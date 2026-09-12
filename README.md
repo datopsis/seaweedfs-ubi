@@ -131,13 +131,23 @@ build from source, or both — is a tracked item in the work plan.
 
 - [Work plan](docs/README.md) is the plan of record: the first-release
   boundary, the ordered work packages that must be completed, the evidence
-  lifecycle, what is deferred, and the decisions that need a human.
+  lifecycle, what is deferred, and the decisions that need a human. It also
+  indexes every document this project owes and names the package that owes it.
+- [Agent and contributor guidance](CLAUDE.md) defines repository
+  implementation and security conventions.
+- [Contributing](CONTRIBUTING.md) defines change, validation, pull-request, and
+  commit expectations, including how to verify an asserted upstream behavior.
+- [Security policy](SECURITY.md) provides private vulnerability reporting and
+  records the deployment-critical upstream behavior an operator cannot skip.
+- [Changelog](CHANGELOG.md) records notable completed changes.
+- [Third-party notices](THIRD_PARTY_NOTICES.md) separates this project's
+  license from SeaweedFS, UBI, and component terms.
 
-The following documents will be added as their associated implementations and
-evidence are developed: versioning and releases, external artifact acquisition,
-configuration, hermetic build, deployment, storage and durability, threat model,
-security controls, cryptographic boundary, FIPS analysis, SCAP, support
-definitions, qualification ledger, and continuous integration.
+Versioning and releases, external artifact acquisition, configuration, hermetic
+build, architecture, deployment, storage and durability, TLS, logging, threat
+model, security controls, cryptographic boundary, FIPS analysis, SCAP, support
+definitions, the qualification ledger, and continuous integration will be added
+as their associated implementations and evidence are developed.
 
 ## Images and releases
 

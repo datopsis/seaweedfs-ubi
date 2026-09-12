@@ -37,7 +37,8 @@ packages can reference them and so a reviewer can see what is missing.
 | `AGENTS.md` — agent guardrails | Present | — |
 | `SECURITY.md` — private reporting and deployment-critical behavior | Present | 1, 4 |
 | `THIRD_PARTY_NOTICES.md` — license and trademark boundary | Present | 1 |
-| `CONTRIBUTING.md` — change, validation, and commit expectations | Planned | 1 |
+| `CONTRIBUTING.md` — change, validation, and commit expectations | Present | 1 |
+| `CHANGELOG.md` — notable completed changes | Present | 1 |
 | `docs/VERSION.md` — container and repository versioning | Planned | 1 |
 | `docs/SUPPORT.md` — support classifications and lifecycle | Planned | 1 |
 | `docs/QUALIFICATION.md` — evidence ledger schema | Planned | 1 |
@@ -171,18 +172,22 @@ before the packages it depends on.
       date.
 - [ ] Write `docs/BADGING.md` inventorying every proposed badge by exact claim
       and backing evidence, and permit only those that are backed today.
-- [ ] Write `CONTRIBUTING.md` covering change scope, validation, pull-request
+- [x] Write `CONTRIBUTING.md` covering change scope, validation, pull-request
       expectations, and the commit-trailer prohibition.
-- [ ] Add `.github/CODEOWNERS`, a security-aware pull request template, issue
+- [x] Add `.github/CODEOWNERS`, a security-aware pull request template, issue
       templates routing security reports to private advisories, and a
       `CHANGELOG.md` seeded with the work completed so far.
-- [ ] Add pinned local `pre-commit` checks for repository hygiene, shell code,
+- [x] Add pinned local `pre-commit` checks for repository hygiene, shell code,
       container build files, GitHub Actions, private keys, and attribution
       trailers, with a hash-locked Python requirements file.
-- [ ] Add grouped Dependabot updates for Actions, pre-commit hooks, and the
+- [x] Add grouped Dependabot updates for Actions, pre-commit hooks, and the
       pinned CI Python environment.
-- [ ] Enable branch protection on `main`, secret scanning with push protection,
-      dependency alerts, and private vulnerability reporting.
+- [x] Enable branch protection on `main`, secret scanning with push protection,
+      and private vulnerability reporting.
+- [ ] Add the required status checks to the `main` protection ruleset once
+      package 5 publishes named CI check contexts. Protection currently requires
+      a pull request, blocks force-pushes and deletion, and requires review
+      threads to be resolved, but cannot require checks that do not exist yet.
 
 **Exit criteria.** A reviewer can read the repository and state exactly what the
 first release will support, what it will not, who owns each obligation, and
