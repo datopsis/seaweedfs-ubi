@@ -161,15 +161,6 @@ omission as an oversight.
   create an unreviewed trust boundary. The image disables it.
 - **The Lance Namespace server** that `weed s3` starts on port `9101` by
   default. Same reasoning, no current use case. The image disables it.
-- **The single-container `server` profile.** Upstream's `server` subcommand runs
-  several roles in one process. It is convenient, and it is refused anyway: the
-  inter-component controls this image intends to qualify — gRPC mTLS and volume
-  read and write JWTs — protect a network that does not exist inside a single
-  process, so supporting the profile would mean publishing a topology where those
-  controls are decorative. It also removes the only boundary between the S3 API
-  and the volume server holding raw bytes. Single-*host* deployment is unaffected:
-  it is four containers on one host. The accepted cost is that every fixture,
-  including the Iceberg round-trip, is multi-container from the start.
 - **WebDAV, the message broker and queue roles, and the admin and worker
   roles.** No first-release use case, and each adds listeners and privileges to
   qualify.
@@ -316,8 +307,9 @@ weakness is documented rather than obscured.
       process so it runs as PID 1 and receives signals directly, with no phase
       that changes user or group.
 - [ ] Enforce a supported-role allowlist. `master`, `volume`, `filer`, `s3`,
-      and the informational `version` and `shell` paths are permitted; `server`
-      is refused along with every other subcommand;
+      and the informational `version` and `shell` paths are permitted
+      unconditionally; `server` is permitted only when `SEAWEEDFS_UBI_STANDALONE`
+      is explicitly set; every other subcommand is refused;
       any other subcommand is refused with a diagnostic naming the supported
       set. Informational paths must keep working so a refused container stays
       diagnosable.
@@ -346,13 +338,22 @@ weakness is documented rather than obscured.
       each guard's exact behavior, and — just as important — what each guard
       does **not** check. The S3 guard proves an identity source is configured;
       it does not judge whether a key is strong, unique, or secret.
-- [ ] Add a hardened Compose or Quadlet development stack with no default
-      credentials and no anonymous access, running each role as its own container.
-- [ ] Add a restricted-runtime smoke suite that provisions its own fixtures and
-      per-run credentials. Because the `server` profile is refused, the fixture is
-      a multi-container `master` + `volume` + `filer` + `s3` topology from the
-      outset; build that harness once and reuse it in packages 4 and 5 rather than
-      starting from a single container and retrofitting. and asserts non-root operation, zero capabilities,
+- [ ] Add hardened Compose or Quadlet development stacks with no default
+      credentials and no anonymous access: one running each role as its own
+      container, and one single-container standalone stack for local use.
+- [ ] Implement the standalone profile gate, `SEAWEEDFS_UBI_STANDALONE`, unset by
+      default: `server` is refused unless it is explicitly set. When it is set,
+      print a startup notice naming what the profile cannot provide — no
+      inter-component authentication, no replication, no component isolation — so
+      the limitation is visible in the logs of whatever is running it and not only
+      in documentation. An unrecognized value is a startup failure.
+- [ ] Add a restricted-runtime smoke suite with **two** fixtures, because they
+      prove different things. A single-container standalone fixture covers
+      functional behavior, the guards, and the restricted-runtime assertions
+      quickly. A separated-role `master` + `volume` + `filer` + `s3` harness
+      covers everything topology-sensitive. Build the separated harness here
+      rather than later, so packages 4 and 5 extend it instead of retrofitting a
+      single-container assumption. and asserts non-root operation, zero capabilities,
       `no-new-privileges`, read-only root, the version match, authenticated S3
       access, refusal of anonymous access, and each negative startup case.
 
@@ -553,7 +554,7 @@ reopening one is a deliberate act rather than a drift.
 | 2026-09-12 | **Order: packages 2 → 3 → 4 → 5 first**, then reassess 6, 7, and 8 | A working, tested image is worth more now than a compliance package describing a boundary that is still moving. See [chosen order](#chosen-order). |
 | 2026-09-12 | **Admit the `large_disk` build variant** | The workload is large Iceberg objects, the default 32 GB volume ceiling is low enough to hit accidentally, and this is the harder direction to reverse. Full reasoning and the switching cost are in [build variants](BUILD-VARIANTS.md). |
 | 2026-09-12 | **Do not admit the `full` variant** | It adds five unqualified filer backends and two tiering integrations purely for capability outside the boundary. PostgreSQL, the backend this organization would actually use, is already in the plain build. |
-| 2026-09-12 | **Do not build the single-container `server` profile**; the entrypoint refuses it and roles run as separate containers everywhere, including fixtures | gRPC mTLS and volume JWTs protect the network between components, so collapsing them into one process makes those controls no-ops and removes any boundary between the S3 API and raw storage. A single-host deployment is still supported; it is four containers rather than one. The cost is accepted: test fixtures are multi-container from the start. |
+| 2026-09-12 | **Ship two deployment profiles from one image**: a separated-role production profile, and a single-container standalone profile gated behind an explicit `SEAWEEDFS_UBI_STANDALONE` opt-in. **Supersedes** an earlier decision the same day to refuse the `server` subcommand outright. | Refusing it outright protected a security claim by pushing multi-container cost into every fixture, including ones needing only functional coverage, and denied a real local-development use case that MinIO serves with one container. One image rather than two is correct because the bytes are identical: separate images would mean two SBOMs, scan runs, signature sets, and ledger entries for a difference that is a command-line argument. What the standalone profile can never evidence is enumerated in [deployment profiles](SUPPORT.md#deployment-profiles). |
 | 2026-09-12 | **First-release consumer: the Datopsis analytical stack's S3 backend**, built so nothing precludes general use | The difference between the two is what gets *qualified*, not what the image can *do*; see [the support contract](SUPPORT.md#who-this-image-is-for). |
 
 ## Decisions that need a human

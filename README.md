@@ -51,7 +51,9 @@ backend, and is being designed for:
 - serving S3-compatible object storage to query engines and table formats;
 - storing Apache Iceberg table data and metadata written by a separate catalog;
 - operating the master, volume, and filer roles that the object path requires;
-- running each role as its own container, including on a single host; and
+- running each role as its own container, including on a single host;
+- a single-container standalone profile for local development, small local use,
+  and test fixtures; and
 - operating inside controlled networks with inspectable evidence.
 
 That scope narrows what this project **qualifies and claims**, not what the image

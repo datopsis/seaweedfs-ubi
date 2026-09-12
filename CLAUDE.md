@@ -31,8 +31,11 @@ Preserve these non-negotiable properties:
   documented;
 - persistent data directories are always explicit, never inherited from
   upstream temporary-directory defaults;
-- the entrypoint refuses the upstream `server` subcommand; every role runs in its
-  own container, in deployments and in fixtures alike;
+- the image ships two deployment profiles: a separated-role production profile,
+  and a single-container standalone profile that starts only when an operator sets
+  `SEAWEEDFS_UBI_STANDALONE` explicitly, warns at every startup that the
+  inter-component controls are inert in it, and is never presented as a production
+  posture;
 - S3 access keys, gRPC mTLS material, JWT signing keys, and filer store
   credentials are supplied by the operator at runtime and never baked into the
   image or an example;
@@ -94,17 +97,22 @@ one at every version bump.
   (`-whiteList`) is empty by default. Inter-component security is therefore a
   documented deployment responsibility with tested examples, never an assumed
   property.
-- **SeaweedFS is a distributed system, and this image keeps it one.** The
-  upstream `server` subcommand runs several roles in a single process, and this
-  image deliberately does not support it: the entrypoint refuses `server`. Roles
-  run as separate containers everywhere, including in tests and fixtures. The
-  reason is that gRPC mTLS and volume JWTs protect the network between
-  components, and collapsing the components into one process makes those controls
-  no-ops while removing any blast-radius boundary between the S3 API and the
-  volume server holding raw bytes. A single *host* deployment remains fine; it is
-  four containers, not one. Durability, replication, and failure behavior remain
-  cluster properties, so never let a single-container or single-host test result
-  stand in as evidence for a replicated topology.
+- **SeaweedFS is a distributed system, and the production profile keeps it one.**
+  The upstream `server` subcommand runs several roles in one process. This image
+  supports that as an explicitly opt-in **standalone** profile for local
+  development and test fixtures, and never as a production posture. `weed server`
+  starts `master` and `volume` by default but leaves `filer` and `s3` off, and
+  `-s3` implies `-filer`, so the standalone profile is `server` with an explicit
+  data directory and `-s3`.
+
+  Four things cannot be exercised or claimed in the standalone profile at all,
+  because they are properties of a topology it does not have: inter-component
+  security, since gRPC mTLS and volume read and write JWTs protect a network that
+  does not exist inside one process; replication and durability; component failure
+  modes; and the discovery and addressing wiring between roles. Tests for those
+  must use the separated-role fixture, and a standalone result must never stand in
+  as evidence for a clustered one. A single-*host* production deployment is still
+  the separated profile: four containers on one host.
 - **Upstream versions are two-component and fast moving.** Releases are
   numbered like `4.46`, not semantically, and arrive frequently. Do not assume
   a version increment is a routine dependency bump; qualify each one.
