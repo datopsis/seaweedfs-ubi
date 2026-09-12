@@ -31,6 +31,8 @@ Preserve these non-negotiable properties:
   documented;
 - persistent data directories are always explicit, never inherited from
   upstream temporary-directory defaults;
+- the entrypoint refuses the upstream `server` subcommand; every role runs in its
+  own container, in deployments and in fixtures alike;
 - S3 access keys, gRPC mTLS material, JWT signing keys, and filer store
   credentials are supplied by the operator at runtime and never baked into the
   image or an example;
@@ -92,10 +94,17 @@ one at every version bump.
   (`-whiteList`) is empty by default. Inter-component security is therefore a
   documented deployment responsibility with tested examples, never an assumed
   property.
-- **SeaweedFS is a distributed system.** A single-container profile is a
-  legitimate development and single-node target, but durability, replication,
-  and failure behavior are cluster properties. Do not let single-container test
-  results stand in as evidence for a replicated topology.
+- **SeaweedFS is a distributed system, and this image keeps it one.** The
+  upstream `server` subcommand runs several roles in a single process, and this
+  image deliberately does not support it: the entrypoint refuses `server`. Roles
+  run as separate containers everywhere, including in tests and fixtures. The
+  reason is that gRPC mTLS and volume JWTs protect the network between
+  components, and collapsing the components into one process makes those controls
+  no-ops while removing any blast-radius boundary between the S3 API and the
+  volume server holding raw bytes. A single *host* deployment remains fine; it is
+  four containers, not one. Durability, replication, and failure behavior remain
+  cluster properties, so never let a single-container or single-host test result
+  stand in as evidence for a replicated topology.
 - **Upstream versions are two-component and fast moving.** Releases are
   numbered like `4.46`, not semantically, and arrive frequently. Do not assume
   a version increment is a routine dependency bump; qualify each one.

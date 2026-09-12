@@ -34,8 +34,8 @@ Two items become due before the packages that need them:
 - **Approve the first-release boundary** in
   [`docs/SUPPORT.md`](SUPPORT.md#proposed-first-release-boundary), due before
   package 3 fixes the supported role set in the entrypoint.
-- **Decide the single-container profile's status**, due at the same point and for
-  the same reason.
+The single-container profile question is settled; see
+[decisions taken](#decisions-taken).
 
 ## What each package involves
 
@@ -47,7 +47,7 @@ without reading all of them.
 | --- | --- | --- | --- | --- |
 | 1 | **Write down the contract** | The scope, support, versioning, evidence, and badge rules are recorded and do not contradict each other | Complete except two decisions | Approve the boundary; decide the update cadence |
 | 2 | **Get the binary in safely** | Scripts that fetch `weed`, verify it against a reviewed digest lock, refuse tampered or wrong-version input, and assemble the image with the network off | ~2–3 increments | Nothing; the variant decision is made |
-| 3 | **Build the actual image** | A `Containerfile` and entrypoint that run each role non-root on a read-only root filesystem, refuse unsupported roles, refuse an unauthenticated S3 gateway, and refuse an implicit temporary data directory — with a smoke suite proving each refusal | ~3–4 increments | Decide the single-container profile's status |
+| 3 | **Build the actual image** | A `Containerfile` and entrypoint that run each role non-root on a read-only root filesystem, refuse unsupported roles, refuse an unauthenticated S3 gateway, and refuse an implicit temporary data directory — with a smoke suite proving each refusal | ~3–4 increments | Nothing; the role set is decided |
 | 4 | **Prove it works** | S3 exercised by a real client, TLS, mTLS and JWTs between components, data surviving restart and replacement, backup and restore, and the Iceberg path exercised end to end against `lakekeeper-ubi` | ~6–8 increments | Decide which filer backends and which durability claim |
 | 5 | **Automate it** | CI on both architectures, SBOMs, Trivy and Grype gates, provenance, signing, and a release workflow that cannot publish without matching evidence | ~3–4 increments | Nothing |
 | 6 | **The compliance package** | Threat model, OSCAL component definition, control matrix, SCAP profile, cryptographic boundary, and FIPS analysis — the artifacts a security reviewer consumes | ~4–6 increments, all writing | Two-person review of every control classification, per this project's own policy |
@@ -161,6 +161,15 @@ omission as an oversight.
   create an unreviewed trust boundary. The image disables it.
 - **The Lance Namespace server** that `weed s3` starts on port `9101` by
   default. Same reasoning, no current use case. The image disables it.
+- **The single-container `server` profile.** Upstream's `server` subcommand runs
+  several roles in one process. It is convenient, and it is refused anyway: the
+  inter-component controls this image intends to qualify — gRPC mTLS and volume
+  read and write JWTs — protect a network that does not exist inside a single
+  process, so supporting the profile would mean publishing a topology where those
+  controls are decorative. It also removes the only boundary between the S3 API
+  and the volume server holding raw bytes. Single-*host* deployment is unaffected:
+  it is four containers on one host. The accepted cost is that every fixture,
+  including the Iceberg round-trip, is multi-container from the start.
 - **WebDAV, the message broker and queue roles, and the admin and worker
   roles.** No first-release use case, and each adds listeners and privileges to
   qualify.
@@ -197,8 +206,8 @@ image exists, for the reason given under
 
 - [ ] Approve the proposed first-release boundary in
       [`docs/SUPPORT.md`](SUPPORT.md#proposed-first-release-boundary), including
-      the exact supported role set, the single-container versus separated-role
-      profiles, and every deferral, and remove the proposal notice when approved.
+      the exact supported role set and every deferral, and remove the proposal
+      notice when approved.
 - [x] Write [`docs/VERSION.md`](VERSION.md), adapting the sibling projects'
       policy to a two-component upstream version that is not semantic. Defines
       the container tag form
@@ -307,7 +316,8 @@ weakness is documented rather than obscured.
       process so it runs as PID 1 and receives signals directly, with no phase
       that changes user or group.
 - [ ] Enforce a supported-role allowlist. `master`, `volume`, `filer`, `s3`,
-      `server`, and the informational `version` and `shell` paths are permitted;
+      and the informational `version` and `shell` paths are permitted; `server`
+      is refused along with every other subcommand;
       any other subcommand is refused with a diagnostic naming the supported
       set. Informational paths must keep working so a refused container stays
       diagnosable.
@@ -337,9 +347,12 @@ weakness is documented rather than obscured.
       does **not** check. The S3 guard proves an identity source is configured;
       it does not judge whether a key is strong, unique, or secret.
 - [ ] Add a hardened Compose or Quadlet development stack with no default
-      credentials and no anonymous access.
+      credentials and no anonymous access, running each role as its own container.
 - [ ] Add a restricted-runtime smoke suite that provisions its own fixtures and
-      per-run credentials, and asserts non-root operation, zero capabilities,
+      per-run credentials. Because the `server` profile is refused, the fixture is
+      a multi-container `master` + `volume` + `filer` + `s3` topology from the
+      outset; build that harness once and reuse it in packages 4 and 5 rather than
+      starting from a single container and retrofitting. and asserts non-root operation, zero capabilities,
       `no-new-privileges`, read-only root, the version match, authenticated S3
       access, refusal of anonymous access, and each negative startup case.
 
@@ -540,6 +553,7 @@ reopening one is a deliberate act rather than a drift.
 | 2026-09-12 | **Order: packages 2 → 3 → 4 → 5 first**, then reassess 6, 7, and 8 | A working, tested image is worth more now than a compliance package describing a boundary that is still moving. See [chosen order](#chosen-order). |
 | 2026-09-12 | **Admit the `large_disk` build variant** | The workload is large Iceberg objects, the default 32 GB volume ceiling is low enough to hit accidentally, and this is the harder direction to reverse. Full reasoning and the switching cost are in [build variants](BUILD-VARIANTS.md). |
 | 2026-09-12 | **Do not admit the `full` variant** | It adds five unqualified filer backends and two tiering integrations purely for capability outside the boundary. PostgreSQL, the backend this organization would actually use, is already in the plain build. |
+| 2026-09-12 | **Do not build the single-container `server` profile**; the entrypoint refuses it and roles run as separate containers everywhere, including fixtures | gRPC mTLS and volume JWTs protect the network between components, so collapsing them into one process makes those controls no-ops and removes any boundary between the S3 API and raw storage. A single-host deployment is still supported; it is four containers rather than one. The cost is accepted: test fixtures are multi-container from the start. |
 | 2026-09-12 | **First-release consumer: the Datopsis analytical stack's S3 backend**, built so nothing precludes general use | The difference between the two is what gets *qualified*, not what the image can *do*; see [the support contract](SUPPORT.md#who-this-image-is-for). |
 
 ## Decisions that need a human
@@ -547,16 +561,12 @@ reopening one is a deliberate act rather than a drift.
 These cannot be settled by implementation work and should be recorded above with
 their reasoning when they are made.
 
-1. **Is the single-container `server` profile supported, or development only?**
-   It is genuinely useful for a single-node deployment and for the Iceberg test
-   path, but it collapses every trust boundary the separated profile creates.
-   Needed before package 3 fixes the entrypoint's role allowlist.
-2. **Which filer metadata store backends are supported.** Each added backend is
+1. **Which filer metadata store backends are supported.** Each added backend is
    a dependency, a credential, and a failure mode to qualify. The plain build
    already compiles in PostgreSQL, MySQL, Redis, MongoDB, etcd, Cassandra, HBase,
    ArangoDB, FoundationDB, and embedded LevelDB, so this is a question of which to
    *qualify*, not which are available. Needed during package 4.
-3. **What update cadence and security-response target will this project commit
+2. **What update cadence and security-response target will this project commit
    to?** [`docs/SUPPORT.md`](SUPPORT.md) cannot define a support period without
    it. Upstream releases roughly every seven to ten days in one linear line,
    fixes only the latest release, and maintains no older line, so there is no
@@ -567,15 +577,15 @@ their reasoning when they are made.
    relevant fix, or a narrower support promise. Choosing none of them means the
    project drifts into one by accident. Deferred to package 8, where the real
    qualification cost will be visible; it binds nothing before then.
-4. **How far to go on provenance.** Recording reviewed digests is the floor.
+3. **How far to go on provenance.** Recording reviewed digests is the floor.
    Building from source in a controlled pipeline would be materially stronger
    and materially more work, and it changes what this project is.
-5. **Whether anonymous read access is ever a supported configuration**, or
+4. **Whether anonymous read access is ever a supported configuration**, or
    always a deployment-owned deviation.
-6. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
+5. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
    a later qualification target, given that `lakekeeper-ubi` already owns that
    role in this organization.
-7. **What durability the first release is willing to claim**, and therefore what
+6. **What durability the first release is willing to claim**, and therefore what
    replication topology has to be qualified before it can be published.
 
 ## Standing obligations at every upstream version bump

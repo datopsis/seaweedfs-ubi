@@ -78,6 +78,14 @@ only to published container images; repository-only changes remain under
   project qualifies rather than in what the image can do.
 - Added a decisions-taken record, so that reopening a settled decision is a
   deliberate act rather than a drift.
+- Decided not to build the single-container `server` profile. The entrypoint will
+  refuse the upstream `server` subcommand, and every role runs in its own
+  container in deployments and fixtures alike, because gRPC mTLS and volume JWTs
+  protect a network that does not exist inside a single process and their presence
+  there would be decorative. Single-host deployment is unaffected: it is four
+  containers rather than one. The accepted cost is that every test fixture,
+  including the Iceberg round-trip and the replacement for `lakekeeper-ubi`'s
+  storage fixture, is multi-container from the outset.
 - Added the Apache License 2.0 for Datopsis-authored work, third-party notices
   separating packaging terms from SeaweedFS and UBI terms, contribution
   guidance, and a private vulnerability-reporting policy.

@@ -34,7 +34,7 @@ a supported release.
 | Docker | Unsupported | To be qualified independently of Podman in work package 7. |
 | OpenShift arbitrary UID | Unsupported | Restricted-SCC behavior is a work package 7 preview target. |
 | `master`, `volume`, `filer`, `s3` roles | Unsupported | In the proposed first-release boundary; unimplemented. |
-| Single-container `server` profile | Unsupported | Its status is an open decision, recorded below. |
+| Single-container `server` profile | Unsupported, and not built | The entrypoint refuses the upstream `server` subcommand. Collapsing the roles into one process makes inter-component mTLS and JWTs no-ops and removes the boundary between the S3 API and raw storage. A single-host deployment is four containers. |
 | S3 API compatibility | Unsupported | No conformance claim will be made without recorded per-operation results. |
 | Client-facing TLS on the S3 listener | Unsupported | Planned in work package 4. |
 | gRPC mTLS and volume JWTs between components | Unsupported | Planned in work package 4; upstream requires an operator-supplied `security.toml`. |
@@ -94,7 +94,10 @@ The first release is scoped to **the Datopsis analytical stack's S3 backend**:
 the object storage layer beneath an Apache Iceberg catalog, replacing the
 unhardened SeaweedFS fixture that
 [`lakekeeper-ubi`](https://github.com/datopsis/lakekeeper-ubi) uses for storage
-testing today.
+testing today. Because this image does not build the single-container `server`
+profile, that replacement is a four-container fixture rather than a drop-in
+single container — a deliberate cost, recorded in
+[the work plan](README.md#decisions-taken).
 
 That scope was chosen over a general-purpose hardened S3 store for one reason
 that is worth stating carefully, because it sounds like a limitation and mostly
