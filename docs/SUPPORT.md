@@ -23,6 +23,57 @@ Absence from a matrix means unqualified, not implicitly compatible. A source
 revision, locally built image, pull-request artifact, or successful CI run is not
 a supported release.
 
+## Deployment profiles
+
+One image ships two profiles. They are the same bytes — the same `weed` binary,
+the same layers, the same digest — and differ only in which role the container
+starts and what this project claims about it.
+
+| | **Production profile** | **Standalone profile** |
+| --- | --- | --- |
+| Shape | `master`, `volume`, `filer`, and `s3` each in its own container | all roles in one container |
+| Invocation | one role per container | `server` with an explicit data directory and `-s3` |
+| Enabled by | the default | setting `SEAWEEDFS_UBI_STANDALONE` explicitly |
+| Intended for | real deployments, including a single host | local development, small local use, and test fixtures |
+| Support intent | the first-release boundary | **never supported for production** |
+
+The standalone profile exists because a single container is a genuinely useful
+local object store, in the same way `minio server /data` is, and refusing to ship
+one would have denied that use case while making nothing safer.
+
+### What the standalone profile cannot provide
+
+These are not gaps to be closed later. They are consequences of running one
+process, and no amount of configuration changes them.
+
+| Limitation | Why |
+| --- | --- |
+| **Inter-component security is inert** | gRPC mTLS and volume read and write JWTs authenticate and encrypt the network between roles. Inside one process there is no such network. A `security.toml` here protects nothing. |
+| **No replication, so no durability** | One volume server cannot satisfy a replication setting. Loss of the disk is loss of the data. |
+| **No component failure modes** | You cannot stop the filer and observe S3 degrade, or lose a volume server and watch the master reassign. |
+| **Discovery and addressing are untested** | Roles find each other in-process, so the inter-role wiring, gRPC addressing, and name resolution never execute — which is the class of defect most likely to appear first on a real deployment. |
+| **No per-role isolation or tuning** | A defect in the S3 API shares a process with the volume server holding raw bytes, and all roles share one container's limits. |
+
+Everything else behaves the same, because it is the same binary: non-root
+operation, read-only root filesystem, dropped capabilities, the entrypoint
+guards, S3 authentication, the S3 API itself, and the on-disk format.
+
+### Which profile a test may use
+
+The rule follows directly from the table above, and
+[release qualification](QUALIFICATION.md#scope-rules-specific-to-a-distributed-system)
+enforces it by requiring every recorded result to name its topology.
+
+- **Standalone is valid for** functional S3 behavior, the Apache Iceberg round
+  trip, version checks, the entrypoint guards and their negative cases, and the
+  restricted-runtime assertions. It is the fast fixture and should be the default
+  for these.
+- **The separated-role fixture is required for** inter-component security,
+  replication and durability, component failure modes, inter-role discovery, and
+  anything else whose subject is the topology rather than the object store.
+
+A standalone result may never be cited as evidence for a clustered claim.
+
 ## Current development matrix
 
 | Area | Current classification | Evidence or limitation |
@@ -34,7 +85,7 @@ a supported release.
 | Docker | Unsupported | To be qualified independently of Podman in work package 7. |
 | OpenShift arbitrary UID | Unsupported | Restricted-SCC behavior is a work package 7 preview target. |
 | `master`, `volume`, `filer`, `s3` roles | Unsupported | In the proposed first-release boundary; unimplemented. |
-| Single-container `server` profile | Unsupported, and not built | The entrypoint refuses the upstream `server` subcommand. Collapsing the roles into one process makes inter-component mTLS and JWTs no-ops and removes the boundary between the S3 API and raw storage. A single-host deployment is four containers. |
+| Single-container standalone profile | Unsupported for production, by design | Planned for local development and test fixtures behind an explicit `SEAWEEDFS_UBI_STANDALONE` opt-in. Inter-component mTLS and JWTs are inert inside one process, and replication, component failure modes, and inter-role discovery cannot be exercised. See [deployment profiles](#deployment-profiles). |
 | S3 API compatibility | Unsupported | No conformance claim will be made without recorded per-operation results. |
 | Client-facing TLS on the S3 listener | Unsupported | Planned in work package 4. |
 | gRPC mTLS and volume JWTs between components | Unsupported | Planned in work package 4; upstream requires an operator-supplied `security.toml`. |
@@ -94,10 +145,10 @@ The first release is scoped to **the Datopsis analytical stack's S3 backend**:
 the object storage layer beneath an Apache Iceberg catalog, replacing the
 unhardened SeaweedFS fixture that
 [`lakekeeper-ubi`](https://github.com/datopsis/lakekeeper-ubi) uses for storage
-testing today. Because this image does not build the single-container `server`
-profile, that replacement is a four-container fixture rather than a drop-in
-single container — a deliberate cost, recorded in
-[the work plan](README.md#decisions-taken).
+testing today. The standalone profile makes that a single-container drop-in for
+lakekeeper's functional storage tests, while its inter-component security,
+replication, and failure-mode tests need the separated-role fixture. See
+[deployment profiles](#deployment-profiles).
 
 That scope was chosen over a general-purpose hardened S3 store for one reason
 that is worth stating carefully, because it sounds like a limitation and mostly

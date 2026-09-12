@@ -78,14 +78,26 @@ only to published container images; repository-only changes remain under
   project qualifies rather than in what the image can do.
 - Added a decisions-taken record, so that reopening a settled decision is a
   deliberate act rather than a drift.
-- Decided not to build the single-container `server` profile. The entrypoint will
-  refuse the upstream `server` subcommand, and every role runs in its own
-  container in deployments and fixtures alike, because gRPC mTLS and volume JWTs
-  protect a network that does not exist inside a single process and their presence
-  there would be decorative. Single-host deployment is unaffected: it is four
-  containers rather than one. The accepted cost is that every test fixture,
-  including the Iceberg round-trip and the replacement for `lakekeeper-ubi`'s
-  storage fixture, is multi-container from the outset.
+- Defined two deployment profiles served by one image: a separated-role
+  production profile, and a single-container standalone profile for local
+  development, small local use, and test fixtures. They are the same bytes and
+  differ only in which role the container starts, so one image keeps one SBOM, one
+  signature chain, and one qualification record. The standalone profile starts
+  only when `SEAWEEDFS_UBI_STANDALONE` is explicitly set and will print a startup
+  notice naming what it cannot provide.
+- Documented what the standalone profile can never provide, as consequences of
+  running one process rather than gaps to close later: inter-component mTLS and
+  JWTs are inert, replication and therefore durability are unavailable, component
+  failure modes cannot be produced, inter-role discovery and addressing never
+  execute, and there is no per-role isolation or tuning.
+- Recorded which profile a test may use, so a fast standalone fixture covers
+  functional behavior and the guards while the separated-role fixture remains
+  required for anything whose subject is the topology. A standalone result may
+  never be cited as evidence for a clustered claim.
+- Superseded an earlier decision to refuse the upstream `server` subcommand
+  outright. Refusing it protected a security claim by pushing multi-container cost
+  into every fixture, including ones needing only functional coverage, and denied a
+  real local-development use case.
 - Added the Apache License 2.0 for Datopsis-authored work, third-party notices
   separating packaging terms from SeaweedFS and UBI terms, contribution
   guidance, and a private vulnerability-reporting policy.
