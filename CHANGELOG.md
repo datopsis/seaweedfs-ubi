@@ -98,6 +98,36 @@ only to published container images; repository-only changes remain under
   outright. Refusing it protected a security claim by pushing multi-container cost
   into every fixture, including ones needing only functional coverage, and denied a
   real local-development use case.
+- Based the standalone profile on upstream's `mini` subcommand rather than
+  `server`. `mini` exists for exactly this purpose and is what upstream's own image
+  runs by default, and admitting only one of the two single-process commands avoids
+  supporting two overlapping paths. The profile disables WebDAV and the Admin UI,
+  which `mini` enables by default and which are outside the boundary, and requires
+  an explicit data directory rather than accepting `mini`'s working-directory
+  default.
+- Recorded what upstream actually publishes and what may be trusted about it.
+  Release tarballs carry an MD5 sidecar and nothing else, while container images
+  are signed with keyless cosign bound to an organization-repository workflow
+  identity and built from the exact released commit. Because those images are
+  published to a personal rather than an organization namespace, pulling one by tag
+  unverified is weaker than taking the tarball while pulling one by digest with the
+  signature enforced is stronger, so verification is mandatory on that path rather
+  than an enhancement to it.
+- Established that the single Go `weed` binary covers every supported role. The
+  Rust `weed-volume` and `weed-worker` binaries in upstream's image are opt-in
+  alternative roles, reachable only under separate role names in upstream's own
+  entrypoint, and the Lance worker is outside the boundary.
+- Established that upstream's image cannot serve as a base layer or a behavioral
+  model: it is Alpine-based and its entrypoint starts as root, recursively chowns
+  the data directory, and drops privileges with `su-exec`, which is the startup
+  privilege transition this project's contract forbids.
+- Documented three candidate acquisition paths with their costs — the release
+  tarball, the cosign-verified container image, and building from upstream source —
+  and recommended the verified image, leaving a source build open as a later step
+  rather than a foreclosed one.
+- Recorded that upstream's Dockerfile claims Go FIPS 140-3 mode is on by default
+  while its build sets no `GOFIPS140` and the Go default is off, so the claim must
+  not be repeated and the real determination is owed by work package 6.
 - Added the Apache License 2.0 for Datopsis-authored work, third-party notices
   separating packaging terms from SeaweedFS and UBI terms, contribution
   guidance, and a private vulnerability-reporting policy.

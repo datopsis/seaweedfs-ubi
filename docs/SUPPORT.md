@@ -32,14 +32,26 @@ starts and what this project claims about it.
 | | **Production profile** | **Standalone profile** |
 | --- | --- | --- |
 | Shape | `master`, `volume`, `filer`, and `s3` each in its own container | all roles in one container |
-| Invocation | one role per container | `server` with an explicit data directory and `-s3` |
+| Invocation | one role per container | `mini` with an explicit data directory, WebDAV and the Admin UI disabled |
 | Enabled by | the default | setting `SEAWEEDFS_UBI_STANDALONE` explicitly |
 | Intended for | real deployments, including a single host | local development, small local use, and test fixtures |
 | Support intent | the first-release boundary | **never supported for production** |
 
 The standalone profile exists because a single container is a genuinely useful
 local object store, in the same way `minio server /data` is, and refusing to ship
-one would have denied that use case while making nothing safer.
+one would have denied that use case while making nothing safer. It is built on
+upstream's `mini` subcommand, which exists for exactly this purpose and which
+upstream's own image runs by default. Upstream's other single-process command,
+`server`, stays refused so that there is one supported standalone command rather
+than two overlapping ones.
+
+`mini` is more generous by default than this profile is. `-s3`, `-webdav`, and
+`-admin.ui` all default to `true`, and `-dir` defaults to `.` rather than to a
+volume. The standalone profile disables WebDAV and the Admin UI, because both are
+outside the first-release boundary and an unused listener is attack surface, and it
+requires an explicit data directory. Work package 3 owes a listener inventory of
+the profile as built, and a decision on `-s3.autoCreateBucket` and
+`-s3.allowDeleteBucketNotEmpty`, which upstream also defaults to `true`.
 
 ### What the standalone profile cannot provide
 
