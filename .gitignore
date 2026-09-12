@@ -1,0 +1,52 @@
+# Local environments and tool caches
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.pre-commit-cache/
+.ruff_cache/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local security and qualification evidence
+*.sarif
+*.spdx.json
+grype*.json
+trivy*.json
+scap-results*/
+security-results/
+
+# Downloaded upstream artifacts. Only their digests belong in this repository.
+.artifact-bundle/
+*.tar.gz
+*.tar.gz.md5
+staging/
+weed
+
+# SeaweedFS runtime state. Never commit a volume, index, or filer store.
+*.dat
+*.idx
+*.vif
+.seaweedfs-data/
+filerldb2/
+
+# Credentials and generated configuration. s3.json holds access keys and
+# security.toml holds gRPC mTLS material and JWT signing keys.
+s3.json
+security.toml
+*.csr
+*.key
+*.p12
+*.pfx
+*.pem
+*.srl
+
+# Local container build output
+build/
+dist/
