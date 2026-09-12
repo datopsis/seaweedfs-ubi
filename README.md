@@ -24,8 +24,15 @@ evidence.
 
 SeaweedFS releases are numbered in two components, such as `4.46`, and are not
 semantically versioned. An increment carries no compatibility promise, and
-releases arrive frequently, so this project treats every upstream increment as a
-qualification event rather than a routine dependency bump.
+releases arrive roughly every seven to ten days, so this project treats every
+upstream increment as a qualification event rather than a routine dependency
+bump. See [versioning and releases](docs/VERSION.md).
+
+Upstream also states that security fixes land only in the latest release and
+maintains no older line, which means security maintenance here can only mean
+rolling forward, not patching a pinned version. That constraint shapes what any
+support statement can honestly promise and is set out in
+[the support contract](docs/SUPPORT.md#upstream-maintenance-constrains-what-this-project-can-promise).
 
 ## Why this image exists
 
@@ -38,14 +45,21 @@ unhardened upstream fixture that project currently uses for storage testing.
 
 ## Intended uses
 
-The first release is being designed for:
+The first release is scoped to serving as the Datopsis analytical stack's S3
+backend, and is being designed for:
 
 - serving S3-compatible object storage to query engines and table formats;
 - storing Apache Iceberg table data and metadata written by a separate catalog;
 - operating the master, volume, and filer roles that the object path requires;
-- running a single-node profile for development and small deployments, and a
-  separated-role profile for real ones; and
+- running each role as its own container, including on a single host; and
 - operating inside controlled networks with inspectable evidence.
+
+That scope narrows what this project **qualifies and claims**, not what the image
+can do: it ships stock upstream SeaweedFS with a hardened runtime, no patch and no
+application-specific code. [Who this image is
+for](docs/SUPPORT.md#who-this-image-is-for) sets out the five places where this
+scope differs from a general-purpose S3 store, which of them are reversible, and
+the rule that keeps the difference to qualification rather than capability.
 
 FUSE mounting (`weed mount`), WebDAV, the message broker and queue roles, the
 admin and worker roles, remote storage tiering, and the embedded Iceberg REST
@@ -129,10 +143,25 @@ build from source, or both — is a tracked item in the work plan.
 
 ## Project documentation
 
-- [Work plan](docs/README.md) is the plan of record: the first-release
-  boundary, the ordered work packages that must be completed, the evidence
-  lifecycle, what is deferred, and the decisions that need a human. It also
-  indexes every document this project owes and names the package that owes it.
+- [Work plan](docs/README.md) is the plan of record: the ordered work packages
+  that must be completed, the evidence lifecycle, what is deferred and why, and
+  the decisions that need a human. It also indexes every document this project
+  owes and names the package that owes it.
+- [Support contract](docs/SUPPORT.md) defines the classification terms, the
+  current development matrix, the proposed first-release boundary, the ownership
+  boundary, and why upstream's maintenance model limits what any support
+  statement here can promise.
+- [Versioning and releases](docs/VERSION.md) separates container artifact
+  versions from repository-only revisions and defines the upgrade policy for an
+  upstream line that makes no compatibility promise.
+- [Release qualification](docs/QUALIFICATION.md) defines the evidence record
+  every release candidate must complete, and the scope rules that keep a result
+  from being read more broadly than it was measured.
+- [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
+  Linux builds this project admits and why, and explains that the choice is a
+  compile-time build tag rather than a runtime option.
+- [Badge policy](docs/BADGING.md) records which public claims are permitted and
+  which are prohibited.
 - [Agent and contributor guidance](CLAUDE.md) defines repository
   implementation and security conventions.
 - [Contributing](CONTRIBUTING.md) defines change, validation, pull-request, and
@@ -143,11 +172,12 @@ build from source, or both — is a tracked item in the work plan.
 - [Third-party notices](THIRD_PARTY_NOTICES.md) separates this project's
   license from SeaweedFS, UBI, and component terms.
 
-Versioning and releases, external artifact acquisition, configuration, hermetic
-build, architecture, deployment, storage and durability, TLS, logging, threat
-model, security controls, cryptographic boundary, FIPS analysis, SCAP, support
-definitions, the qualification ledger, and continuous integration will be added
-as their associated implementations and evidence are developed.
+External artifact acquisition, hermetic build, configuration, architecture,
+deployment, storage and durability, TLS, logging, threat model, security
+controls, cryptographic boundary, FIPS analysis, SCAP, and continuous
+integration will be added as their associated implementations and evidence are
+developed. The [work plan](docs/README.md#documentation-index) names the package
+that owes each one.
 
 ## Images and releases
 
@@ -178,7 +208,7 @@ project contract and the work plan; the first image lands in work package 3.
 Until the first signed release is published, this repository should be treated
 as development material rather than a supported production image.
 
-Repository checks will be run with pinned local hooks once work package 1 lands:
+Repository checks run with pinned local hooks:
 
 ```console
 python -m pip install --require-hashes --only-binary=:all: \
