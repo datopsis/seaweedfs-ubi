@@ -88,6 +88,53 @@ selective adoption policy that skips increments without relevant fixes, or a
 narrower support promise — and each has a real cost that the person accountable
 for it should choose knowingly.
 
+## Who this image is for
+
+The first release is scoped to **the Datopsis analytical stack's S3 backend**:
+the object storage layer beneath an Apache Iceberg catalog, replacing the
+unhardened SeaweedFS fixture that
+[`lakekeeper-ubi`](https://github.com/datopsis/lakekeeper-ubi) uses for storage
+testing today.
+
+That scope was chosen over a general-purpose hardened S3 store for one reason
+that is worth stating carefully, because it sounds like a limitation and mostly
+is not: **the difference between the two is what gets qualified, not what the
+image can do.**
+
+The image contains stock upstream SeaweedFS. This project adds no patch, no fork,
+and no application-specific code — only a hardened runtime, an entrypoint that
+refuses unsafe configurations, verified build inputs, and evidence. Nothing about
+serving this organization's Iceberg workload makes the image worse at general S3
+work, and a general-purpose scope can be adopted later by adding qualification
+rather than by changing the product.
+
+### Where the two scopes actually diverge
+
+Five choices differ between them. Four are "this project tests and claims less",
+which a later package can extend. One is baked into the image and cannot be.
+
+| # | Choice | Effect on a general S3 consumer | Reversible later? |
+| --- | --- | --- | --- |
+| 1 | **Filer metadata backend.** One backend is qualified; the plain build compiles in PostgreSQL, MySQL, Redis, MongoDB, etcd, Cassandra, HBase, ArangoDB, FoundationDB, and embedded LevelDB. | An unqualified backend still functions; it is simply unsupported and untested. Someone wanting single-node embedded LevelDB with no external database is not blocked, just unqualified. | Yes — add qualification |
+| 2 | **Anonymous read access is not supported.** The fail-closed guard refuses an S3 gateway with no identity source. | Real friction. A legitimate general use case — public datasets, public static assets — must consciously set `SEAWEEDFS_UBI_REQUIRE_S3_AUTH=false` to get upstream's behavior. The guard exists because the upstream default is allow-all *anonymous write*, not merely anonymous read, and the two are not separable in upstream's default. | Yes — a narrower guard could distinguish read from write |
+| 3 | **The embedded Iceberg REST Catalog and Lance Namespace listeners are disabled.** | Irrelevant to general S3 use. A removal only for someone who specifically wanted SeaweedFS's own Iceberg catalog rather than a separate one, and that path needs an explicit opt-in. | Yes — opt-in exists by design |
+| 4 | **Qualified S3 operation coverage.** What Iceberg engines use: put, get, head, delete, list, multipart. | Versioning, lifecycle rules, object tagging, ACLs, presigned URLs, CORS, and conditional writes would be unqualified. Unqualified is not broken — upstream implements much of this — but it is unclaimed, and any S3 behavioral difference in those areas would be undiscovered. | Yes — add qualification |
+| 5 | **The `large_disk` build variant.** | This is the one constraint that is genuinely baked in. It suits large objects, and a consumer storing billions of small files would prefer the default build's narrower index entries. Changing it means a different image and a data migration. See [build variants](BUILD-VARIANTS.md). | **No** — compile-time |
+
+### The rule this implies
+
+Because item 5 is the only irreversible one, and items 1 through 4 are
+qualification scope rather than capability, the operating rule for every later
+package is:
+
+> Narrow what this project *claims* to the analytical-stack use case freely.
+> Never narrow what the image *can do* to that use case.
+
+Concretely: no Iceberg-specific or Datopsis-specific code, configuration
+hardcoding, or removed capability may enter the image to serve this scope. If a
+choice would foreclose general S3 use rather than merely leave it unqualified, it
+needs the same explicit decision and reasoning the build variant received.
+
 ## Proposed first-release boundary
 
 > [!IMPORTANT]

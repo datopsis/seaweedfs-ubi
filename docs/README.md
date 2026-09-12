@@ -15,29 +15,62 @@ checked off and its evidence exists.
 
 **Next task: work package 2**, upstream artifact acquisition and the digest lock.
 
-Work package 1 is complete except for two items that only a human can close, and
-neither of them blocks package 2:
-
-- **Approve the proposed first-release boundary** in
-  [`docs/SUPPORT.md`](SUPPORT.md#proposed-first-release-boundary). It is marked as
-  a proposal and nothing depends on it being a commitment until package 3 fixes
-  the supported role set in the entrypoint.
-- **Decide the update cadence and security-response targets.** This one is worth
-  reading the reasoning for before deciding, in
-  [upstream maintenance constrains what this project can
-  promise](SUPPORT.md#upstream-maintenance-constrains-what-this-project-can-promise).
-  It is the sharpest constraint this project has and it has no comfortable
-  answer.
+Package 1 is complete. Its decisions are recorded under
+[decisions taken](#decisions-taken), and the items still open are listed under
+[decisions that need a human](#decisions-that-need-a-human) with the package each
+one blocks. Nothing open blocks package 2.
 
 Package 2 ranks next because package 3 cannot build an image without verified
-bytes to build it from, and because the variant decision package 2 makes is one
-the release contract already depends on.
+bytes to build it from.
 
 Its first task is the decision-shaped one: establish what upstream provenance is
 actually available — whether any release asset carries a GitHub artifact
 attestation, and whether a reproducible build from source is feasible — because
-the answer determines whether the lock is the floor or the ceiling of this
+the answer determines whether the digest lock is the floor or the ceiling of this
 project's provenance story.
+
+Two items become due before the packages that need them:
+
+- **Approve the first-release boundary** in
+  [`docs/SUPPORT.md`](SUPPORT.md#proposed-first-release-boundary), due before
+  package 3 fixes the supported role set in the entrypoint.
+- **Decide the single-container profile's status**, due at the same point and for
+  the same reason.
+
+## What each package involves
+
+The detailed checklists later in this document are the authority on scope. This
+section exists so that the shape and size of the remaining work is legible
+without reading all of them.
+
+| # | In plain terms | What "done" looks like | Rough size | Needs from a human |
+| --- | --- | --- | --- | --- |
+| 1 | **Write down the contract** | The scope, support, versioning, evidence, and badge rules are recorded and do not contradict each other | Complete except two decisions | Approve the boundary; decide the update cadence |
+| 2 | **Get the binary in safely** | Scripts that fetch `weed`, verify it against a reviewed digest lock, refuse tampered or wrong-version input, and assemble the image with the network off | ~2–3 increments | Nothing; the variant decision is made |
+| 3 | **Build the actual image** | A `Containerfile` and entrypoint that run each role non-root on a read-only root filesystem, refuse unsupported roles, refuse an unauthenticated S3 gateway, and refuse an implicit temporary data directory — with a smoke suite proving each refusal | ~3–4 increments | Decide the single-container profile's status |
+| 4 | **Prove it works** | S3 exercised by a real client, TLS, mTLS and JWTs between components, data surviving restart and replacement, backup and restore, and the Iceberg path exercised end to end against `lakekeeper-ubi` | ~6–8 increments | Decide which filer backends and which durability claim |
+| 5 | **Automate it** | CI on both architectures, SBOMs, Trivy and Grype gates, provenance, signing, and a release workflow that cannot publish without matching evidence | ~3–4 increments | Nothing |
+| 6 | **The compliance package** | Threat model, OSCAL component definition, control matrix, SCAP profile, cryptographic boundary, and FIPS analysis — the artifacts a security reviewer consumes | ~4–6 increments, all writing | Two-person review of every control classification, per this project's own policy |
+| 7 | **Prove it on real hosts** | Qualification on an exact RHEL 9, Podman, SELinux, and cgroup matrix, Docker compatibility, and an OpenShift restricted-SCC preview | ~3–4 increments | Real hosts; CI is not a substitute |
+| 8 | **Ship it** | Inputs frozen, evidence regenerated against the candidate digest, findings dispositioned, publication rehearsed, then a signed immutable release verified from a clean environment | ~1–2 increments | Release approval; the cadence decision binds here |
+
+Three things are worth knowing about that shape:
+
+- **Package 3 is where this becomes useful.** At the end of it there is a working
+  hardened image you can run, even though nothing is released or qualified.
+- **Packages 4 and 6 are most of the remaining effort**, and they are different
+  kinds of work: 4 is testing, 6 is analysis and writing. Neither can be
+  shortened by doing the other.
+- **Package 7 cannot be completed from CI.** It exists precisely to produce
+  evidence from hosts that are not this project's build environment.
+
+### Chosen order
+
+Packages **2 → 3 → 4 → 5** proceed first, producing a working, tested, and
+automatically built image. Packages 6, 7, and 8 are then reassessed against what
+the image has become and who is asking for it. This ordering is deliberate: the
+compliance package in 6 describes a boundary, and describing a boundary that is
+still moving wastes the work.
 
 ## Documentation index
 
@@ -54,6 +87,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `CONTRIBUTING.md` — change, validation, and commit expectations | Present | 1 |
 | `CHANGELOG.md` — notable completed changes | Present | 1 |
 | `docs/VERSION.md` — container and repository versioning | Present | 1 |
+| `docs/BUILD-VARIANTS.md` — which upstream build is admitted, and why | Present | 1, 2 |
 | `docs/SUPPORT.md` — support classifications and lifecycle | Present | 1 |
 | `docs/QUALIFICATION.md` — evidence ledger schema | Present | 1 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
@@ -155,6 +189,10 @@ before the packages it depends on.
 7. Deployment and platform qualification.
 8. Signed first release.
 
+Packages 1 through 5 are committed. Packages 6, 7, and 8 are reassessed once the
+image exists, for the reason given under
+[chosen order](#chosen-order).
+
 ## Package 1: repository contract, scope, and evidence ownership
 
 - [ ] Approve the proposed first-release boundary in
@@ -215,12 +253,16 @@ what evidence each claim will rest on, with no contradiction between documents.
       is not collision resistant, that a sidecar from the same origin is not an
       independent check, and that this project's lock proves reviewed bytes
       rather than publisher identity.
-- [ ] Decide which release asset variant is admitted. Upstream publishes
-      `linux_amd64`, `linux_amd64_full`, `linux_amd64_large_disk`,
-      `linux_arm64`, `linux_arm64_large_disk`, and role-specific
-      `weed-volume` and `weed-worker` builds. Record what each variant changes,
-      why the chosen one is chosen, and what the `large_disk` decision costs an
-      operator who later needs it.
+- [x] Decide which release asset variant is admitted, record what each variant
+      changes, and record what switching would cost. Settled in
+      [build variants](BUILD-VARIANTS.md): `large_disk` is admitted, `full` is
+      not, and the choice is a compile-time build tag rather than a runtime
+      option.
+- [ ] Qualify the variant migration path that [build
+      variants](BUILD-VARIANTS.md#what-switching-would-cost) currently leaves
+      open: test whether a wider-offset build can read a narrower-offset volume,
+      test the reverse, test a partially migrated data directory, and publish the
+      result. Until this exists, no variant change may be offered as supported.
 - [ ] Investigate whether upstream publishes GitHub artifact attestations or a
       reproducible build path for any release asset, and record the finding
       either way. If one exists, verifying it becomes a required admission step.
@@ -488,39 +530,52 @@ host evidence or explicitly classified as unqualified, with nothing in between.
 provenance independently, read exactly what is supported, and find the evidence
 behind every claim.
 
+## Decisions taken
+
+Recorded so that a later reviewer does not have to reconstruct them, and so that
+reopening one is a deliberate act rather than a drift.
+
+| Date | Decision | Reasoning |
+| --- | --- | --- |
+| 2026-09-12 | **Order: packages 2 → 3 → 4 → 5 first**, then reassess 6, 7, and 8 | A working, tested image is worth more now than a compliance package describing a boundary that is still moving. See [chosen order](#chosen-order). |
+| 2026-09-12 | **Admit the `large_disk` build variant** | The workload is large Iceberg objects, the default 32 GB volume ceiling is low enough to hit accidentally, and this is the harder direction to reverse. Full reasoning and the switching cost are in [build variants](BUILD-VARIANTS.md). |
+| 2026-09-12 | **Do not admit the `full` variant** | It adds five unqualified filer backends and two tiering integrations purely for capability outside the boundary. PostgreSQL, the backend this organization would actually use, is already in the plain build. |
+| 2026-09-12 | **First-release consumer: the Datopsis analytical stack's S3 backend**, built so nothing precludes general use | The difference between the two is what gets *qualified*, not what the image can *do*; see [the support contract](SUPPORT.md#who-this-image-is-for). |
+
 ## Decisions that need a human
 
-These cannot be settled by implementation work and should be recorded with their
-reasoning when they are made.
+These cannot be settled by implementation work and should be recorded above with
+their reasoning when they are made.
 
-1. **What update cadence and security-response target will this project
-   commit to?** This is the first decision to make, because
-   [`docs/SUPPORT.md`](SUPPORT.md) cannot define a support period without it.
-   Upstream releases roughly every seven to ten days in one linear line, fixes
-   only the latest release, and maintains no older line, so there is no backport
-   target and security maintenance necessarily means rolling forward. The
-   qualification each increment owes cannot be completed weekly and indefinitely.
-   The honest options are a defined qualification lag with a stated exposure
-   window, a selective adoption policy that skips increments carrying no relevant
-   fix, or a narrower support promise. Choosing none of them means the project
-   drifts into one by accident.
-2. **Is the single-container `server` profile supported, or development only?**
+1. **Is the single-container `server` profile supported, or development only?**
    It is genuinely useful for a single-node deployment and for the Iceberg test
    path, but it collapses every trust boundary the separated profile creates.
-3. **Which release asset variant is admitted**, and whether the `large_disk`
-   build is the safer default given that switching later is not a trivial
-   migration for an operator who has already stored data.
-4. **Which filer metadata store backends are supported.** Each added backend is
-   a dependency, a credential, and a failure mode to qualify.
-5. **How far to go on provenance.** Recording reviewed digests is the floor.
+   Needed before package 3 fixes the entrypoint's role allowlist.
+2. **Which filer metadata store backends are supported.** Each added backend is
+   a dependency, a credential, and a failure mode to qualify. The plain build
+   already compiles in PostgreSQL, MySQL, Redis, MongoDB, etcd, Cassandra, HBase,
+   ArangoDB, FoundationDB, and embedded LevelDB, so this is a question of which to
+   *qualify*, not which are available. Needed during package 4.
+3. **What update cadence and security-response target will this project commit
+   to?** [`docs/SUPPORT.md`](SUPPORT.md) cannot define a support period without
+   it. Upstream releases roughly every seven to ten days in one linear line,
+   fixes only the latest release, and maintains no older line, so there is no
+   backport target and security maintenance necessarily means rolling forward.
+   The qualification each increment owes cannot be completed weekly and
+   indefinitely. The honest options are a defined qualification lag with a stated
+   exposure window, a selective adoption policy that skips increments carrying no
+   relevant fix, or a narrower support promise. Choosing none of them means the
+   project drifts into one by accident. Deferred to package 8, where the real
+   qualification cost will be visible; it binds nothing before then.
+4. **How far to go on provenance.** Recording reviewed digests is the floor.
    Building from source in a controlled pipeline would be materially stronger
    and materially more work, and it changes what this project is.
-6. **Whether anonymous read access is ever a supported configuration**, or
+5. **Whether anonymous read access is ever a supported configuration**, or
    always a deployment-owned deviation.
-7. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
+6. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
    a later qualification target, given that `lakekeeper-ubi` already owns that
    role in this organization.
-8. **What durability the first release is willing to claim**, and therefore what
+7. **What durability the first release is willing to claim**, and therefore what
    replication topology has to be qualified before it can be published.
 
 ## Standing obligations at every upstream version bump

@@ -58,6 +58,26 @@ only to published container images; repository-only changes remain under
   hardened/STIG/CIS, FIPS, and durability or uptime badges.
 - Made the support contract the single authority for the first-release boundary,
   so that the scope statement cannot drift between documents.
+- Documented upstream's build variants and recorded which one this project
+  admits. The variant is a compile-time Go build tag, not a runtime option:
+  `5BytesOffset` raises the per-volume ceiling from 32 GB to 8 TB by widening the
+  on-disk index offset, so one image carries exactly one variant and switching is
+  a data migration rather than a redeploy. `large_disk` is admitted; `full` is
+  not, because the filer backends it adds are outside the boundary and the
+  PostgreSQL backend this organization would use is already in the plain build.
+- Recorded that the variant migration path is not yet qualified, and that no
+  variant change may be offered as supported until it is.
+- Added a plain-language summary of what each work package involves, what "done"
+  looks like, its rough size, and what it needs from a human, so the shape of the
+  remaining work is legible without reading every checklist.
+- Recorded the chosen package order — a working, tested, automatically built image
+  before the compliance package — and the reasoning for it.
+- Scoped the first release to the Datopsis analytical stack's S3 backend, and
+  documented the five places that scope differs from a general-purpose S3 store,
+  which are reversible, and the rule that the difference must stay in what the
+  project qualifies rather than in what the image can do.
+- Added a decisions-taken record, so that reopening a settled decision is a
+  deliberate act rather than a drift.
 - Added the Apache License 2.0 for Datopsis-authored work, third-party notices
   separating packaging terms from SeaweedFS and UBI terms, contribution
   guidance, and a private vulnerability-reporting policy.

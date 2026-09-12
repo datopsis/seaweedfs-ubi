@@ -45,14 +45,22 @@ unhardened upstream fixture that project currently uses for storage testing.
 
 ## Intended uses
 
-The first release is being designed for:
+The first release is scoped to serving as the Datopsis analytical stack's S3
+backend, and is being designed for:
 
 - serving S3-compatible object storage to query engines and table formats;
 - storing Apache Iceberg table data and metadata written by a separate catalog;
 - operating the master, volume, and filer roles that the object path requires;
-- running a single-node profile for development and small deployments, and a
-  separated-role profile for real ones; and
+- running the roles as separate containers, with the status of a single-container
+  profile still an open decision; and
 - operating inside controlled networks with inspectable evidence.
+
+That scope narrows what this project **qualifies and claims**, not what the image
+can do: it ships stock upstream SeaweedFS with a hardened runtime, no patch and no
+application-specific code. [Who this image is
+for](docs/SUPPORT.md#who-this-image-is-for) sets out the five places where this
+scope differs from a general-purpose S3 store, which of them are reversible, and
+the rule that keeps the difference to qualification rather than capability.
 
 FUSE mounting (`weed mount`), WebDAV, the message broker and queue roles, the
 admin and worker roles, remote storage tiering, and the embedded Iceberg REST
@@ -150,6 +158,9 @@ build from source, or both — is a tracked item in the work plan.
 - [Release qualification](docs/QUALIFICATION.md) defines the evidence record
   every release candidate must complete, and the scope rules that keep a result
   from being read more broadly than it was measured.
+- [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
+  Linux builds this project admits and why, and explains that the choice is a
+  compile-time build tag rather than a runtime option.
 - [Badge policy](docs/BADGING.md) records which public claims are permitted and
   which are prohibited.
 - [Agent and contributor guidance](CLAUDE.md) defines repository

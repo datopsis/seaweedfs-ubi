@@ -104,12 +104,13 @@ including the leading `v`. OCI metadata records:
 - the artifact-lock digest used to prepare the build inputs.
 
 The asset variant must appear in metadata because the release tag does not encode
-it. Upstream publishes several Linux builds of the same version — the default
-build, a `large_disk` build, a `full` build, and role-specific `weed-volume` and
-`weed-worker` builds — and they are not interchangeable to an operator who has
-already stored data. Two images carrying the same release tag but different
-variants would be indistinguishable from the tag alone, which is exactly the
-ambiguity this section exists to prevent.
+it. Upstream publishes several Linux builds of the same version and they are not
+interchangeable to an operator who has already stored data: the variant is a
+compile-time build tag, and one of the tags changes the on-disk index format. Two
+images carrying the same release tag but different variants would be
+indistinguishable from the tag alone, which is exactly the ambiguity this section
+exists to prevent. [Build variants](BUILD-VARIANTS.md) records which variant this
+project admits, what each one changes, and what switching costs.
 
 The image digest, not any label or tag, is the definitive artifact identity.
 
