@@ -24,8 +24,10 @@ Preserve these non-negotiable properties:
   confined to explicitly declared writable volumes;
 - the runtime needs no Linux capabilities and enables `no-new-privileges` in
   documented deployments;
-- the upstream release binary is admitted only after its archive digest and
-  extracted binary digest match the reviewed lock in `artifacts/`;
+- the upstream `weed` binary is admitted only after every digest, size, version,
+  and linkage measurement recorded in the reviewed lock in `artifacts/` matches,
+  and — on the acquisition path that supports it — only after its publisher
+  signature verifies against the expected identity and issuer;
 - the S3 gateway refuses to start without a configured identity source unless
   an operator explicitly opts out, and the opt-out stays available and
   documented;
@@ -98,12 +100,20 @@ one at every version bump.
   documented deployment responsibility with tested examples, never an assumed
   property.
 - **SeaweedFS is a distributed system, and the production profile keeps it one.**
-  The upstream `server` subcommand runs several roles in one process. This image
-  supports that as an explicitly opt-in **standalone** profile for local
-  development and test fixtures, and never as a production posture. `weed server`
-  starts `master` and `volume` by default but leaves `filer` and `s3` off, and
-  `-s3` implies `-filer`, so the standalone profile is `server` with an explicit
-  data directory and `-s3`.
+  Upstream has two single-process commands. `server` runs a selectable set of
+  roles, and `mini` is purpose-built for small and development use; upstream's own
+  image defaults to `mini`. This image supports **`mini`** as an explicitly opt-in
+  **standalone** profile for local development and test fixtures, and never as a
+  production posture. `server` stays refused, so there is exactly one supported
+  standalone command rather than two overlapping ones.
+
+  `mini` enables more than the object store by default: `-s3`, `-webdav`, and
+  `-admin.ui` are all `true`, `-s3.autoCreateBucket` and
+  `-s3.allowDeleteBucketNotEmpty` are `true`, and `-dir` defaults to `.` rather
+  than a volume. The standalone profile therefore sets `-webdav=false` and
+  `-admin.ui=false`, because WebDAV and the Admin UI are outside the boundary and
+  an unused listener is attack surface, and it requires an explicit `-dir` for the
+  same reason the separated roles do.
 
   Four things cannot be exercised or claimed in the standalone profile at all,
   because they are properties of a topology it does not have: inter-component

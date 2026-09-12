@@ -91,7 +91,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/SUPPORT.md` — support classifications and lifecycle | Present | 1 |
 | `docs/QUALIFICATION.md` — evidence ledger schema | Present | 1 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
-| `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Planned | 2 |
+| `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Planned | 2 |
 | `docs/CONFIGURATION.md` — variables this image adds and its guards | Planned | 3 |
 | `docs/ARCHITECTURE.md` — roles, listeners, and data flow | Planned | 3 |
@@ -263,9 +263,19 @@ what evidence each claim will rest on, with no contradiction between documents.
       open: test whether a wider-offset build can read a narrower-offset volume,
       test the reverse, test a partially migrated data directory, and publish the
       result. Until this exists, no variant change may be offered as supported.
-- [ ] Investigate whether upstream publishes GitHub artifact attestations or a
-      reproducible build path for any release asset, and record the finding
-      either way. If one exists, verifying it becomes a required admission step.
+- [x] Investigate whether upstream publishes GitHub artifact attestations or a
+      reproducible build path for any release asset, and record the finding either
+      way. Recorded in
+      [external artifact acquisition](ARTIFACT-ACQUISITION.md): tarballs carry an
+      MD5 sidecar and nothing else, while container images are signed with keyless
+      cosign bound to an organization-repository workflow identity, and are built
+      from the exact released commit.
+- [ ] **Confirm the acquisition path.** Three are documented with their costs; the
+      recommendation is the cosign-verified image. The scripts are not written
+      until this is confirmed, because the choice determines what they do.
+- [ ] Prove `cosign verify` actually succeeds against the published `large_disk`
+      digest for both architectures, rather than relying on the presence of a
+      signing step in an upstream workflow.
 - [ ] Create a schema-validated lock under `artifacts/` for both architectures
       containing the release tag, archive URL, archive size and SHA-256, the
       upstream-published MD5 as a recorded value, the extracted binary size and
@@ -308,8 +318,10 @@ weakness is documented rather than obscured.
       that changes user or group.
 - [ ] Enforce a supported-role allowlist. `master`, `volume`, `filer`, `s3`,
       and the informational `version` and `shell` paths are permitted
-      unconditionally; `server` is permitted only when `SEAWEEDFS_UBI_STANDALONE`
-      is explicitly set; every other subcommand is refused;
+      unconditionally; `mini` is permitted only when `SEAWEEDFS_UBI_STANDALONE` is
+      explicitly set; every other subcommand is refused, including `server`, so
+      that there is one supported standalone command rather than two overlapping
+      ones;
       any other subcommand is refused with a diagnostic naming the supported
       set. Informational paths must keep working so a refused container stays
       diagnosable.
@@ -328,6 +340,15 @@ weakness is documented rather than obscured.
 - [ ] Disable the `weed s3` Iceberg REST Catalog and Lance Namespace listeners
       by default by passing `0`, and gate re-enabling them behind explicit
       `SEAWEEDFS_UBI_` opt-ins that are documented as unqualified.
+- [ ] Harden the standalone profile's own defaults, which are more generous than
+      the separated roles': set `-webdav=false` and `-admin.ui=false`, require an
+      explicit `-dir` rather than accepting `mini`'s `.` default, and decide and
+      record positions on `-s3.autoCreateBucket` and
+      `-s3.allowDeleteBucketNotEmpty`, both of which upstream defaults to `true`.
+- [ ] Publish a listener inventory for every supported role and for the standalone
+      profile as actually built, measured from a running container rather than read
+      from upstream flags, and assert it in a test so a newly default-enabled
+      upstream listener fails CI rather than shipping.
 - [ ] Fix the default listener set and document it: master `9333`, volume
       `8080`, filer `8888`, S3 `8333`, and the gRPC companion ports upstream
       derives by adding `10000` to the HTTP port. Confirm no privileged port is
@@ -342,7 +363,7 @@ weakness is documented rather than obscured.
       credentials and no anonymous access: one running each role as its own
       container, and one single-container standalone stack for local use.
 - [ ] Implement the standalone profile gate, `SEAWEEDFS_UBI_STANDALONE`, unset by
-      default: `server` is refused unless it is explicitly set. When it is set,
+      default: `mini` is refused unless it is explicitly set. When it is set,
       print a startup notice naming what the profile cannot provide — no
       inter-component authentication, no replication, no component isolation — so
       the limitation is visible in the logs of whatever is running it and not only

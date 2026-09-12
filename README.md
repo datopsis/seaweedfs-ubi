@@ -129,19 +129,28 @@ will record them in full as their guards and tests land.
 
 ## Upstream artifact trust
 
-SeaweedFS publishes release tarballs on GitHub with **a `.md5` sidecar per asset
-and nothing else**: no SHA-256 manifest, no detached signature, and no
-provenance attestation. MD5 is not collision resistant, and a sidecar published
-from the same place as the artifact is not an independent check, so that file is
-an upstream-published value worth recording and not an integrity control.
+Upstream produces each release through two independent pipelines whose provenance
+is not equivalent, which turns out to matter a great deal.
 
-This project will therefore record the archive digest, the extracted binary
-digest, sizes, and build identifiers in a reviewed lock under `artifacts/`, and
-a reviewed change to that lock will be the point at which new bytes are
-admitted. That proves every build used exactly the reviewed bytes. It does
-**not** independently prove publisher identity, and it is weaker than
-vendor-signed RPM provenance. Improving it — upstream attestations, a reproduced
-build from source, or both — is a tracked item in the work plan.
+**Release tarballs** carry **a `.md5` sidecar per asset and nothing else**: no
+SHA-256 manifest, no detached signature, no attestation. MD5 is not collision
+resistant, and a sidecar served from the same origin as the artifact it describes
+is not an independent check, so that file is an upstream-published value worth
+recording and worth nothing as an integrity control.
+
+**Container images** are signed with **keyless cosign**, verified in the same
+workflow against an organization-repository workflow identity, and built from the
+exact released commit. They are published to a *personal* namespace,
+`chrislusf`, rather than an organization one — which is why verification is
+mandatory rather than optional: pulling that image by tag unverified is worse than
+taking the tarball, while pulling it by digest with the signature enforced is
+meaningfully better, because the tarball has no publisher signal at all.
+
+Either way, a reviewed lock under `artifacts/` records every digest, size,
+version, and linkage measurement, and a reviewed change to that lock is the only
+way new bytes enter an image. The acquisition path, the three candidates, their
+costs, and the exact trust limitations of each are set out in
+[external artifact acquisition](docs/ARTIFACT-ACQUISITION.md).
 
 ## Project documentation
 
@@ -159,6 +168,9 @@ build from source, or both — is a tracked item in the work plan.
 - [Release qualification](docs/QUALIFICATION.md) defines the evidence record
   every release candidate must complete, and the scope rules that keep a result
   from being read more broadly than it was measured.
+- [External artifact acquisition](docs/ARTIFACT-ACQUISITION.md) records what
+  upstream publishes, what is verified before a binary is admitted, and what that
+  verification does not prove.
 - [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
   Linux builds this project admits and why, and explains that the choice is a
   compile-time build tag rather than a runtime option.
