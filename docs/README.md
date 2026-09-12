@@ -13,17 +13,31 @@ checked off and its evidence exists.
 
 ## Where to resume
 
-**Next task: work package 1**, the repository contract and scope boundary.
+**Next task: work package 2**, upstream artifact acquisition and the digest lock.
 
-It ranks first because every later package depends on a decision it makes. The
-supported role set determines what the entrypoint must enforce, the support
-boundary determines what the tests have to prove, and the evidence schema
-determines what CI has to retain. Starting with the image would mean building
-against an unstated contract and re-deriving it later.
+Work package 1 is complete except for two items that only a human can close, and
+neither of them blocks package 2:
 
-The one prerequisite that can proceed in parallel is the upstream trust
-analysis in package 2, because its outcome may change what package 1 can claim
-about provenance.
+- **Approve the proposed first-release boundary** in
+  [`docs/SUPPORT.md`](SUPPORT.md#proposed-first-release-boundary). It is marked as
+  a proposal and nothing depends on it being a commitment until package 3 fixes
+  the supported role set in the entrypoint.
+- **Decide the update cadence and security-response targets.** This one is worth
+  reading the reasoning for before deciding, in
+  [upstream maintenance constrains what this project can
+  promise](SUPPORT.md#upstream-maintenance-constrains-what-this-project-can-promise).
+  It is the sharpest constraint this project has and it has no comfortable
+  answer.
+
+Package 2 ranks next because package 3 cannot build an image without verified
+bytes to build it from, and because the variant decision package 2 makes is one
+the release contract already depends on.
+
+Its first task is the decision-shaped one: establish what upstream provenance is
+actually available — whether any release asset carries a GitHub artifact
+attestation, and whether a reproducible build from source is feasible — because
+the answer determines whether the lock is the floor or the ceiling of this
+project's provenance story.
 
 ## Documentation index
 
@@ -39,10 +53,10 @@ packages can reference them and so a reviewer can see what is missing.
 | `THIRD_PARTY_NOTICES.md` — license and trademark boundary | Present | 1 |
 | `CONTRIBUTING.md` — change, validation, and commit expectations | Present | 1 |
 | `CHANGELOG.md` — notable completed changes | Present | 1 |
-| `docs/VERSION.md` — container and repository versioning | Planned | 1 |
-| `docs/SUPPORT.md` — support classifications and lifecycle | Planned | 1 |
-| `docs/QUALIFICATION.md` — evidence ledger schema | Planned | 1 |
-| `docs/BADGING.md` — permitted public claims | Planned | 1 |
+| `docs/VERSION.md` — container and repository versioning | Present | 1 |
+| `docs/SUPPORT.md` — support classifications and lifecycle | Present | 1 |
+| `docs/QUALIFICATION.md` — evidence ledger schema | Present | 1 |
+| `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Planned | 2 |
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Planned | 2 |
 | `docs/CONFIGURATION.md` — variables this image adds and its guards | Planned | 3 |
@@ -78,27 +92,17 @@ Evidence is only meaningful when it is bound to exactly what was assessed.
   test is not replication evidence; a passing scan on AMD64 is not ARM64
   evidence; a tailored SCAP pass is not a certification.
 
-## Working first-release boundary
+## First-release boundary
 
-This boundary is a proposal until work package 1 approves it.
+The boundary itself lives in
+[`docs/SUPPORT.md`](SUPPORT.md#proposed-first-release-boundary), which is its
+single authority, alongside the classification terms and the current development
+matrix. It is deliberately recorded in one place: a scope statement duplicated
+across two documents is a scope statement that will eventually disagree with
+itself.
 
-**In scope**
-
-- The `master`, `volume`, `filer`, and `s3` roles, each runnable as a separate
-  container, plus a single-container `server` profile for development and
-  single-node use.
-- S3-compatible object storage with configured identities, exercised by a real
-  S3 client and by the table-format path the organization actually uses.
-- The filer metadata store backends required by the object path, with an
-  explicit decision in package 4 on which are supported.
-- A read-only root filesystem with explicitly declared writable volumes for
-  master metadata, volume data, and filer store data.
-- Non-root operation under Podman, Docker-compatible runtimes, and an arbitrary
-  assigned UID in group `0`.
-- Client-facing TLS on the S3 listener, and gRPC mTLS plus volume JWTs between
-  components, with tested examples.
-- Native AMD64 and ARM64 evidence, SBOMs, vulnerability scans, tailored SCAP
-  results, attestations, and a signed immutable release.
+It remains a **proposal awaiting approval**. What follows here is only what the
+work plan adds to it — why each exclusion is an exclusion.
 
 **Out of scope, and stated as such in public documentation**
 
@@ -153,25 +157,35 @@ before the packages it depends on.
 
 ## Package 1: repository contract, scope, and evidence ownership
 
-- [ ] Approve the working first-release boundary above, including the exact
-      supported role set, the single-container versus separated-role profiles,
-      and every deferral.
-- [ ] Write `docs/VERSION.md`, adapting the sibling projects' policy to a
-      two-component upstream version that is not semantic. Define the container
-      tag form `v<seaweedfs-version>-ubi<ubi-major>-r<YYYYMMDD>.<sequence>`,
-      prohibit mutable convenience tags, separate container releases from
-      repository-only revisions, and state the upgrade policy for an upstream
-      line that makes no compatibility promise.
-- [ ] Write `docs/SUPPORT.md` with support classifications, the initial support
-      period, the SeaweedFS and UBI update cadence, vulnerability-response
-      targets, withdrawal handling, and accountable ownership. Publish one
-      support matrix and make `README.md` agree with it.
-- [ ] Write `docs/QUALIFICATION.md` defining the evidence ledger schema: commit,
-      image digest, lock digest, architecture, host platform, runtime version,
-      role profile, scanner and content versions, result location, reviewer, and
-      date.
-- [ ] Write `docs/BADGING.md` inventorying every proposed badge by exact claim
-      and backing evidence, and permit only those that are backed today.
+- [ ] Approve the proposed first-release boundary in
+      [`docs/SUPPORT.md`](SUPPORT.md#proposed-first-release-boundary), including
+      the exact supported role set, the single-container versus separated-role
+      profiles, and every deferral, and remove the proposal notice when approved.
+- [x] Write [`docs/VERSION.md`](VERSION.md), adapting the sibling projects'
+      policy to a two-component upstream version that is not semantic. Defines
+      the container tag form
+      `v<seaweedfs-version>-ubi<ubi-major>-r<YYYYMMDD>.<sequence>`, prohibits
+      mutable convenience tags, separates container releases from
+      repository-only revisions, requires the release asset variant in OCI
+      metadata because the tag cannot encode it, and states the upgrade policy
+      for an upstream line that makes no compatibility promise.
+- [x] Write [`docs/SUPPORT.md`](SUPPORT.md) with support classifications, the
+      development matrix, the proposed first-release boundary, accountable
+      ownership, and the reporting route.
+- [ ] **Decide the update cadence and security-response targets**, which
+      `docs/SUPPORT.md` deliberately leaves undefined. Upstream releases roughly
+      weekly, fixes only the latest release, and offers no maintained older line
+      to pin to, so qualification depth and update latency are in direct
+      tension. See the decision recorded below; `docs/SUPPORT.md` cannot define a
+      support period until it is settled.
+- [x] Write [`docs/QUALIFICATION.md`](QUALIFICATION.md) defining the evidence
+      ledger schema, including the scope rules that stop a single-container or
+      single-client result from being over-read, and the two structural residual
+      risks every candidate record must restate.
+- [x] Write [`docs/BADGING.md`](BADGING.md) inventorying every proposed badge by
+      exact claim and backing evidence, naming the package that enables each, and
+      prohibiting the four claims a reader would plausibly expect this project to
+      badge and it cannot support.
 - [x] Write `CONTRIBUTING.md` covering change scope, validation, pull-request
       expectations, and the commit-trailer prohibition.
 - [x] Add `.github/CODEOWNERS`, a security-aware pull request template, issue
@@ -479,23 +493,34 @@ behind every claim.
 These cannot be settled by implementation work and should be recorded with their
 reasoning when they are made.
 
-1. **Is the single-container `server` profile supported, or development only?**
+1. **What update cadence and security-response target will this project
+   commit to?** This is the first decision to make, because
+   [`docs/SUPPORT.md`](SUPPORT.md) cannot define a support period without it.
+   Upstream releases roughly every seven to ten days in one linear line, fixes
+   only the latest release, and maintains no older line, so there is no backport
+   target and security maintenance necessarily means rolling forward. The
+   qualification each increment owes cannot be completed weekly and indefinitely.
+   The honest options are a defined qualification lag with a stated exposure
+   window, a selective adoption policy that skips increments carrying no relevant
+   fix, or a narrower support promise. Choosing none of them means the project
+   drifts into one by accident.
+2. **Is the single-container `server` profile supported, or development only?**
    It is genuinely useful for a single-node deployment and for the Iceberg test
    path, but it collapses every trust boundary the separated profile creates.
-2. **Which release asset variant is admitted**, and whether the `large_disk`
+3. **Which release asset variant is admitted**, and whether the `large_disk`
    build is the safer default given that switching later is not a trivial
    migration for an operator who has already stored data.
-3. **Which filer metadata store backends are supported.** Each added backend is
+4. **Which filer metadata store backends are supported.** Each added backend is
    a dependency, a credential, and a failure mode to qualify.
-4. **How far to go on provenance.** Recording reviewed digests is the floor.
+5. **How far to go on provenance.** Recording reviewed digests is the floor.
    Building from source in a controlled pipeline would be materially stronger
    and materially more work, and it changes what this project is.
-5. **Whether anonymous read access is ever a supported configuration**, or
+6. **Whether anonymous read access is ever a supported configuration**, or
    always a deployment-owned deviation.
-6. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
+7. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
    a later qualification target, given that `lakekeeper-ubi` already owns that
    role in this organization.
-7. **What durability the first release is willing to claim**, and therefore what
+8. **What durability the first release is willing to claim**, and therefore what
    replication topology has to be qualified before it can be published.
 
 ## Standing obligations at every upstream version bump

@@ -33,6 +33,31 @@ only to published container images; repository-only changes remain under
 - Selected SeaweedFS 4.46 as the initial development baseline on UBI 9 and
   adapted the sibling projects' immutable container versioning approach to an
   upstream line that is not semantically versioned.
+- Defined container and repository versioning: the immutable release tag form,
+  the tag validation pattern, prohibited mutable tags, the separation of
+  container releases from repository-only revisions, and the requirement that
+  OCI metadata record the upstream release asset variant, because the release tag
+  cannot encode it and two images sharing a tag with different variants would be
+  indistinguishable.
+- Defined the support contract: classification terms, the current development
+  matrix, the proposed first-release boundary, the ownership boundary between the
+  image, the host or orchestrator, and the storage operator, and the reporting
+  route.
+- Recorded that upstream releases roughly every seven to ten days in a single
+  linear line and fixes only its latest release, so there is no maintained older
+  version to pin to and security maintenance can only mean rolling forward. The
+  support contract therefore defines no update cadence or security-response
+  target yet, and states the tension between qualification depth and update
+  latency as a decision that needs a human rather than resolving it silently.
+- Defined the release qualification evidence record, including the scope rules
+  that prevent a single-container, single-role, or single-client result from being
+  read as evidence for a separated, replicated, or conformant one, and the two
+  structural residual risks every candidate record must restate.
+- Defined the badge policy: the approved inventory with the work package that
+  enables each badge, and explicit prohibitions on S3-conformance,
+  hardened/STIG/CIS, FIPS, and durability or uptime badges.
+- Made the support contract the single authority for the first-release boundary,
+  so that the scope statement cannot drift between documents.
 - Added the Apache License 2.0 for Datopsis-authored work, third-party notices
   separating packaging terms from SeaweedFS and UBI terms, contribution
   guidance, and a private vulnerability-reporting policy.
