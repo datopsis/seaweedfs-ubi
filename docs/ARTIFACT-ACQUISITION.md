@@ -114,13 +114,12 @@ a base layer and never a behavioral model.
 
 ## The acquisition path
 
-> [!IMPORTANT]
-> The choice below is **proposed, not settled**. It corresponds to the "how far to
-> go on provenance" decision in
-> [the work plan](README.md#decisions-that-need-a-human). The scripts are not
-> written until it is confirmed, because the choice determines what they do.
+**Path B is the decided path**, recorded in
+[decisions taken](README.md#decisions-taken) and implemented by
+`scripts/fetch-artifacts.sh`. Path A is retained below as a documented fallback,
+and Path C remains open as a later step rather than a foreclosed one.
 
-Three paths are genuinely available. All three admit only `weed`, and all three
+Three paths were genuinely available. All three admit only `weed`, and all three
 record digests in a reviewed lock; they differ in what the lock can *claim*.
 
 ### Path A — the release tarball
@@ -132,7 +131,7 @@ extract, verify the binary's SHA-256, measure linkage.
 - Ships the artifact upstream officially publishes as *the release*.
 - **Proves reviewed bytes only.** No publisher identity, ever.
 
-### Path B — the cosign-verified container image *(recommended)*
+### Path B — the cosign-verified container image *(chosen, implemented)*
 
 Resolve the `large_disk` tag to a digest, `cosign verify` that digest against the
 exact issuer and identity above, extract `/usr/bin/weed` from the verified image,
@@ -159,29 +158,102 @@ single CGO-free `go build` above in a pinned toolchain.
   it; and it materially changes what this project *is*, from a packager of
   upstream releases to a builder of them.
 
-**The recommendation is Path B**, with Path A retained and documented as a
+Path B was chosen: it is the largest available provenance improvement that does
+not change the nature of the project. Path A is retained and documented as a
 fallback for an environment where pulling and verifying an image is impractical.
-Path B is the largest available provenance improvement that does not change the
-nature of the project, and Path C remains open as a later step rather than a
-foreclosed one.
+
+## Verified evidence for the current lock
+
+This is not a description of what the gate should do. Every line below was
+produced by running it against SeaweedFS `4.46`, `large_disk`, and is recorded in
+[`artifacts/seaweedfs.lock.json`](../artifacts/seaweedfs.lock.json).
+
+- The index digest
+  `sha256:b3701e1aa12b00f8781ed898d2d25346ca43ac1777ca88f2cfbe2368468492d1`
+  verifies with cosign against the recorded issuer and identity, as do both
+  architecture manifests, because upstream signs recursively.
+- The signing certificate carries `githubWorkflowRepository: seaweedfs/seaweedfs`
+  — the organization, not the personal namespace the image lives in — with
+  `githubWorkflowRef: refs/tags/4.46` and
+  `githubWorkflowSha: d997fba1575583a89cf0cc50dc0150642286c86d`.
+- That commit is **independently confirmed** to be what the `4.46` tag resolves
+  to, checked against the GitHub API rather than taken from the certificate
+  alone.
+- Both extracted binaries are statically linked, confirmed by ELF inspection: no
+  `PT_INTERP` and no `PT_DYNAMIC` segment, so neither carries a glibc version
+  requirement.
+- The amd64 binary reports `version 8000GB 4.46 d997fba15 linux amd64`. The
+  `8000GB` is the `large_disk` marker: it is upstream's maximum volume size
+  printed at runtime, so the variant is **confirmed from the artifact** rather
+  than inferred from the tag name. A default build would print `30GB`.
+- The arm64 version string is not recorded, because this evidence was produced on
+  an amd64 host and the gate does not execute foreign-architecture binaries. The
+  arm64 binary was instead confirmed to embed both the release commit and the
+  `8000GB` marker. Capturing its version string on a native runner is owed before
+  a release.
+- The upstream version *number* is computed at runtime from a numeric constant
+  rather than stored as a string, so it cannot be found by searching the binary.
+  Only execution reveals it, which is why the commit and the variant marker carry
+  the offline check.
+
+## Running the gate
+
+Acquisition needs a network; assembly does not, which is the whole point of
+separating them.
+
+```console
+scripts/fetch-artifacts.sh            # every architecture in the lock
+scripts/fetch-artifacts.sh amd64      # or a subset
+```
+
+It verifies the index signature, then per architecture verifies the manifest
+signature, pulls **by digest**, copies the binary out of a created — never run —
+container so a foreign architecture needs no emulation, and checks every recorded
+measurement before admitting it to `.artifact-bundle/<arch>/weed`.
+
+No tag is ever used to fetch. The tag in the lock is recorded for humans; a tag
+can move and a digest cannot.
+
+To see the gate refuse:
+
+```console
+tests/acquisition.sh                  # offline: every recorded measurement
+tests/acquisition-signature.sh        # network: the publisher signature
+```
+
+The offline suite tampers with a byte while preserving the size, truncates,
+appends, offers a binary as the wrong architecture, asks for an architecture the
+lock does not record, substitutes a non-ELF file, points at a missing file, and
+supplies an unparseable lock. The signature suite substitutes a different
+workflow identity, a different git ref, a different OIDC issuer, and an unsigned
+digest.
+
+The different-workflow-identity case is the one worth understanding: it is
+precisely what an attacker holding push access to the personal namespace, but not
+the organization's workflow identity, would be unable to satisfy.
 
 ## What the lock records
 
-Regardless of path, the reviewed lock under `artifacts/` records per
-architecture:
+The reviewed lock at
+[`artifacts/seaweedfs.lock.json`](../artifacts/seaweedfs.lock.json) records:
 
 - the upstream release tag, exactly as upstream published it, and the release
   commit SHA;
-- the admitted asset variant, and the build tags it corresponds to;
-- the acquisition source: archive URL, or image reference **by digest**;
-- the archive or image digest, and its byte size;
-- the upstream-published MD5, recorded as an upstream value and never treated as
-  verification;
-- the extracted `weed` binary's SHA-256 and size;
-- the embedded commit string the binary reports;
-- the measured linkage: static or dynamic, the highest required glibc symbol
-  version if any, needed shared libraries, and anything loaded at runtime rather
-  than linked.
+- the admitted asset variant, the build tags it corresponds to, and the runtime
+  marker that confirms it;
+- the acquisition path, the image repository, and the index digest;
+- the cosign issuer and certificate identity that a signature must carry;
+- the path of the binary inside the image;
+- per architecture: the manifest digest, and the extracted binary's SHA-256,
+  size, ELF machine, linkage, needed libraries, minimum glibc version, embedded
+  commit, and version string where one has been captured;
+- the evidence that the lock was verified, including the certificate's workflow
+  repository, ref, and commit, the Rekor log index, and the notes recording what
+  the evidence does and does not establish.
+
+On the Path A fallback, the lock would instead record the archive URL and digest
+and the upstream-published MD5 — the latter as an upstream value, never as
+verification.
 
 A reviewed change to that lock is the only way new bytes enter an image. Nothing
 is resolved at build time.

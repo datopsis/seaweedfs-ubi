@@ -217,8 +217,35 @@ are not published.
 
 ## Development status
 
-There is no build, test, or run command yet. The current contents are the
-project contract and the work plan; the first image lands in work package 3.
+There is no image yet — that lands in work package 3. What works today is the
+artifact admission gate: it acquires the upstream binary, verifies the publisher
+signature, and refuses anything that does not match the reviewed lock.
+
+Acquisition needs a network and a container runtime. Assembly will not, which is
+why they are separate.
+
+```console
+scripts/fetch-artifacts.sh            # every architecture in the lock
+scripts/fetch-artifacts.sh amd64      # or a subset
+```
+
+The gate verifies the image index signature with cosign against a pinned OIDC
+issuer and certificate identity, then per architecture verifies the manifest
+signature, pulls **by digest**, copies `weed` out of a created — never run —
+container, and confirms its size, SHA-256, ELF machine, static linkage, embedded
+commit, and variant marker before admitting it to `.artifact-bundle/<arch>/weed`.
+No tag is ever used to fetch.
+
+To watch it refuse bad input:
+
+```console
+tests/acquisition.sh                  # offline: every recorded measurement
+tests/acquisition-signature.sh        # network: the publisher signature
+```
+
+Details, including what the verification does and does not prove, are in
+[external artifact acquisition](docs/ARTIFACT-ACQUISITION.md).
+
 Until the first signed release is published, this repository should be treated
 as development material rather than a supported production image.
 
