@@ -92,7 +92,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/QUALIFICATION.md` — evidence ledger schema | Present | 1 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
-| `docs/HERMETIC-BUILD.md` — network-free assembly contract | Planned | 2 |
+| `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
 | `docs/CONFIGURATION.md` — variables this image adds and its guards | Planned | 3 |
 | `docs/ARCHITECTURE.md` — roles, listeners, and data flow | Planned | 3 |
 | `docs/USE-CASES.md` — supported profiles | Planned | 4 |
@@ -282,9 +282,14 @@ what evidence each claim will rest on, with no contradiction between documents.
       and index digest, the cosign issuer and identity, and per architecture the
       manifest digest and the extracted binary's digest, size, ELF machine,
       linkage, embedded commit, and version string where captured.
-- [ ] Add JSON Schema validation of the lock, enforced by a pinned check in CI and
-      in the local hooks, so a malformed or partially edited lock fails review
-      rather than a build.
+- [x] Add validation of the lock, enforced by a local hook and available to CI, so
+      a malformed or partially edited lock fails review rather than a build.
+      Implemented as an explicit checker rather than JSON Schema: the dangerous
+      failure is a half-edited lock that still parses, and the cross-field
+      agreement checks that catch it — a bumped tag that misses the certificate
+      identity, a commit that no longer prefixes the recorded one, a static binary
+      that also lists needed libraries — cannot be expressed in JSON Schema. It
+      also avoids adding a dependency to a hash-locked environment.
 - [x] Measure and record the runtime linkage of the shipped binary. Both
       architectures are statically linked, with no `PT_INTERP` and no `PT_DYNAMIC`
       segment and therefore no glibc version requirement, measured by ELF
@@ -306,11 +311,24 @@ what evidence each claim will rest on, with no contradiction between documents.
       the lock, a non-ELF file, a missing file, and an unparseable lock, all offline.
       `tests/acquisition-signature.sh` covers a different workflow identity, a
       different git ref, a different OIDC issuer, and an unsigned digest.
-- [ ] Prove assembly succeeds with the build network disabled, and record in
-      `docs/HERMETIC-BUILD.md` what that property does and does not defend
-      against.
-- [ ] Implement a reviewed lock-update workflow that proposes changes on a
-      branch, and never resolves a version at build time.
+- [x] Record in [hermetic build](HERMETIC-BUILD.md) what the network-free assembly
+      property does and does not defend against, including that it does not make
+      upstream trustworthy, does not detect a compromised upstream signing
+      identity, does not validate the base image's contents, and is not
+      reproducibility.
+- [ ] Prove assembly actually succeeds with the build network disabled. This
+      cannot be done until package 3 creates something to assemble, and the Docker
+      path needs a different mechanism than Podman's, which the support matrix will
+      have to distinguish.
+- [x] Implement a reviewed lock-update path that proposes changes for review and
+      never resolves a version at build time. `scripts/update-lock.py` resolves the
+      tag, verifies the signature, cross-checks the certificate's commit against
+      the commit the tag resolves to, extracts and measures both architectures, and
+      writes a lock whose diff a human reads. Regenerating the committed 4.46 lock
+      reproduces it exactly, including the Rekor log index.
+- [ ] Run the lock-update path in CI on a schedule so a new upstream release
+      arrives as a reviewable pull request rather than as something someone has to
+      remember to check. Belongs with the rest of the automation in package 5.
 - [ ] Record source availability, redistribution terms, trademark boundaries,
       and the Apache 2.0 obligations in `THIRD_PARTY_NOTICES.md`.
 

@@ -153,6 +153,25 @@ only to published container images; repository-only changes remain under
   the binary reports its maximum volume size at runtime, `8000GB` rather than the
   default build's `30GB`, so the variant is measured rather than inferred from a tag
   name.
+- Added a lock checker that validates agreement between fields, not only shape,
+  because the dangerous failure is a half-edited lock that still parses: a tag
+  bumped without the certificate identity, a commit that no longer prefixes the
+  recorded one, a statically linked binary that also lists needed libraries. It
+  reports every problem at once rather than stopping at the first, and runs as a
+  local hook. Written without a schema library, since the cross-field checks that
+  catch the real failures cannot be expressed in JSON Schema and a hash-locked
+  environment should not gain a dependency for a single-file check.
+- Added a reviewed lock-update path. `scripts/update-lock.py` resolves the release
+  tag, verifies the signature, cross-checks the certificate's commit against the
+  commit the tag resolves to, extracts and measures both architectures, and writes
+  a lock whose diff a human reads. Resolution happens there and nowhere else, so a
+  moved tag cannot change what a build admits. Regenerating the committed 4.46 lock
+  reproduces it exactly, including the Rekor log index.
+- Added the hermetic build contract, stating what network-free assembly defends
+  against and — at greater length — what it does not: it does not make upstream
+  trustworthy, does not detect a compromised upstream signing identity, does not
+  protect the acquisition host, does not validate the base image's contents, and is
+  not reproducibility.
 - Added negative tests so the gate is observed refusing rather than assumed to.
   Offline: a tampered binary of the correct size, a truncated download, appended
   bytes, a binary offered as the wrong architecture, an architecture absent from the
