@@ -13,7 +13,13 @@ checked off and its evidence exists.
 
 ## Where to resume
 
-**Next task: work package 2**, upstream artifact acquisition and the digest lock.
+**Next task: finish work package 3**, then work package 4.
+
+The image exists and is exercised: `scripts/build.sh` produces it and
+`tests/smoke.sh` asserts 20 properties against it under a read-only root with no
+capabilities. What remains in package 3 is the multi-container fixture for the
+separated roles, the hardened Compose stacks, `docs/ARCHITECTURE.md`, the image
+size accounting, and the two `mini` bucket defaults still to decide.
 
 Package 1 is complete. Its decisions are recorded under
 [decisions taken](#decisions-taken), and the items still open are listed under
@@ -93,7 +99,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
-| `docs/CONFIGURATION.md` — variables this image adds and its guards | Planned | 3 |
+| `docs/CONFIGURATION.md` — variables this image adds and its guards | Present | 3 |
 | `docs/ARCHITECTURE.md` — roles, listeners, and data flow | Planned | 3 |
 | `docs/USE-CASES.md` — supported profiles | Planned | 4 |
 | `docs/STORAGE.md` — durability, replication, backup, restore | Planned | 4 |
@@ -338,42 +344,45 @@ weakness is documented rather than obscured.
 
 ## Package 3: rootless minimal image, role contract, and entrypoint guards
 
-- [ ] Add a digest-pinned UBI 9 build stage and a package-manager-free final
-      stage, installing only the verified `weed` binary and the runtime files it
-      needs.
-- [ ] Define the runtime identity: a fixed non-root UID in group `0`, with
-      group-writable state directories so an arbitrary assigned UID also works.
-      Record the exact UID and the reason for it in `docs/ARCHITECTURE.md`.
-- [ ] Declare the writable state directories explicitly — master metadata,
-      volume data and index, and filer store — and prove the image runs with a
-      read-only root filesystem and nothing else writable.
-- [ ] Implement the entrypoint as a role dispatcher that `exec`s the server
-      process so it runs as PID 1 and receives signals directly, with no phase
-      that changes user or group.
-- [ ] Enforce a supported-role allowlist. `master`, `volume`, `filer`, `s3`,
-      and the informational `version` and `shell` paths are permitted
-      unconditionally; `mini` is permitted only when `SEAWEEDFS_UBI_STANDALONE` is
-      explicitly set; every other subcommand is refused, including `server`, so
-      that there is one supported standalone command rather than two overlapping
-      ones;
+- [x] Add a digest-pinned, package-manager-free UBI 9 Micro image carrying only
+      the verified `weed` binary, the entrypoint, and a CA bundle. There is no
+      compilation stage: the upstream binary is statically linked, so assembly
+      needs no toolchain. UBI Minimal appears only as a source for trust material
+      copied as a file, since Micro ships no CA bundle and an empty trust store
+      fails confusingly.
+- [x] Define the runtime identity: UID `1000` in group `0`, with `/data` owned
+      `1000:0` mode `0770` so an arbitrary assigned UID also works. Asserted by the
+      smoke suite, which reads the running process's uid rather than trusting the
+      `USER` instruction.
+- [x] Declare exactly one writable path, `/data`, and prove the image runs with a
+      read-only root filesystem. Every smoke assertion runs with `--read-only`,
+      `--cap-drop=ALL` and `no-new-privileges`, so an image that needed more would
+      fail the suite rather than quietly get them.
+- [x] Implement the entrypoint as a role dispatcher that `exec`s the server, with
+      no phase that changes user or group. The suite reads `/proc/1/cmdline` to
+      confirm PID 1 is the server and not a shell.
+- [x] Enforce a supported-role allowlist: `master`, `volume`, `filer`, `s3` and
+      the informational `version` and `shell` paths unconditionally, `mini` only
+      when `SEAWEEDFS_UBI_STANDALONE` is set, everything else refused including
+      `server`, `mount` and `webdav`.
       any other subcommand is refused with a diagnostic naming the supported
       set. Informational paths must keep working so a refused container stays
       diagnosable.
-- [ ] Implement the fail-closed S3 authentication guard,
-      `SEAWEEDFS_UBI_REQUIRE_S3_AUTH`, default `true`: starting the `s3` role
-      with no identity source — no configuration file, no filer-held
-      configuration, no credential environment — is a startup failure with exit
-      status `78` (`EX_CONFIG`) and a diagnostic naming what to configure. An
-      unrecognized value is also a failure, so a misspelled toggle cannot
-      quietly disable the control. Never print a key or secret.
-- [ ] Implement the explicit-data-directory guard,
-      `SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR`, default `true`: a `master` or
-      `volume` role whose data directory is unset, or resolves to the process
-      temporary directory, fails at startup rather than silently storing durable
-      state on a `tmpfs`.
-- [ ] Disable the `weed s3` Iceberg REST Catalog and Lance Namespace listeners
-      by default by passing `0`, and gate re-enabling them behind explicit
-      `SEAWEEDFS_UBI_` opt-ins that are documented as unqualified.
+- [x] Implement the fail-closed S3 authentication guard,
+      `SEAWEEDFS_UBI_REQUIRE_S3_AUTH`. A config flag naming a file that does not
+      exist is refused too, since upstream would fall back to allow-all. An
+      unrecognised toggle value is a startup failure rather than a silent default.
+      The suite asserts the refusal, the diagnostic, and that the secret never
+      reaches the logs.
+- [x] Implement the explicit-data-directory guard,
+      `SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR`. The suite asserts both that it
+      refuses and that opting out is honoured, so it is a control rather than a
+      wall.
+- [x] Disable the Iceberg REST Catalog and Lance Namespace listeners by default
+      for both the `s3` and `mini` roles, behind `SEAWEEDFS_UBI_` opt-ins
+      documented as unqualified. They were live in the standalone profile at first,
+      because `mini` names those flags differently from `s3`; the measured listener
+      assertion below is what found it.
 - [ ] Harden the standalone profile's own defaults, which are more generous than
       the separated roles': set `-webdav=false` and `-admin.ui=false`, require an
       explicit `-dir` rather than accepting `mini`'s `.` default, and decide and
@@ -385,20 +394,26 @@ weakness is documented rather than obscured.
       compress and what that costs debuggability and reproducibility, and state
       plainly that a package-manager-free UBI Micro base does not make this a small
       image. Do not claim minimal without a measurement.
-- [ ] Publish a listener inventory for every supported role and for the standalone
-      profile as actually built, measured from a running container rather than read
-      from upstream flags, and assert it in a test so a newly default-enabled
-      upstream listener fails CI rather than shipping.
+- [x] Measure the standalone profile's listener set from a running container and
+      assert in the suite that the Iceberg and Lance ports are absent and that no
+      privileged port is opened. Recorded in
+      [configuration](CONFIGURATION.md#the-standalone-profile), including that
+      `mini` puts the volume server on 9340 rather than the volume role's 8080.
+- [ ] Extend the measured listener inventory to the separated roles, which needs
+      the multi-container fixture, and assert the full expected set rather than
+      only the ports that must be absent.
 - [ ] Fix the default listener set and document it: master `9333`, volume
       `8080`, filer `8888`, S3 `8333`, and the gRPC companion ports upstream
       derives by adding `10000` to the HTTP port. Confirm no privileged port is
       used and that the pprof debug listener stays disabled.
-- [ ] Ensure logs and metrics go to the container log streams and an explicit
-      metrics port, with no writable log path required.
-- [ ] Write `docs/CONFIGURATION.md` covering every `SEAWEEDFS_UBI_` variable,
-      each guard's exact behavior, and — just as important — what each guard
-      does **not** check. The S3 guard proves an identity source is configured;
-      it does not judge whether a key is strong, unique, or secret.
+- [x] Ensure logs go to the container streams with `-logtostderr=true`, so no
+      writable log path is required. Metrics stay opt-in through upstream's
+      `-metricsPort`; nothing is exposed by default.
+- [x] Write [configuration](CONFIGURATION.md) covering every `SEAWEEDFS_UBI_`
+      variable, each guard's exact behaviour, and what each guard does **not**
+      check: the S3 guard cannot see filer-held identities and does not judge a
+      key's strength, and the data directory guard cannot tell a persistent mount
+      from a writable layer.
 - [ ] Add hardened Compose or Quadlet development stacks with no default
       credentials and no anonymous access: one running each role as its own
       container, and one single-container standalone stack for local use.
