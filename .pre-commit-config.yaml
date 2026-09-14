@@ -53,6 +53,15 @@ repos:
 
   - repo: local
     hooks:
+      # The lock is the only thing standing between a build and unreviewed bytes,
+      # and its dangerous failure is a half-edited file that still parses. This
+      # checks agreement between fields, not just shape.
+      - id: check-artifact-lock
+        name: validate artifact locks
+        language: python
+        entry: python .github/scripts/check_artifact_lock.py
+        files: ^artifacts/.*\.lock\.json$
+
       - id: forbid-coauthor-trailers
         name: forbid co-author attribution trailers
         language: pygrep
