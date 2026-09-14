@@ -270,26 +270,42 @@ what evidence each claim will rest on, with no contradiction between documents.
       MD5 sidecar and nothing else, while container images are signed with keyless
       cosign bound to an organization-repository workflow identity, and are built
       from the exact released commit.
-- [ ] **Confirm the acquisition path.** Three are documented with their costs; the
-      recommendation is the cosign-verified image. The scripts are not written
-      until this is confirmed, because the choice determines what they do.
-- [ ] Prove `cosign verify` actually succeeds against the published `large_disk`
+- [x] **Confirm the acquisition path.** The cosign-verified image, Path B, with
+      the tarball retained as a documented fallback.
+- [x] Prove `cosign verify` actually succeeds against the published `large_disk`
       digest for both architectures, rather than relying on the presence of a
-      signing step in an upstream workflow.
-- [ ] Create a schema-validated lock under `artifacts/` for both architectures
-      containing the release tag, archive URL, archive size and SHA-256, the
-      upstream-published MD5 as a recorded value, the extracted binary size and
-      SHA-256, the Go build identifier, and the linkage facts below.
-- [ ] Measure and record the runtime linkage of the shipped binary: whether it
-      is statically or dynamically linked, the highest required glibc symbol
-      version if any, the needed shared libraries, and every library glibc may
-      load at runtime rather than link. Re-measure on every image build instead
-      of assuming a future release keeps the same properties.
-- [ ] Acquire artifacts outside the container build, verify before and after
-      transfer, and fail closed on a size, digest, version, or linkage mismatch.
-- [ ] Add negative tests proving the gate rejects a tampered archive, a
-      tampered extracted binary, a wrong-version archive, a truncated download,
-      and a missing lock entry.
+      signing step in an upstream workflow. Verified for the index and both
+      architecture manifests, with the certificate's workflow repository, ref, and
+      commit recorded, and the commit independently cross-checked against the tag.
+- [x] Create a lock under `artifacts/` for both architectures recording the
+      release tag and commit, the variant and its build tags, the image repository
+      and index digest, the cosign issuer and identity, and per architecture the
+      manifest digest and the extracted binary's digest, size, ELF machine,
+      linkage, embedded commit, and version string where captured.
+- [ ] Add JSON Schema validation of the lock, enforced by a pinned check in CI and
+      in the local hooks, so a malformed or partially edited lock fails review
+      rather than a build.
+- [x] Measure and record the runtime linkage of the shipped binary. Both
+      architectures are statically linked, with no `PT_INTERP` and no `PT_DYNAMIC`
+      segment and therefore no glibc version requirement, measured by ELF
+      inspection rather than assumed from upstream's build flags. The gate
+      re-measures on every acquisition and refuses a change.
+- [ ] Capture the arm64 version string on a native runner. The offline gate
+      confirms the arm64 binary embeds the release commit and the variant marker,
+      but the version number is computed at runtime and only execution reveals it.
+- [x] Acquire artifacts outside the container build and fail closed on a size,
+      digest, ELF machine, linkage, commit, or variant mismatch, and on a missing
+      verification tool. Implemented by `scripts/fetch-artifacts.sh`, which fetches
+      only by digest and never resolves a tag.
+- [ ] Verify the bundle again at assembly time, so a bundle altered between
+      acquisition and assembly is refused. This lands with the Containerfile in
+      package 3, because assembly does not exist yet.
+- [x] Add negative tests proving the gate refuses bad input. `tests/acquisition.sh`
+      covers a tampered binary of the correct size, a truncated download, appended
+      bytes, a binary offered as the wrong architecture, an architecture absent from
+      the lock, a non-ELF file, a missing file, and an unparseable lock, all offline.
+      `tests/acquisition-signature.sh` covers a different workflow identity, a
+      different git ref, a different OIDC issuer, and an unsigned digest.
 - [ ] Prove assembly succeeds with the build network disabled, and record in
       `docs/HERMETIC-BUILD.md` what that property does and does not defend
       against.
@@ -345,6 +361,12 @@ weakness is documented rather than obscured.
       explicit `-dir` rather than accepting `mini`'s `.` default, and decide and
       record positions on `-s3.autoCreateBucket` and
       `-s3.allowDeleteBucketNotEmpty`, both of which upstream defaults to `true`.
+- [ ] Account for the binary's size in the image contract. The admitted `weed` is
+      **210 MiB** on amd64 and 194 MiB on arm64, so it, not the UBI base, will
+      dominate the image. Record the assembled size, decide whether to strip or
+      compress and what that costs debuggability and reproducibility, and state
+      plainly that a package-manager-free UBI Micro base does not make this a small
+      image. Do not claim minimal without a measurement.
 - [ ] Publish a listener inventory for every supported role and for the standalone
       profile as actually built, measured from a running container rather than read
       from upstream flags, and assert it in a test so a newly default-enabled
@@ -576,6 +598,7 @@ reopening one is a deliberate act rather than a drift.
 | 2026-09-12 | **Admit the `large_disk` build variant** | The workload is large Iceberg objects, the default 32 GB volume ceiling is low enough to hit accidentally, and this is the harder direction to reverse. Full reasoning and the switching cost are in [build variants](BUILD-VARIANTS.md). |
 | 2026-09-12 | **Do not admit the `full` variant** | It adds five unqualified filer backends and two tiering integrations purely for capability outside the boundary. PostgreSQL, the backend this organization would actually use, is already in the plain build. |
 | 2026-09-12 | **Ship two deployment profiles from one image**: a separated-role production profile, and a single-container standalone profile gated behind an explicit `SEAWEEDFS_UBI_STANDALONE` opt-in. **Supersedes** an earlier decision the same day to refuse the `server` subcommand outright. | Refusing it outright protected a security claim by pushing multi-container cost into every fixture, including ones needing only functional coverage, and denied a real local-development use case that MinIO serves with one container. One image rather than two is correct because the bytes are identical: separate images would mean two SBOMs, scan runs, signature sets, and ledger entries for a difference that is a command-line argument. What the standalone profile can never evidence is enumerated in [deployment profiles](SUPPORT.md#deployment-profiles). |
+| 2026-09-12 | **Acquire the binary from the cosign-verified official container image** (Path B), pinned by digest, with the tarball retained as a documented fallback and a source build left open | The tarball has no publisher signal at all, while the image is signed with keyless cosign bound to an organization-repository workflow identity and built from the exact released commit. Because the images live in a personal namespace, verification is the reason to take that path rather than an enhancement to it. Building from source would be stronger still, but it turns this project from a packager of upstream releases into a builder of them. Recorded in [external artifact acquisition](ARTIFACT-ACQUISITION.md). |
 | 2026-09-12 | **First-release consumer: the Datopsis analytical stack's S3 backend**, built so nothing precludes general use | The difference between the two is what gets *qualified*, not what the image can *do*; see [the support contract](SUPPORT.md#who-this-image-is-for). |
 
 ## Decisions that need a human

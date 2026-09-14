@@ -128,6 +128,37 @@ only to published container images; repository-only changes remain under
 - Recorded that upstream's Dockerfile claims Go FIPS 140-3 mode is on by default
   while its build sets no `GOFIPS140` and the Go default is off, so the claim must
   not be repeated and the real determination is owed by work package 6.
+- Chose the cosign-verified official container image as the acquisition path,
+  pinned by digest, with the release tarball retained as a documented fallback and
+  a source build left open rather than foreclosed.
+- Added the reviewed artifact lock for SeaweedFS 4.46 `large_disk` on both
+  architectures, recording the release tag and commit, the variant and its build
+  tags, the image index digest, the cosign issuer and certificate identity, and per
+  architecture the manifest digest and the extracted binary's digest, size, ELF
+  machine, linkage, and embedded commit.
+- Added the artifact admission gate. It verifies the image index and each
+  architecture manifest with cosign against a pinned identity and issuer, fetches
+  only by digest and never resolves a tag, copies the binary out of a created
+  rather than a running container so a foreign architecture needs no emulation, and
+  refuses on any mismatch of size, digest, ELF machine, linkage, embedded commit, or
+  variant marker, or on a missing verification tool.
+- Verified the provenance claim rather than asserting it: the index and both
+  architecture manifests verify against the recorded identity, the signing
+  certificate names the `seaweedfs/seaweedfs` organization repository at
+  `refs/tags/4.46`, and its recorded commit was independently cross-checked against
+  the commit that the release tag resolves to.
+- Confirmed both binaries are statically linked by ELF inspection rather than by
+  trusting upstream's build flags, so neither carries a glibc version requirement.
+- Confirmed the admitted build is the `large_disk` variant from the artifact itself:
+  the binary reports its maximum volume size at runtime, `8000GB` rather than the
+  default build's `30GB`, so the variant is measured rather than inferred from a tag
+  name.
+- Added negative tests so the gate is observed refusing rather than assumed to.
+  Offline: a tampered binary of the correct size, a truncated download, appended
+  bytes, a binary offered as the wrong architecture, an architecture absent from the
+  lock, a non-ELF file, a missing file, and an unparseable lock. With a network: a
+  different workflow identity, a different git ref, a different OIDC issuer, and an
+  unsigned digest.
 - Added the Apache License 2.0 for Datopsis-authored work, third-party notices
   separating packaging terms from SeaweedFS and UBI terms, contribution
   guidance, and a private vulnerability-reporting policy.
