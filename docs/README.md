@@ -100,7 +100,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
 | `docs/CONFIGURATION.md` — variables this image adds and its guards | Present | 3 |
-| `docs/ARCHITECTURE.md` — roles, listeners, and data flow | Planned | 3 |
+| `docs/ARCHITECTURE.md` — roles, listeners, data flow, trust boundaries | Present | 3 |
 | `docs/USE-CASES.md` — supported profiles | Planned | 4 |
 | `docs/STORAGE.md` — durability, replication, backup, restore | Planned | 4 |
 | `docs/TLS.md` — client TLS and inter-component mTLS | Planned | 4 |
@@ -383,25 +383,27 @@ weakness is documented rather than obscured.
       documented as unqualified. They were live in the standalone profile at first,
       because `mini` names those flags differently from `s3`; the measured listener
       assertion below is what found it.
-- [ ] Harden the standalone profile's own defaults, which are more generous than
-      the separated roles': set `-webdav=false` and `-admin.ui=false`, require an
-      explicit `-dir` rather than accepting `mini`'s `.` default, and decide and
-      record positions on `-s3.autoCreateBucket` and
-      `-s3.allowDeleteBucketNotEmpty`, both of which upstream defaults to `true`.
-- [ ] Account for the binary's size in the image contract. The admitted `weed` is
-      **210 MiB** on amd64 and 194 MiB on arm64, so it, not the UBI base, will
-      dominate the image. Record the assembled size, decide whether to strip or
-      compress and what that costs debuggability and reproducibility, and state
-      plainly that a package-manager-free UBI Micro base does not make this a small
-      image. Do not claim minimal without a measurement.
+- [x] Harden the standalone profile's own defaults and decide the two bucket
+      behaviours. `-webdav` and `-admin.ui` are off, an explicit data directory is
+      required, and `autoCreateBucket` and `allowDeleteBucketNotEmpty` are off for
+      **both** the `s3` role and `mini` — the latter matters because upstream's
+      default turns a `DeleteBucket` that the S3 API refuses into a silent deletion
+      of every object in the bucket.
+- [x] Account for the binary's size in the image contract. Measured in
+      [architecture](ARCHITECTURE.md#size-measured): 232.5 MiB assembled, of which
+      the binary is 209.8 MiB and the base 22.6 MiB, so everything this project adds
+      beyond upstream is about 16 kB. Stripping would save roughly 62 MiB and is
+      refused, because the shipped binary would no longer be the bytes that were
+      verified.
 - [x] Measure the standalone profile's listener set from a running container and
       assert in the suite that the Iceberg and Lance ports are absent and that no
       privileged port is opened. Recorded in
       [configuration](CONFIGURATION.md#the-standalone-profile), including that
       `mini` puts the volume server on 9340 rather than the volume role's 8080.
-- [ ] Extend the measured listener inventory to the separated roles, which needs
-      the multi-container fixture, and assert the full expected set rather than
-      only the ports that must be absent.
+- [x] Extend the measured listener inventory to the separated roles and assert the
+      full expected set rather than only the ports that must be absent.
+      `tests/cluster.sh` pins each role's exact ports, so an upstream release that
+      opens something new fails rather than shipping.
 - [ ] Fix the default listener set and document it: master `9333`, volume
       `8080`, filer `8888`, S3 `8333`, and the gRPC companion ports upstream
       derives by adding `10000` to the HTTP port. Confirm no privileged port is
@@ -414,24 +416,29 @@ weakness is documented rather than obscured.
       check: the S3 guard cannot see filer-held identities and does not judge a
       key's strength, and the data directory guard cannot tell a persistent mount
       from a writable layer.
-- [ ] Add hardened Compose or Quadlet development stacks with no default
-      credentials and no anonymous access: one running each role as its own
-      container, and one single-container standalone stack for local use.
+- [x] Add hardened Compose development stacks with no default credentials and no
+      anonymous access: `compose.yaml` for the separated roles and
+      `compose.standalone.yaml` for local use. Both publish only the S3 API, and
+      only on loopback.
+- [ ] Add Quadlet units for the rootless systemd path, and exercise the Compose
+      stacks in CI. Neither has been run in the reference environment yet, so both
+      are unverified.
 - [ ] Implement the standalone profile gate, `SEAWEEDFS_UBI_STANDALONE`, unset by
       default: `mini` is refused unless it is explicitly set. When it is set,
       print a startup notice naming what the profile cannot provide — no
       inter-component authentication, no replication, no component isolation — so
       the limitation is visible in the logs of whatever is running it and not only
       in documentation. An unrecognized value is a startup failure.
-- [ ] Add a restricted-runtime smoke suite with **two** fixtures, because they
-      prove different things. A single-container standalone fixture covers
-      functional behavior, the guards, and the restricted-runtime assertions
-      quickly. A separated-role `master` + `volume` + `filer` + `s3` harness
-      covers everything topology-sensitive. Build the separated harness here
-      rather than later, so packages 4 and 5 extend it instead of retrofitting a
-      single-container assumption. and asserts non-root operation, zero capabilities,
-      `no-new-privileges`, read-only root, the version match, authenticated S3
-      access, refusal of anonymous access, and each negative startup case.
+- [x] Add a restricted-runtime suite with **two** fixtures, because they prove
+      different things. `tests/smoke.sh` covers functional behaviour and the guards
+      against the standalone profile; `tests/cluster.sh` brings up the four roles as
+      separate containers on a real network and covers discovery, per-role listener
+      sets, and the S3 role needing no writable path at all.
+- [ ] Assert authenticated S3 access and the refusal of anonymous access against
+      a real S3 client. Both fixtures currently prove the gateway starts and that
+      the startup guard refuses a missing identity source; neither yet exercises a
+      signed request, which needs a client and belongs with the round trips in
+      package 4.
 
 **Exit criteria.** A container built from this repository runs every supported
 role as a non-root process on a read-only root filesystem with no capabilities,

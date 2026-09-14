@@ -18,7 +18,7 @@ image does not support is refused rather than started untested.
 | `master` | Coordination and volume assignment | 9333, gRPC 19333 |
 | `volume` | Object storage | 8080, gRPC 18080 |
 | `filer` | File and bucket metadata | 8888, gRPC 18888 |
-| `s3` | The S3 API | 8333 |
+| `s3` | The S3 API | 8333, gRPC 18333 |
 | `mini` | Every role in one process — local development only, opt-in | see [standalone profile](#the-standalone-profile) |
 | `version`, `shell` | Informational, no guards | none |
 
@@ -110,6 +110,28 @@ already set them, so an explicit choice always wins.
 | `s3` | `-port.iceberg=0`, `-port.lance=0` | Both listeners are on by default upstream and are outside this image's boundary. |
 | `mini` | `-s3.port.iceberg=0`, `-s3.port.lance=0` | Same, under `mini`'s differently named flags. |
 | `mini` | `-webdav=false`, `-admin.ui=false` | Both default to `true` in `mini` and are outside the boundary. |
+| `s3`, `mini` | `-allowDeleteBucketNotEmpty=false` | Upstream defaults it to `true`, which makes `DeleteBucket` on a bucket that still holds objects delete all of them. The S3 API answers `BucketNotEmpty`. |
+| `s3`, `mini` | `-autoCreateBucket=false` | Upstream defaults it to `true`, which creates a bucket on upload if it does not exist. The S3 API answers `NoSuchBucket`. |
+
+### The two bucket defaults
+
+These are worth reading rather than skimming, because one of them loses data.
+
+Upstream enables `allowDeleteBucketNotEmpty` by default. A `DeleteBucket` call
+against a bucket that still holds objects **deletes every object in it**. The S3
+API a client is written against answers `BucketNotEmpty` and deletes nothing, so
+the same call that is a safe no-op against S3 is a silent bulk deletion here.
+That is not a permission a storage image should grant by default.
+
+Upstream also enables `autoCreateBucket` by default, so a `PUT` into a bucket
+that does not exist creates it, for admin identities. The S3 API answers
+`NoSuchBucket`. A typo in a bucket name becomes a new bucket instead of an error.
+
+Both are turned off, for the standalone profile as well as the S3 role. A fixture
+that is more permissive than the thing it stands in for lets tests pass against
+behaviour production will not have, and there is no reason for the production
+role to diverge from S3 semantics either. An operator who wants upstream's
+behaviour passes the flag explicitly and it is honoured.
 
 The Iceberg listener is disabled for a reason beyond surface area:
 [`lakekeeper-ubi`](https://github.com/datopsis/lakekeeper-ubi) is this
@@ -160,6 +182,27 @@ podman run -d --name seaweedfs-master \
 ```
 
 No image has been published yet, so that reference is illustrative.
+
+The S3 role is the exception: it keeps no local state, so it needs no volume and
+runs on a wholly read-only filesystem. The cluster fixture asserts that by
+attempting a write and expecting it to fail.
+
+## Development stacks
+
+Two Compose files, matching the two profiles. Neither carries a default
+credential; both read from a local `.env` that Git ignores.
+
+```console
+printf 'AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n' \
+  "$(openssl rand -hex 16)" "$(openssl rand -base64 32)" > .env
+
+podman compose up -d                                  # separated roles
+podman compose -f compose.standalone.yaml up -d       # one container
+```
+
+In both, only the S3 API is published, and only on the loopback address. The
+master, volume, and filer listeners stay on the internal network, because without
+a `security.toml` they are unauthenticated.
 
 ## Runtime identity and signals
 

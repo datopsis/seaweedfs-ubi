@@ -1,0 +1,41 @@
+# Standalone development stack: every role in one container.
+#
+# This is the local-object-store shape -- one command, one container, an S3
+# endpoint on 8333. It is for development, small local use, and test fixtures.
+#
+# It is never a supported production posture, and the reason is not caution. In
+# one process there is no network between the roles, so gRPC mTLS and volume
+# JWTs protect nothing, there is no replication and therefore no durability, and
+# nothing separates the S3 API from stored bytes. Use compose.yaml for anything
+# resembling a deployment.
+#
+# No credential has a default. Create a local .env first:
+#
+#   printf 'AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n' \
+#     "$(openssl rand -hex 16)" "$(openssl rand -base64 32)" > .env
+#
+#   podman compose -f compose.standalone.yaml up -d
+#   podman compose -f compose.standalone.yaml down -v
+
+services:
+  seaweedfs:
+    image: ${SEAWEEDFS_UBI_IMAGE:-localhost/seaweedfs-ubi:development}
+    command: ["mini", "-dir=/data", "-ip.bind=0.0.0.0"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      # Without this the entrypoint refuses to start the role at all.
+      SEAWEEDFS_UBI_STANDALONE: "true"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID in .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
+    volumes:
+      - standalone-data:/data
+    ports:
+      # Only the S3 API. The master, volume, and filer listeners this profile
+      # also opens stay inside the container, where they belong.
+      - "127.0.0.1:8333:8333"
+    restart: unless-stopped
+
+volumes:
+  standalone-data:

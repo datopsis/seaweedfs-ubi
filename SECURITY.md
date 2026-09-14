@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-No supported image has been published, and no image has been built from this
-repository yet. Repository revisions are available for evaluation and receive no
+No supported image has been published. The image builds and is exercised by an
+automated suite, but nothing is released. Repository revisions are available for evaluation and receive no
 security-support commitment. Each future release will document its exact support
 status and supersession policy; support must not be inferred from a tag, a
 branch, a successful build, or a scanner result.
@@ -64,6 +64,13 @@ re-verified at every version bump.
   and write it directly, bypassing the S3 identity model entirely. The
   `-whiteList` IP restriction is empty by default and is not a substitute for
   authentication.
+- **`DeleteBucket` deletes a non-empty bucket's contents.** Upstream defaults
+  `allowDeleteBucketNotEmpty` to `true`, so a request that the S3 API answers with
+  `BucketNotEmpty` instead removes every object in the bucket. A client written
+  against S3 semantics can therefore destroy data with a call it expects to fail.
+  This image turns it off by default, and also turns off `autoCreateBucket`, which
+  upstream enables and which turns a mistyped bucket name into a new bucket rather
+  than an error. Both are restored by passing the flag explicitly.
 - **`weed s3` opens more listeners than the S3 API.** In `4.46` it also starts
   an Iceberg REST Catalog on port `8181` and a Lance Namespace server on port
   `9101` unless each is explicitly disabled. This image disables both by
@@ -71,8 +78,10 @@ re-verified at every version bump.
 - **Only the S3 listener is designed to face clients.** The master, volume, and
   filer listeners must not be reachable from an untrusted network.
 
-These guards are described as designed rather than delivered until work package
-3 in [the work plan](docs/README.md) lands and its tests exist.
+Every guard above is implemented and exercised: `tests/smoke.sh` asserts each
+refusal and its diagnostic, and `tests/cluster.sh` asserts the per-role listener
+sets from running containers. What remains unqualified is the deployment side of
+the third item, since tested `security.toml` examples are owed by work package 4.
 
 ## Scanner results require context
 

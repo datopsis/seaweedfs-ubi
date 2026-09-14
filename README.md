@@ -172,6 +172,9 @@ costs, and the exact trust limitations of each are set out in
 - [External artifact acquisition](docs/ARTIFACT-ACQUISITION.md) records what
   upstream publishes, what is verified before a binary is admitted, and what that
   verification does not prove.
+- [Architecture](docs/ARCHITECTURE.md) describes what is in the image, the
+  startup sequence, per-role listeners, the data flow, the trust boundaries, and
+  the measured size, including why the binary is deliberately not stripped.
 - [Configuration](docs/CONFIGURATION.md) documents the roles this image will
   start, the variables it adds, and what each startup guard does **not** check.
 - [Hermetic build](docs/HERMETIC-BUILD.md) describes the assembly contract and is
@@ -227,7 +230,8 @@ published, and platform qualification has not started.
 
 ```console
 scripts/build.sh                      # acquire, verify, assemble
-tests/smoke.sh                        # exercise it under the restricted runtime
+tests/smoke.sh                        # the standalone profile, guards and behaviour
+tests/cluster.sh                      # the four roles as separate containers
 ```
 
 `scripts/build.sh` is a convenience wrapper over three phases that are separate
@@ -246,7 +250,14 @@ bundle, and run the third disconnected. Assembly re-verifies the bundle, because
 a bundle is an ordinary directory and the two steps can be separated by a
 transfer.
 
-The smoke suite runs every case with a read-only root filesystem, all
+There are two fixtures because they prove different things. `tests/smoke.sh` is
+the fast one, covering functional behaviour and the startup guards against the
+standalone profile. `tests/cluster.sh` brings up `master`, `volume`, `filer`, and
+`s3` as separate containers on a real network, and covers what one process cannot
+show: discovery between roles, each role's exact listener set, and the S3 role
+needing no writable path at all.
+
+Both run every case with a read-only root filesystem, all
 capabilities dropped, and `no-new-privileges`. That is deliberate: an image that
 only worked without them would not meet its contract, so the suite would rather
 fail than relax them. It asserts the role allowlist, both startup guards and
@@ -271,6 +282,13 @@ tests/acquisition-signature.sh        # network: the publisher signature
 
 Details, including what the verification does and does not prove, are in
 [external artifact acquisition](docs/ARTIFACT-ACQUISITION.md).
+
+Two Compose stacks are provided for local work, matching the two profiles:
+`compose.yaml` for the separated roles and `compose.standalone.yaml` for a single
+container. Neither carries a default credential, both read from a local `.env`
+that Git ignores, and both publish only the S3 API and only on loopback. Neither
+has been exercised in CI yet, so treat them as unverified; the suites above are
+the verified path.
 
 Until the first signed release is published, this repository should be treated
 as development material rather than a supported production image.

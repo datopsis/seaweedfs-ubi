@@ -1,0 +1,81 @@
+# Separated-role development stack.
+#
+# This is the shape a real deployment takes: one role per container, addressed
+# over a network, with only the S3 API reachable from outside. It is a
+# development stack, not a supported deployment -- there is one volume server, so
+# there is no replication and therefore no durability claim.
+#
+# No credential has a default. Create a local .env first:
+#
+#   printf 'AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n' \
+#     "$(openssl rand -hex 16)" "$(openssl rand -base64 32)" > .env
+#
+# .env is ignored by Git. Do not reuse a value from any example.
+#
+#   podman compose up -d
+#   podman compose down -v      # -v also removes the data
+
+services:
+  master:
+    image: ${SEAWEEDFS_UBI_IMAGE:-localhost/seaweedfs-ubi:development}
+    command: ["master", "-mdir=/data", "-ip=master"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - master-data:/data
+    # Deliberately not published. Only the S3 API is designed to face clients;
+    # anything that can reach the master can influence volume assignment.
+    expose: ["9333", "19333"]
+    restart: unless-stopped
+
+  volume:
+    image: ${SEAWEEDFS_UBI_IMAGE:-localhost/seaweedfs-ubi:development}
+    command: ["volume", "-dir=/data", "-ip=volume", "-mserver=master:9333", "-max=4"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - volume-data:/data
+    # Not published, and this one matters most: without a security.toml there is
+    # no authentication here at all, so anything that can reach a volume server
+    # can read and write stored bytes directly, bypassing S3 identities entirely.
+    expose: ["8080", "18080"]
+    depends_on: [master]
+    restart: unless-stopped
+
+  filer:
+    image: ${SEAWEEDFS_UBI_IMAGE:-localhost/seaweedfs-ubi:development}
+    command: ["filer", "-ip=filer", "-master=master:9333", "-defaultStoreDir=/data"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - filer-data:/data
+    expose: ["8888", "18888"]
+    depends_on: [master, volume]
+    restart: unless-stopped
+
+  s3:
+    image: ${SEAWEEDFS_UBI_IMAGE:-localhost/seaweedfs-ubi:development}
+    command: ["s3", "-filer=filer:8888", "-ip.bind=0.0.0.0"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      # Required. The entrypoint refuses to start without an identity source,
+      # because upstream would otherwise serve every request -- including writes
+      # and deletes -- as an anonymous caller.
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID in .env}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
+    # The S3 role keeps no local state, so it needs no volume and no writable
+    # path at all.
+    ports:
+      - "127.0.0.1:8333:8333"
+    depends_on: [filer]
+    restart: unless-stopped
+
+volumes:
+  master-data:
+  volume-data:
+  filer-data:

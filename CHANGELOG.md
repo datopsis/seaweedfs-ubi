@@ -224,3 +224,34 @@ only to published container images; repository-only changes remain under
   each guard's behaviour, and what each guard does not check: the S3 guard cannot
   see filer-held identities and does not judge a key's strength, and the data
   directory guard cannot tell a persistent mount from a writable layer.
+- Added the separated-role fixture, which brings up `master`, `volume`, `filer`,
+  and `s3` as four containers on a real network and asserts what one process
+  cannot show: that the roles discover and reach each other by address, each
+  role's exact listener set, that no role opens a privileged port or runs as
+  root, and that the S3 role needs no writable path at all because its state
+  lives in the filer.
+- Added hardened Compose stacks for both profiles, with no default credential in
+  either. Only the S3 API is published, and only on loopback: without a
+  `security.toml` the master, volume, and filer listeners are unauthenticated, so
+  they stay on the internal network.
+- Turned off `allowDeleteBucketNotEmpty` and `autoCreateBucket` for the S3 role
+  and the standalone profile alike. Upstream enables both. The first makes
+  `DeleteBucket` against a bucket that still holds objects delete every one of
+  them, where the S3 API answers `BucketNotEmpty` and deletes nothing, so a client
+  written against S3 semantics can destroy data with a call it expects to fail.
+  The second turns a mistyped bucket name into a new bucket rather than an error.
+  Passing either flag explicitly restores upstream's behaviour.
+- Added the architecture reference: image contents, startup sequence, per-role
+  listeners, data flow, and the trust boundaries, including that the boundary
+  between the roles belongs to the operator and not to the image.
+- Measured the image rather than describing it: 232.5 MiB assembled, of which the
+  upstream binary is 209.8 MiB and the UBI Micro base 22.6 MiB, leaving about
+  16 kB for everything this project adds. A package-manager-free Micro base does
+  not make this a small image.
+- Recorded why the binary is not stripped. It carries roughly 62 MiB of symbol
+  table and DWARF sections, and removing them would take the image to about
+  171 MiB, but the shipped binary would no longer be the bytes whose digest and
+  signature were verified. The provenance chain is worth more than 26% of the
+  size. Related: upstream's tarball build is stripped while its container build is
+  not, so the fallback acquisition path would produce a smaller image with weaker
+  provenance.

@@ -88,6 +88,17 @@ Three consequences matter to this project:
 3. **`$TAGS` is the variant.** `5BytesOffset` for the admitted `large_disk`
    build. See [build variants](BUILD-VARIANTS.md).
 
+There is a fourth difference between the two pipelines, found while measuring the
+assembled image rather than while reading the workflows. The **tarball** build
+passes `-s -w` and is stripped; the **container** build does not. The admitted
+binary therefore carries about 62 MiB of symbol table and DWARF sections that the
+published tarball does not.
+
+That is a real cost of this acquisition path: Path A would produce a smaller
+image with weaker provenance. The trade is recorded and taken knowingly, and the
+reasoning for not stripping afterwards is in
+[architecture](ARCHITECTURE.md#why-the-binary-is-not-stripped).
+
 ### Only `weed` is needed
 
 The container image also carries two Rust binaries, `weed-volume` and
