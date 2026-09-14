@@ -9,10 +9,11 @@ arbitrary user IDs, and controlled networks that require inspectable security
 evidence.
 
 > [!IMPORTANT]
-> The project is under initial development. No supported container image has
-> been released, and no image has been built from this repository yet. Commands,
-> tags, and security claims will be published only after their implementations
-> are tested and the applicable work-plan gates are complete.
+> The project is under initial development. The image builds and is exercised by
+> an automated suite, but **no supported container image has been released**,
+> nothing is published, and platform qualification has not started. Tags and
+> security claims will be published only after their implementations are tested
+> and the applicable work-plan gates are complete.
 
 ## Version baseline
 
@@ -171,6 +172,10 @@ costs, and the exact trust limitations of each are set out in
 - [External artifact acquisition](docs/ARTIFACT-ACQUISITION.md) records what
   upstream publishes, what is verified before a binary is admitted, and what that
   verification does not prove.
+- [Configuration](docs/CONFIGURATION.md) documents the roles this image will
+  start, the variables it adds, and what each startup guard does **not** check.
+- [Hermetic build](docs/HERMETIC-BUILD.md) describes the assembly contract and is
+  explicit about what network-free assembly does not defend against.
 - [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
   Linux builds this project admits and why, and explains that the choice is a
   compile-time build tag rather than a runtime option.
@@ -217,17 +222,38 @@ are not published.
 
 ## Development status
 
-There is no image yet — that lands in work package 3. What works today is the
-artifact admission gate: it acquires the upstream binary, verifies the publisher
-signature, and refuses anything that does not match the reviewed lock.
-
-Acquisition needs a network and a container runtime. Assembly will not, which is
-why they are separate.
+The image builds and runs. It is development material, not a release: nothing is
+published, and platform qualification has not started.
 
 ```console
-scripts/fetch-artifacts.sh            # every architecture in the lock
-scripts/fetch-artifacts.sh amd64      # or a subset
+scripts/build.sh                      # acquire, verify, assemble
+tests/smoke.sh                        # exercise it under the restricted runtime
 ```
+
+`scripts/build.sh` is a convenience wrapper over three phases that are separate
+because they have different trust properties. A plain `podman build .` will not
+work, by design: the image cannot be assembled from inputs that have not been
+through the admission gate.
+
+```console
+scripts/fetch-artifacts.sh            # network: verify the signature, admit the binary
+scripts/fetch-base-images.sh          # network: pull the digest-pinned bases
+scripts/build-image.sh                # no network: verify again, then assemble
+```
+
+On a controlled network, run the first two on a connected host, transfer the
+bundle, and run the third disconnected. Assembly re-verifies the bundle, because
+a bundle is an ordinary directory and the two steps can be separated by a
+transfer.
+
+The smoke suite runs every case with a read-only root filesystem, all
+capabilities dropped, and `no-new-privileges`. That is deliberate: an image that
+only worked without them would not meet its contract, so the suite would rather
+fail than relax them. It asserts the role allowlist, both startup guards and
+their diagnostics, that opting a guard out is honoured, that PID 1 is the server
+rather than a shell, that the process is non-root, that no privileged port is
+opened, that the unqualified Iceberg and Lance listeners are absent, that state
+survives container replacement, and that the secret key never reaches the logs.
 
 The gate verifies the image index signature with cosign against a pinned OIDC
 issuer and certificate identity, then per architecture verifies the manifest

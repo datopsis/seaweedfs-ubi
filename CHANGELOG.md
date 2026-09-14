@@ -191,3 +191,36 @@ only to published container images; repository-only changes remain under
   pinned CI Python environment.
 - Enabled a protected default branch, secret scanning with push protection, and
   private vulnerability reporting.
+- Added the container image: a digest-pinned, package-manager-free UBI 9 Micro
+  runtime carrying only the verified `weed` binary, an entrypoint, and a CA
+  bundle. There is no compilation stage, because the upstream binary is
+  statically linked; UBI Minimal appears solely as a source of trust material
+  copied as a file, since Micro ships none and an empty trust store fails
+  confusingly.
+- Added the entrypoint: a role dispatcher that enforces the supported-role
+  allowlist, applies the two fail-closed startup guards, disables the listeners
+  outside the boundary, and `exec`s the server so it becomes PID 1 and receives
+  signals directly. It runs as the same non-root identity as the server, changes
+  no ownership, and switches no user.
+- Added the build phases as separate commands, because acquisition and assembly
+  have different trust properties: acquisition and base-image pulls reach the
+  network, assembly does not and re-verifies the bundle before using it, since a
+  bundle is an ordinary directory and the two steps can be separated by a
+  transfer.
+- Added the smoke suite, which runs every case with a read-only root filesystem,
+  all capabilities dropped, and `no-new-privileges`, so an image needing more
+  fails rather than quietly receiving them. Twenty assertions covering the role
+  allowlist, both guards and their diagnostics, that opting a guard out is
+  honoured, PID 1, the non-root uid, the absent listeners, no privileged port,
+  survival across container replacement, and secrets staying out of the logs.
+- Fixed the standalone profile shipping the Iceberg REST Catalog and Lance
+  Namespace listeners while the documentation said both were disabled. The
+  entrypoint disabled them for the `s3` role and missed that `mini` names the same
+  flags differently. Reading the open ports out of a running container is what
+  found it, so that measurement is now an assertion rather than a one-off check.
+- Recorded the measured listener set for the standalone profile, including that
+  `mini` places the volume server on 9340 rather than the volume role's 8080.
+- Added the configuration reference, covering every variable this packaging adds,
+  each guard's behaviour, and what each guard does not check: the S3 guard cannot
+  see filer-held identities and does not judge a key's strength, and the data
+  directory guard cannot tell a persistent mount from a writable layer.
