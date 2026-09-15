@@ -103,7 +103,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/ARCHITECTURE.md` — roles, listeners, data flow, trust boundaries | Present | 3 |
 | `docs/USE-CASES.md` — supported profiles | Planned | 4 |
 | `docs/STORAGE.md` — durability, replication, backup, restore | Planned | 4 |
-| `docs/TLS.md` — inter-component boundary, measured; client TLS still owed | Present | 4 |
+| `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
 | `docs/LOGGING.md` — log and metrics profiles | Planned | 4 |
 | `docs/CI.md` — automation and local checks | Planned | 5 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
@@ -466,8 +466,15 @@ proves it in an automated suite.
 - [x] Test identity isolation: two bucket-scoped identities, proving one cannot
       read, write, or list the other's bucket, alongside an anonymous caller and a
       valid key with the wrong secret being refused.
-- [ ] Qualify S3 listener TLS, including a private CA chain, and prove
-      certificate verification is not silently disabled.
+- [x] Qualify S3 listener TLS against a private CA chain and prove verification
+      is not silently disabled: a client trusting only an unrelated CA is refused
+      at the handshake, and a hostname the certificate does not cover is refused.
+      Supplying a certificate without `-port.https` upgrades the listener and
+      stops serving plaintext on it.
+- [ ] Decide whether the entrypoint should refuse `-cert.file` together with
+      `-port.https`. That combination starts TLS on the new port and leaves the
+      original one serving plaintext, which is measured and documented but not
+      currently prevented.
 - [ ] Decide and document the supported position on anonymous read access.
 
 ### Cluster, durability, and state
@@ -669,7 +676,14 @@ their reasoning when they are made.
    already compiles in PostgreSQL, MySQL, Redis, MongoDB, etcd, Cassandra, HBase,
    ArangoDB, FoundationDB, and embedded LevelDB, so this is a question of which to
    *qualify*, not which are available. Needed during package 4.
-2. **What update cadence and security-response target will this project commit
+2. **Should the entrypoint refuse a certificate combined with `-port.https`?**
+   That combination starts TLS on the new port and leaves the original one
+   serving the S3 API in plaintext, which is the opposite of what an operator
+   reaching for it intends. It is also a legitimate migration shape, so refusing
+   it by default with an opt-out would follow the pattern already used for
+   anonymous access, while doing nothing leaves a measured footgun in place.
+   Needed before the deployment guidance in package 7.
+3. **What update cadence and security-response target will this project commit
    to?** [`docs/SUPPORT.md`](SUPPORT.md) cannot define a support period without
    it. Upstream releases roughly every seven to ten days in one linear line,
    fixes only the latest release, and maintains no older line, so there is no
@@ -680,15 +694,15 @@ their reasoning when they are made.
    relevant fix, or a narrower support promise. Choosing none of them means the
    project drifts into one by accident. Deferred to package 8, where the real
    qualification cost will be visible; it binds nothing before then.
-3. **How far to go on provenance.** Recording reviewed digests is the floor.
+4. **How far to go on provenance.** Recording reviewed digests is the floor.
    Building from source in a controlled pipeline would be materially stronger
    and materially more work, and it changes what this project is.
-4. **Whether anonymous read access is ever a supported configuration**, or
+5. **Whether anonymous read access is ever a supported configuration**, or
    always a deployment-owned deviation.
-5. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
+6. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
    a later qualification target, given that `lakekeeper-ubi` already owns that
    role in this organization.
-6. **What durability the first release is willing to claim**, and therefore what
+7. **What durability the first release is willing to claim**, and therefore what
    replication topology has to be qualified before it can be published.
 
 ## Standing obligations at every upstream version bump

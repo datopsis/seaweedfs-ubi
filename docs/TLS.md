@@ -134,14 +134,50 @@ outlives the test is a key someone will reuse. A deployment needs more:
 - the private keys mounted read-only and never baked into an image, which the
   image contract already requires.
 
+## Client-facing TLS on the S3 listener
+
+Measured by `tests/s3-tls.sh` against a private CA.
+
+Supply a certificate and key and **omit `-port.https`**:
+
+```console
+podman run -d --name seaweedfs-s3   --read-only --cap-drop=ALL --security-opt=no-new-privileges   -v seaweedfs-config:/etc/seaweedfs:ro   ghcr.io/datopsis/seaweedfs-ubi:<tag> s3 -filer=filer:8888     -config=/etc/seaweedfs/s3.json     -cert.file=/etc/seaweedfs/gateway.crt     -key.file=/etc/seaweedfs/gateway.key
+```
+
+What that configuration was confirmed to do:
+
+- a client trusting the private CA completes the handshake and round-trips an
+  authenticated object;
+- **a client trusting only an unrelated CA is refused at the handshake**, which
+  is the check that makes the others mean anything, since a connection that
+  succeeds for a client trusting everything proves nothing about the server;
+- a hostname the certificate does not cover is refused, so the certificate needs
+  a matching `subjectAltName` — a common name alone is ignored by modern
+  clients; and
+- the same port stops answering plain HTTP. Supplying a certificate upgrades the
+  listener rather than adding a second one.
+
+### The -port.https hazard
+
+> [!WARNING]
+> Adding `-port.https` does **not** move TLS to a second port. It starts TLS
+> there and **leaves the original port serving plaintext**.
+
+Confirmed: with `-cert.file`, `-key.file` and `-port.https=8334`, the container
+listens on `8333`, `8334` and `18333`, and `8333` really does serve the S3 API in
+the clear. An operator reaching for `-port.https` to "enable HTTPS" ends up
+publishing both.
+
+The safe shape is the one above: certificate and key, no `-port.https`. Whether
+this image should refuse the combination outright, the way it refuses an
+unauthenticated S3 gateway, is an open decision recorded in
+[the work plan](README.md#decisions-that-need-a-human).
+
 ## What is not qualified yet
 
 Stated plainly, because this document would otherwise read as more complete than
 it is.
 
-- **Client-facing TLS on the S3 listener.** `weed s3` accepts `-key.file` and
-  `-cert.file`, and neither has been exercised here. Every test in this
-  repository currently drives the S3 API over plain HTTP.
 - **Certificate rotation** without downtime.
 - **mTLS failure behaviour.** The suite proves the cluster works with mTLS
   configured; it does not yet prove a client presenting no certificate, or one

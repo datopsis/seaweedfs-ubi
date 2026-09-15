@@ -316,3 +316,19 @@ only to published container images; repository-only changes remain under
   list of what is still unqualified: client-facing TLS on the S3 listener,
   certificate rotation, mTLS rejection behaviour, and HTTPS on the master, volume,
   and filer listeners.
+- Qualified TLS on the client-facing S3 listener against a private CA. A client
+  trusting the CA completes the handshake and round-trips an authenticated
+  object, and the same port stops answering plain HTTP, so supplying a
+  certificate upgrades the listener rather than adding a second one.
+- Proved the verification is real rather than incidental. A client trusting only
+  an unrelated CA is refused at the handshake, and a hostname the certificate
+  does not cover is refused, so the successful round trip says something about
+  the server's identity instead of only about bytes moving. The certificate needs
+  a matching `subjectAltName`; a common name alone is ignored.
+- Recorded a configuration hazard, measured rather than inferred. Adding
+  `-port.https` does not move TLS to a second port: it starts TLS there and leaves
+  the original port serving the S3 API in plaintext. With a certificate, a key and
+  `-port.https=8334` the container listens on 8333, 8334 and 18333, and the
+  plaintext port really does serve the API. Whether the entrypoint should refuse
+  that combination is recorded as a decision for a human rather than settled
+  unilaterally.

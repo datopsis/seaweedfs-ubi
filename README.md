@@ -238,6 +238,7 @@ tests/smoke.sh                        # the standalone profile, guards and behav
 tests/cluster.sh                      # the four roles as separate containers
 tests/s3.sh                           # the S3 API, with real credentials
 tests/inter-component.sh              # what a security.toml does and does not close
+tests/s3-tls.sh                       # TLS on the client-facing S3 listener
 ```
 
 `scripts/build.sh` is a convenience wrapper over three phases that are separate

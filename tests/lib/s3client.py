@@ -24,6 +24,7 @@ import datetime as dt
 import hashlib
 import hmac
 import json
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -62,12 +63,31 @@ def _signing_key(secret: str, date: str) -> bytes:
 class S3Client:
     """Path-style S3 over plain HTTP, signed with SigV4."""
 
-    def __init__(self, endpoint: str, access_key: str | None, secret_key: str | None):
+    def __init__(
+        self,
+        endpoint: str,
+        access_key: str | None,
+        secret_key: str | None,
+        ca_bundle: str | None = None,
+        verify: bool = True,
+    ):
+        """ca_bundle trusts a private CA; verify=False disables checking entirely.
+
+        Both exist so the TLS checks can tell "the server presented a certificate
+        we trust" apart from "the connection happened to work". A client that
+        trusts everything proves nothing about the server's identity.
+        """
         self.endpoint = endpoint.rstrip("/")
         self.access_key = access_key
         self.secret_key = secret_key
         parsed = urllib.parse.urlparse(self.endpoint)
         self.host = parsed.netloc
+        self.context = None
+        if parsed.scheme == "https":
+            if not verify:
+                self.context = ssl._create_unverified_context()  # noqa: S323
+            else:
+                self.context = ssl.create_default_context(cafile=ca_bundle)
 
     def request(
         self,
@@ -140,12 +160,16 @@ class S3Client:
             url, data=body or None, method=method, headers=headers
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+            with urllib.request.urlopen(  # noqa: S310
+                request, timeout=30, context=self.context
+            ) as response:
                 return Response(response.status, response.read(), dict(response.headers))
         except urllib.error.HTTPError as error:
             return Response(error.code, error.read(), dict(error.headers))
         except urllib.error.URLError as error:
-            raise SystemExit(f"cannot reach {self.endpoint}: {error}") from error
+            # A refused TLS handshake is a result the checks care about, not a
+            # crash. Surface it as status 0 with the reason in the body.
+            return Response(0, str(error.reason).encode(), {})
 
     # Convenience wrappers, named for the S3 operation rather than the verb.
     def create_bucket(self, bucket: str) -> Response:
