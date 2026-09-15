@@ -292,3 +292,27 @@ only to published container images; repository-only changes remain under
   of being hidden by a run of identical bytes. An aborted upload is confirmed to
   leave no readable object, and a neighbouring tenant is refused when it tries to
   add a part to an upload it does not own.
+- Measured the security boundary between the roles instead of describing it.
+  `tests/inter-component.sh` runs the cluster twice, once without a
+  `security.toml` and once with gRPC mTLS and write JWTs, and probes the filer
+  and volume servers directly in both. The result corrects what the security
+  policy previously implied: a `security.toml` closes one of four paths that
+  bypass the S3 gateway.
+- Established that three read paths stay open even with a `security.toml` in
+  place. The filer discloses an object's storage location, the filer serves its
+  content, and a volume server serves its bytes by file id. This is structural,
+  not a misconfiguration: upstream does not support read JWTs alongside a filer,
+  and the S3 API requires a filer, so no configuration in a topology that serves
+  S3 can close them. Network isolation is the only remaining control, which makes
+  keeping the master, volume, and filer listeners off client-reachable networks a
+  requirement rather than a recommendation.
+- Confirmed the mitigation that does work: with write JWTs configured, a direct
+  write to a volume server without the master's token is refused with HTTP 401,
+  where the same request succeeds with HTTP 201 in the baseline.
+- Confirmed the cluster still serves S3 with gRPC mTLS and write JWTs in effect,
+  using a throwaway CA and per-role certificates generated for each run.
+- Added the TLS and inter-component boundary reference, including a working
+  `security.toml` example, the certificate lifecycle expectations, and an explicit
+  list of what is still unqualified: client-facing TLS on the S3 listener,
+  certificate rotation, mTLS rejection behaviour, and HTTPS on the master, volume,
+  and filer listeners.

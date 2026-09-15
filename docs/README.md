@@ -103,7 +103,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/ARCHITECTURE.md` — roles, listeners, data flow, trust boundaries | Present | 3 |
 | `docs/USE-CASES.md` — supported profiles | Planned | 4 |
 | `docs/STORAGE.md` — durability, replication, backup, restore | Planned | 4 |
-| `docs/TLS.md` — client TLS and inter-component mTLS | Planned | 4 |
+| `docs/TLS.md` — inter-component boundary, measured; client TLS still owed | Present | 4 |
 | `docs/LOGGING.md` — log and metrics profiles | Planned | 4 |
 | `docs/CI.md` — automation and local checks | Planned | 5 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
@@ -493,11 +493,21 @@ proves it in an automated suite.
 
 ### Inter-component security
 
-- [ ] Provide tested `security.toml` examples enabling gRPC mTLS between master,
-      volume, filer, and S3, and prove a client without a valid certificate is
-      refused.
-- [ ] Provide tested examples enabling volume read and write JWTs, and prove a
-      direct volume request without a token is refused.
+- [x] Provide a tested `security.toml` example enabling gRPC mTLS between master,
+      volume, filer, and S3, and prove the cluster serves S3 with it in effect.
+      `tests/inter-component.sh` generates a throwaway CA and per-role
+      certificates and runs the cluster with them.
+- [ ] Prove a gRPC client without a valid certificate, or with one from another
+      CA, is refused. The suite shows mTLS working but not mTLS rejecting, which
+      needs a gRPC client it does not have.
+- [x] Provide a tested example enabling volume write JWTs, and prove a direct
+      volume write without a token is refused: measured, HTTP 401.
+- [x] Establish what the mitigation does **not** cover, which turned out to
+      matter more. Read JWTs are unsupported alongside a filer and the S3 topology
+      requires one, so three read paths stay open with `security.toml` in place:
+      the filer discloses object locations, the filer serves object content, and
+      volume servers serve bytes by file id. All three are asserted, and network
+      isolation is documented as the only available control.
 - [ ] Document the `-whiteList` IP restriction, its limits, and why it is not a
       substitute for authentication.
 - [ ] State clearly, for every supported profile, which listeners may face a
