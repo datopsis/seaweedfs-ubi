@@ -452,8 +452,13 @@ proves it in an automated suite.
       identities. One divergence is recorded and asserted: a prefix leaves a
       directory entry behind, so a bucket whose listing is empty still cannot be
       deleted.
-- [ ] Qualify multipart upload, which the round trip above does not cover and
-      which the table-format path depends on for large objects.
+- [x] Qualify multipart upload, which the table-format path depends on for large
+      objects. Exercised with parts at the 5 MiB minimum the S3 API imposes, using
+      non-uniform content so that parts reassembled out of order would be caught
+      rather than hidden by a run of identical bytes. Initiate, part upload,
+      complete, byte-exact reassembly, abort, and the absence of an object after an
+      abort are all asserted, as is a neighbouring tenant being refused when it
+      tries to add a part to an upload it does not own.
 - [ ] Qualify the table-format path end to end: write and read Iceberg tables
       through `lakekeeper-ubi` against this image, replacing the unhardened
       fixture that project uses today. Pin the engine toolchain so the result is

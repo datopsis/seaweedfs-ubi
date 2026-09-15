@@ -258,7 +258,7 @@ standalone profile. `tests/cluster.sh` brings up `master`, `volume`, `filer`, an
 show: discovery between roles, each role's exact listener set, and the S3 role
 needing no writable path at all.
 
-`tests/s3.sh` is the one that sends signed requests. It stands up the cluster
+`tests/s3.sh` is the one that sends signed requests, including multipart uploads. It stands up the cluster
 with three identities, drives the API with a small dependency-free SigV4 client,
 and checks that an authorised caller round-trips an object byte for byte while an
 anonymous caller, a wrong secret, and a tenant reaching into another tenant's

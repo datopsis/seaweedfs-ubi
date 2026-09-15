@@ -283,3 +283,12 @@ only to published container images; repository-only changes remain under
   bind mount or a host-path copy, neither of which is portable: a rootless machine
   VM sees only part of the host filesystem, so both fail wherever the engine
   cannot resolve the path the shell produced.
+- Qualified multipart upload, which the table-format path depends on because
+  Parquet files routinely exceed what a single PUT carries. Initiate, part upload,
+  complete, and abort are all exercised, with parts at the 5 MiB minimum the S3
+  API imposes rather than three tiny parts that would not touch the same path.
+  The reassembled object is compared by digest, not only by length, and the part
+  content is non-uniform so that parts reassembled out of order are caught instead
+  of being hidden by a run of identical bytes. An aborted upload is confirmed to
+  leave no readable object, and a neighbouring tenant is refused when it tries to
+  add a part to an upload it does not own.
