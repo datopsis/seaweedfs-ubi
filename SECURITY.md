@@ -56,14 +56,22 @@ re-verified at every version bump.
   cluster that reports healthy and loses its topology or its data on restart.
   This image is designed to refuse that configuration, controlled by
   `SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR`.
-- **Nothing between the components is authenticated or encrypted by default.**
-  gRPC mTLS between the master, volume, filer, and S3 roles, volume read and
-  write JWTs, and HTTPS on the master, volume, and filer listeners are all
-  configured through a `security.toml` that does not exist unless an operator
-  supplies one. Without it, any client that can reach a volume server can read
-  and write it directly, bypassing the S3 identity model entirely. The
-  `-whiteList` IP restriction is empty by default and is not a substitute for
-  authentication.
+- **Nothing between the components is authenticated by default, and a
+  `security.toml` closes only part of it.** This has now been measured rather
+  than assumed. Without the file, four paths bypass the S3 gateway entirely: the
+  filer discloses an object's storage location, the filer serves its content, a
+  volume server serves its bytes by file id, and a volume server accepts writes.
+  With gRPC mTLS and write JWTs configured, **only the write path closes**. All
+  three read paths stay open.
+
+  That is not a configuration mistake. Upstream states that read JWTs are
+  unsupported alongside a filer, and the S3 API requires a filer, so in any
+  topology that serves S3 the read paths cannot be closed by configuration at
+  all. **Network isolation is the only control for them**: reaching a volume
+  server or the filer is equivalent to reading every object stored there, with no
+  tenant scoping. The `-whiteList` IP restriction is empty by default and is not
+  a substitute for authentication. See [TLS and the boundary between the
+  roles](docs/TLS.md).
 - **`DeleteBucket` deletes a non-empty bucket's contents.** Upstream defaults
   `allowDeleteBucketNotEmpty` to `true`, so a request that the S3 API answers with
   `BucketNotEmpty` instead removes every object in the bucket. A client written

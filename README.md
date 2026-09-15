@@ -177,6 +177,10 @@ costs, and the exact trust limitations of each are set out in
   the measured size, including why the binary is deliberately not stripped.
 - [Configuration](docs/CONFIGURATION.md) documents the roles this image will
   start, the variables it adds, and what each startup guard does **not** check.
+- [TLS and the boundary between the roles](docs/TLS.md) records what a
+  `security.toml` actually closes, measured rather than assumed: it shuts the
+  direct write path and leaves three read paths open, which no configuration in
+  an S3 topology can close.
 - [Hermetic build](docs/HERMETIC-BUILD.md) describes the assembly contract and is
   explicit about what network-free assembly does not defend against.
 - [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
@@ -233,6 +237,7 @@ scripts/build.sh                      # acquire, verify, assemble
 tests/smoke.sh                        # the standalone profile, guards and behaviour
 tests/cluster.sh                      # the four roles as separate containers
 tests/s3.sh                           # the S3 API, with real credentials
+tests/inter-component.sh              # what a security.toml does and does not close
 ```
 
 `scripts/build.sh` is a convenience wrapper over three phases that are separate
