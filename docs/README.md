@@ -434,11 +434,8 @@ weakness is documented rather than obscured.
       against the standalone profile; `tests/cluster.sh` brings up the four roles as
       separate containers on a real network and covers discovery, per-role listener
       sets, and the S3 role needing no writable path at all.
-- [ ] Assert authenticated S3 access and the refusal of anonymous access against
-      a real S3 client. Both fixtures currently prove the gateway starts and that
-      the startup guard refuses a missing identity source; neither yet exercises a
-      signed request, which needs a client and belongs with the round trips in
-      package 4.
+- [x] Assert authenticated S3 access and the refusal of anonymous access against
+      a real S3 client. Delivered by `tests/s3.sh`.
 
 **Exit criteria.** A container built from this repository runs every supported
 role as a non-root process on a read-only root filesystem with no capabilities,
@@ -449,15 +446,21 @@ proves it in an automated suite.
 
 ### Object storage path
 
-- [ ] Qualify the S3 API against a real client for bucket and object create,
-      read, list, multipart upload, delete, and error behavior, and record which
-      S3 behaviors SeaweedFS implements differently from the reference service.
+- [x] Qualify the S3 API against a real client for bucket and object create,
+      read, list, delete, and error behaviour, and record the divergences found.
+      `tests/s3.sh` drives a dependency-free SigV4 client against three
+      identities. One divergence is recorded and asserted: a prefix leaves a
+      directory entry behind, so a bucket whose listing is empty still cannot be
+      deleted.
+- [ ] Qualify multipart upload, which the round trip above does not cover and
+      which the table-format path depends on for large objects.
 - [ ] Qualify the table-format path end to end: write and read Iceberg tables
       through `lakekeeper-ubi` against this image, replacing the unhardened
       fixture that project uses today. Pin the engine toolchain so the result is
       reproducible.
-- [ ] Test identity isolation: two identities with distinct buckets and
-      credentials, proving one cannot read or write the other's bucket.
+- [x] Test identity isolation: two bucket-scoped identities, proving one cannot
+      read, write, or list the other's bucket, alongside an anonymous caller and a
+      valid key with the wrong secret being refused.
 - [ ] Qualify S3 listener TLS, including a private CA chain, and prove
       certificate verification is not silently disabled.
 - [ ] Decide and document the supported position on anonymous read access.

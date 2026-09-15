@@ -133,6 +133,23 @@ behaviour production will not have, and there is no reason for the production
 role to diverge from S3 semantics either. An operator who wants upstream's
 behaviour passes the flag explicitly and it is honoured.
 
+#### One consequence worth knowing about
+
+SeaweedFS models a bucket as a directory, so a key containing a slash creates a
+directory entry that outlives the object. Delete the only object under
+`prefix/`, and the bucket's listing goes empty while `prefix/` remains.
+
+With `allowDeleteBucketNotEmpty` off, which is this image's default, the bucket
+then **cannot be deleted even though a client sees nothing in it**, and the
+gateway answers `409`. That is a real divergence from the S3 API, and it is a
+consequence of the safer default rather than a defect.
+
+An operator meeting it has two honest options: remove the residual directories
+through the filer, or pass `-allowDeleteBucketNotEmpty=true` for that deletion
+and accept that it will remove anything still present. `tests/s3.sh` asserts this
+behaviour rather than avoiding it, so an upstream change to directory cleanup
+shows up as a failure to review instead of going unnoticed.
+
 The Iceberg listener is disabled for a reason beyond surface area:
 [`lakekeeper-ubi`](https://github.com/datopsis/lakekeeper-ubi) is this
 organization's qualified Iceberg REST catalog, and a second unqualified
