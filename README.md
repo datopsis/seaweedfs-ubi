@@ -232,6 +232,7 @@ published, and platform qualification has not started.
 scripts/build.sh                      # acquire, verify, assemble
 tests/smoke.sh                        # the standalone profile, guards and behaviour
 tests/cluster.sh                      # the four roles as separate containers
+tests/s3.sh                           # the S3 API, with real credentials
 ```
 
 `scripts/build.sh` is a convenience wrapper over three phases that are separate
@@ -257,7 +258,13 @@ standalone profile. `tests/cluster.sh` brings up `master`, `volume`, `filer`, an
 show: discovery between roles, each role's exact listener set, and the S3 role
 needing no writable path at all.
 
-Both run every case with a read-only root filesystem, all
+`tests/s3.sh` is the one that sends signed requests. It stands up the cluster
+with three identities, drives the API with a small dependency-free SigV4 client,
+and checks that an authorised caller round-trips an object byte for byte while an
+anonymous caller, a wrong secret, and a tenant reaching into another tenant's
+bucket are all refused.
+
+All three run every case with a read-only root filesystem, all
 capabilities dropped, and `no-new-privileges`. That is deliberate: an image that
 only worked without them would not meet its contract, so the suite would rather
 fail than relax them. It asserts the role allowlist, both startup guards and

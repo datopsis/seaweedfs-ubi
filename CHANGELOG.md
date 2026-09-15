@@ -255,3 +255,31 @@ only to published container images; repository-only changes remain under
   size. Related: upstream's tarball build is stripped while its container build is
   not, so the fallback acquisition path would produce a smaller image with weaker
   provenance.
+- Added S3 API qualification against a real client. `tests/s3.sh` stands up the
+  separated-role cluster with three identities and drives the API with a
+  dependency-free SigV4 client, so the gateway is proven to authenticate rather
+  than merely to have refused to start without a config file. An authorised
+  identity round-trips an object byte for byte and sees it in a listing; an
+  anonymous caller is refused on read, write, and list; a valid access key with
+  the wrong secret is refused; and a bucket-scoped tenant cannot read, write, or
+  list another tenant's bucket.
+- Verified at the API level that the two upstream defaults this image disables
+  actually take effect. A flag that is passed but ignored would look identical in
+  the process arguments, so a write to a missing bucket is confirmed to fail
+  rather than create it, and deleting a non-empty bucket is confirmed to be
+  refused rather than to remove its contents.
+- Wrote the test client rather than pulling one in. A large CLI image would put
+  an unpinned third party inside the one suite whose job is to prove the access
+  controls work, and it would make the suite awkward to run on a controlled
+  network.
+- Recorded and asserted a divergence from the S3 API rather than working around
+  it. SeaweedFS models a bucket as a directory, so a key containing a slash leaves
+  a directory entry that outlives the object: the listing goes empty while the
+  bucket does not, and with recursive bucket deletion disabled the bucket then
+  cannot be deleted even though a client sees nothing in it. The suite pins that
+  behaviour so an upstream change to directory cleanup surfaces as a failure to
+  review.
+- Seeded test configuration through a tar stream into a volume rather than a host
+  bind mount or a host-path copy, neither of which is portable: a rootless machine
+  VM sees only part of the host filesystem, so both fail wherever the engine
+  cannot resolve the path the shell produced.
