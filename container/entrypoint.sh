@@ -145,6 +145,32 @@ require_s3_identities() {
 		"SEAWEEDFS_UBI_REQUIRE_S3_AUTH=false and rely on your own review."
 }
 
+# Two upstream S3 defaults diverge from the S3 API in ways a client will not
+# expect, and one of them loses data.
+#
+#   allowDeleteBucketNotEmpty=true  DeleteBucket on a bucket that still holds
+#                                   objects deletes all of them. The S3 API
+#                                   answers BucketNotEmpty instead, so a client
+#                                   written against S3 gets silent bulk deletion
+#                                   where it expected an error.
+#   autoCreateBucket=true           A PUT into a bucket that does not exist
+#                                   creates it, for admin identities. The S3 API
+#                                   answers NoSuchBucket, so a typo becomes a new
+#                                   bucket rather than a failure.
+#
+# Both are turned off, for the standalone profile as well as the S3 role: a
+# fixture that is more permissive than the thing it stands in for lets tests pass
+# against behaviour production will not have. An operator who wants upstream's
+# behaviour passes the flag explicitly, which is honoured.
+apply_s3_bucket_defaults() {
+	local prefix="$1"
+	shift
+	has_flag "-${prefix}allowDeleteBucketNotEmpty" "$@" ||
+		injected+=("-${prefix}allowDeleteBucketNotEmpty=false")
+	has_flag "-${prefix}autoCreateBucket" "$@" ||
+		injected+=("-${prefix}autoCreateBucket=false")
+}
+
 usage() {
 	cat >&2 <<-'USAGE'
 		seaweedfs-ubi: no role given.
@@ -209,6 +235,8 @@ main() {
 			"${SEAWEEDFS_UBI_ENABLE_LANCE_NAMESPACE:-}" false; then
 			has_flag -port.lance "$@" || injected+=(-port.lance=0)
 		fi
+
+		apply_s3_bucket_defaults "" "$@"
 		;;
 	mini)
 		if ! boolean SEAWEEDFS_UBI_STANDALONE "${SEAWEEDFS_UBI_STANDALONE:-}" false; then
@@ -245,6 +273,8 @@ main() {
 			"${SEAWEEDFS_UBI_ENABLE_LANCE_NAMESPACE:-}" false; then
 			has_flag -s3.port.lance "$@" || injected+=(-s3.port.lance=0)
 		fi
+
+		apply_s3_bucket_defaults "s3." "$@"
 		;;
 	version)
 		exec "$WEED" version
