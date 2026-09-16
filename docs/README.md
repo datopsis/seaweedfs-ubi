@@ -471,10 +471,10 @@ proves it in an automated suite.
       at the handshake, and a hostname the certificate does not cover is refused.
       Supplying a certificate without `-port.https` upgrades the listener and
       stops serving plaintext on it.
-- [ ] Decide whether the entrypoint should refuse `-cert.file` together with
-      `-port.https`. That combination starts TLS on the new port and leaves the
-      original one serving plaintext, which is measured and documented but not
-      currently prevented.
+- [x] Refuse `-cert.file` together with a nonzero `-port.https` by default for
+      both supported profiles. That combination starts TLS on the new port and
+      leaves the original one serving plaintext. A deliberate migration can set
+      `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true` to accept both listeners.
 - [ ] Decide and document the supported position on anonymous read access.
 
 ### Cluster, durability, and state
@@ -665,6 +665,7 @@ reopening one is a deliberate act rather than a drift.
 | 2026-09-12 | **Ship two deployment profiles from one image**: a separated-role production profile, and a single-container standalone profile gated behind an explicit `SEAWEEDFS_UBI_STANDALONE` opt-in. **Supersedes** an earlier decision the same day to refuse the `server` subcommand outright. | Refusing it outright protected a security claim by pushing multi-container cost into every fixture, including ones needing only functional coverage, and denied a real local-development use case that MinIO serves with one container. One image rather than two is correct because the bytes are identical: separate images would mean two SBOMs, scan runs, signature sets, and ledger entries for a difference that is a command-line argument. What the standalone profile can never evidence is enumerated in [deployment profiles](SUPPORT.md#deployment-profiles). |
 | 2026-09-12 | **Acquire the binary from the cosign-verified official container image** (Path B), pinned by digest, with the tarball retained as a documented fallback and a source build left open | The tarball has no publisher signal at all, while the image is signed with keyless cosign bound to an organization-repository workflow identity and built from the exact released commit. Because the images live in a personal namespace, verification is the reason to take that path rather than an enhancement to it. Building from source would be stronger still, but it turns this project from a packager of upstream releases into a builder of them. Recorded in [external artifact acquisition](ARTIFACT-ACQUISITION.md). |
 | 2026-09-12 | **First-release consumer: the Datopsis analytical stack's S3 backend**, built so nothing precludes general use | The difference between the two is what gets *qualified*, not what the image can *do*; see [the support contract](SUPPORT.md#who-this-image-is-for). |
+| 2026-09-15 | **Refuse a plaintext S3 listener beside TLS by default, with an explicit migration opt-out** | Upstream's `-port.https` adds TLS without removing plaintext from the original port. Failing closed matches the authentication and data-directory guards, while `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true` preserves the legitimate dual-listener migration shape. |
 
 ## Decisions that need a human
 
@@ -676,14 +677,7 @@ their reasoning when they are made.
    already compiles in PostgreSQL, MySQL, Redis, MongoDB, etcd, Cassandra, HBase,
    ArangoDB, FoundationDB, and embedded LevelDB, so this is a question of which to
    *qualify*, not which are available. Needed during package 4.
-2. **Should the entrypoint refuse a certificate combined with `-port.https`?**
-   That combination starts TLS on the new port and leaves the original one
-   serving the S3 API in plaintext, which is the opposite of what an operator
-   reaching for it intends. It is also a legitimate migration shape, so refusing
-   it by default with an opt-out would follow the pattern already used for
-   anonymous access, while doing nothing leaves a measured footgun in place.
-   Needed before the deployment guidance in package 7.
-3. **What update cadence and security-response target will this project commit
+2. **What update cadence and security-response target will this project commit
    to?** [`docs/SUPPORT.md`](SUPPORT.md) cannot define a support period without
    it. Upstream releases roughly every seven to ten days in one linear line,
    fixes only the latest release, and maintains no older line, so there is no
@@ -694,15 +688,15 @@ their reasoning when they are made.
    relevant fix, or a narrower support promise. Choosing none of them means the
    project drifts into one by accident. Deferred to package 8, where the real
    qualification cost will be visible; it binds nothing before then.
-4. **How far to go on provenance.** Recording reviewed digests is the floor.
+3. **How far to go on provenance.** Recording reviewed digests is the floor.
    Building from source in a controlled pipeline would be materially stronger
    and materially more work, and it changes what this project is.
-5. **Whether anonymous read access is ever a supported configuration**, or
+4. **Whether anonymous read access is ever a supported configuration**, or
    always a deployment-owned deviation.
-6. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
+5. **Whether the embedded Iceberg REST Catalog is permanently out of scope** or
    a later qualification target, given that `lakekeeper-ubi` already owns that
    role in this organization.
-7. **What durability the first release is willing to claim**, and therefore what
+6. **What durability the first release is willing to claim**, and therefore what
    replication topology has to be qualified before it can be published.
 
 ## Standing obligations at every upstream version bump

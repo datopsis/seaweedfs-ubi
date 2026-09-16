@@ -9,7 +9,9 @@
 # It also pins a configuration hazard. Supplying a certificate and key with no
 # -port.https upgrades the main port to HTTPS and stops serving plaintext.
 # Supplying -port.https as well leaves the plaintext port open beside the TLS
-# one, which is easy to reach for and hard to notice. Both shapes are exercised.
+# one, which is easy to reach for and hard to notice. The entrypoint refuses
+# that shape by default; this suite first asserts the refusal, then opts out so
+# the measured upstream behavior remains pinned.
 #
 # Usage:
 #   tests/s3-tls.sh
@@ -255,10 +257,31 @@ main() {
 
 	printf '\nChecking the -port.https hazard\n\n'
 
-	# ---- shape 2: the hazard, -port.https alongside the plain port -----------
+	local refusal_output refusal_status
+	set +e
+	refusal_output="$(runtime run --rm --network "$NETWORK" "${RESTRICTED[@]}" \
+		-v "${PREFIX}-config:/etc/seaweedfs:ro" \
+		"$IMAGE" s3 -filer="${PREFIX}-filer:8888" -ip.bind=0.0.0.0 \
+		-config=/etc/seaweedfs/s3.json \
+		-cert.file=/etc/seaweedfs/gateway.crt \
+		-key.file=/etc/seaweedfs/gateway.key \
+		-port.https=8334 2>&1)"
+	refusal_status=$?
+	set -e
+	if [ "$refusal_status" -eq 78 ] &&
+		printf '%s' "$refusal_output" | grep -qi 'serving plaintext'; then
+		ok "the entrypoint refuses the dual plaintext and TLS listener shape by default"
+	else
+		bad "the entrypoint refuses the dual plaintext and TLS listener shape by default" \
+			"expected exit 78 and a plaintext diagnostic, got ${refusal_status}" \
+			"${refusal_output}"
+	fi
+
+	# ---- shape 2: explicit opt-out exposes the measured upstream behavior ----
 	runtime run -d --name "${PREFIX}-s3plain" --network "$NETWORK" \
 		--network-alias "${PREFIX}-s3plain" "${RESTRICTED[@]}" \
 		-v "${PREFIX}-config:/etc/seaweedfs:ro" \
+		-e SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true \
 		-p "127.0.0.1:${PLAIN_PORT}:8333" \
 		"$IMAGE" s3 -filer="${PREFIX}-filer:8888" -ip.bind=0.0.0.0 \
 		-config=/etc/seaweedfs/s3.json \

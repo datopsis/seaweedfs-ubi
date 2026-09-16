@@ -185,12 +185,24 @@ main() {
 	expect_refusal "s3 with a missing config file is refused" "does not exist" \
 		-- s3 -config=/nonexistent/s3.json
 
+	# ---- the plaintext-beside-TLS guard -------------------------------------
+	expect_refusal "s3 refuses a plaintext listener beside TLS" "serving plaintext" \
+		-e AWS_ACCESS_KEY_ID=smoke-key -e AWS_SECRET_ACCESS_KEY=smoke-secret \
+		-- s3 -cert.file=/tls/server.crt -key.file=/tls/server.key -port.https=8334
+	expect_refusal "mini refuses a plaintext listener beside TLS" "serving plaintext" \
+		-e SEAWEEDFS_UBI_STANDALONE=true \
+		-e AWS_ACCESS_KEY_ID=smoke-key -e AWS_SECRET_ACCESS_KEY=smoke-secret \
+		-- mini -dir=/data -s3.cert.file=/tls/server.crt \
+		-s3.key.file=/tls/server.key -s3.port.https=8334
+
 	# ---- the standalone gate -------------------------------------------------
 	expect_refusal "mini without the standalone opt-in is refused" "not enabled" -- mini -dir=/data
 
 	# ---- toggles fail closed --------------------------------------------------
 	expect_refusal "an unrecognised boolean is refused, not ignored" "not true or false" \
 		-e SEAWEEDFS_UBI_REQUIRE_S3_AUTH=yes -- s3
+	expect_refusal "the TLS opt-out also rejects an unrecognised boolean" "not true or false" \
+		-e SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=yes -- version
 
 	# ---- opting out is honoured, so the guard is a control and not a wall -----
 	#
