@@ -164,7 +164,7 @@ wait_volume_ready() {
 
 listening_ports() {
 	runtime exec "$1" cat /proc/net/tcp /proc/net/tcp6 2>/dev/null |
-		awk '$4=="0A" {split($2,a,":"); print strtonum("0x" a[2])}' | sort -n -u
+		"$PYTHON" "${REPO_ROOT}/tests/lib/listening_ports.py"
 }
 
 wait_for_port() {

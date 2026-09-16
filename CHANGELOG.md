@@ -12,6 +12,13 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added native AMD64 and ARM64 image CI jobs. Each verifies the runner and image
+  architecture, admits the locked binary through the signed-digest path,
+  exercises negative acquisition checks, assembles with Podman's build network
+  disabled, and runs the full available restricted-runtime suite. A stable
+  `native image` aggregate fails unless both native jobs pass. Listener parsing
+  is shared Python code rather than GNU-awk-specific behavior.
+
 - Added the CI validation foundation with least-privilege triggers, immutable
   Action pins, hash-locked pre-commit tooling, deterministic unit and negative
   lock tests, zizmor workflow auditing, Trivy configuration scanning, and a
