@@ -67,6 +67,11 @@ Losing any one of the first three stores can make the object path incomplete
 even when the other two remain. Copying only volume bytes is not a backup of an
 S3 deployment, because the namespace and topology metadata are separate.
 
+The qualified coordinated cold-backup procedure is documented in [cold backup
+and restore](BACKUP-RESTORE.md). It stops all roles before exporting master,
+volume, and embedded filer state, then proves restoration into new named volumes
+and replacement containers. Runtime secrets remain outside the state archives.
+
 ## Resource exhaustion
 
 `tests/resource-exhaustion.sh` runs master and volume as separate restricted
@@ -95,5 +100,5 @@ The first release still needs a human decision on the durability statement it
 is willing to make. The one-host `010` result is a lower bound, not a substitute
 for the real-host topology that decision may require. The project also still
 owes physical-loss and inode-exhaustion failure injection, backend-specific full
-disk qualification, backup and restore procedures, and restore evidence against
-replacement storage.
+disk qualification, and backup qualification for any external filer backend the
+project later supports.

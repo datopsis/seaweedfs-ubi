@@ -186,6 +186,8 @@ costs, and the exact trust limitations of each are set out in
   an S3 topology can close.
 - [Logging and metrics](docs/LOGGING.md) defines the structured-log default,
   opt-in role metrics, exposure boundary, and measured secret-handling evidence.
+- [Cold backup and restore](docs/BACKUP-RESTORE.md) defines the coordinated
+  Podman volume procedure, restoration checks, and its evidence boundary.
 - [Hermetic build](docs/HERMETIC-BUILD.md) describes the assembly contract and is
   explicit about what network-free assembly does not defend against.
 - [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
@@ -248,6 +250,7 @@ tests/s3-tls.sh                       # TLS on the client-facing S3 listener
 tests/state-survival.sh                # state across restart, replacement and stops
 tests/replication.sh                  # two replicas across logical racks on one host
 tests/resource-exhaustion.sh          # bounded storage and volume-count failures
+tests/backup-restore.sh               # cold state archives into replacement volumes
 ```
 
 `scripts/build.sh` is a convenience wrapper over three phases that are separate
@@ -289,6 +292,11 @@ to reach both the client and the volume logs. A separate phase proves `-max=1`
 admits one volume and visibly refuses another. The rootless Podman backend cannot
 set an inode limit, so inode exhaustion remains unqualified rather than being
 approximated with a privileged mount.
+
+`tests/backup-restore.sh` stops the separated roles before exporting master,
+volume, and embedded filer state. It deletes the original volumes, imports the
+archives under new names, recreates credentials separately, and requires a
+replacement deployment to return the original S3 object byte for byte.
 
 `tests/s3.sh` is the one that sends signed requests, including multipart uploads. It stands up the cluster
 with three identities, drives the API with a small dependency-free SigV4 client,
