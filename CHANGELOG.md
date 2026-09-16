@@ -12,6 +12,13 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added role-specific health and readiness qualification. Master and filer use
+  their meaningful native checks; S3 readiness is an authenticated API
+  operation; volume readiness combines local health with registration in master
+  topology. The suite pins two native false positives by removing dependencies:
+  S3 `/readyz` stays green without the filer, and volume `/readyz` stays green
+  without the master.
+
 - Added negative gRPC mTLS qualification. The inter-component suite now proves
   that a client certificate from the configured CA reaches the HTTP/2 protocol,
   while a client presenting no certificate and one signed by an unrelated CA

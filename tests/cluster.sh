@@ -18,6 +18,7 @@
 # Environment:
 #   CONTAINER_RUNTIME  podman (default) or docker
 #   IMAGE              image under test (default localhost/seaweedfs-ubi:development)
+#   *_HOST_PORT        loopback ports used for role probes
 
 set -euo pipefail
 
@@ -25,6 +26,11 @@ REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 LOCK_FILE="${LOCK_FILE:-${REPO_ROOT}/artifacts/seaweedfs.lock.json}"
 CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-podman}"
 IMAGE="${IMAGE:-localhost/seaweedfs-ubi:development}"
+MASTER_HOST_PORT="${MASTER_HOST_PORT:-19336}"
+VOLUME_HOST_PORT="${VOLUME_HOST_PORT:-18082}"
+FILER_HOST_PORT="${FILER_HOST_PORT:-18890}"
+S3_HOST_PORT="${S3_HOST_PORT:-18336}"
+PYTHON=""
 
 # Container arguments are absolute paths inside the container and must arrive
 # untouched; Git Bash would rewrite them. Inert on Linux.
@@ -76,6 +82,69 @@ bad() {
 	failed=$((failed + 1))
 }
 
+resolve_python() {
+	local candidate
+	for candidate in python3 python; do
+		if command -v "$candidate" >/dev/null 2>&1 &&
+			"$candidate" -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1; then
+			printf '%s' "$candidate"
+			return 0
+		fi
+	done
+	return 1
+}
+
+http_code() {
+	curl -s -o /dev/null --max-time 5 -w '%{http_code}' "$1" 2>/dev/null || printf '000'
+}
+
+wait_http_code() {
+	local url="$1" expected="$2" waited=0
+	while [ "$waited" -lt 40 ]; do
+		[ "$(http_code "$url")" = "$expected" ] && return 0
+		sleep 2
+		waited=$((waited + 2))
+	done
+	return 1
+}
+
+s3_ready() {
+	"$PYTHON" - "http://127.0.0.1:${S3_HOST_PORT}" <<-'PYTHON'
+		import sys
+		sys.path.insert(0, "tests/lib")
+		from s3client import S3Client
+		client = S3Client(sys.argv[1], "cluster-key", "cluster-secret")
+		sys.exit(0 if client.request("GET", "/").status == 200 else 1)
+	PYTHON
+}
+
+volume_registered() {
+	"$PYTHON" - "http://127.0.0.1:${MASTER_HOST_PORT}/dir/status" "$VOLUME_ROLE" <<-'PYTHON'
+		import json, sys, urllib.request
+		try:
+		    with urllib.request.urlopen(sys.argv[1], timeout=5) as response:
+		        topology = json.load(response)
+		except Exception:
+		    raise SystemExit(1)
+		raise SystemExit(0 if sys.argv[2] in json.dumps(topology) else 1)
+	PYTHON
+}
+
+volume_ready() {
+	[ "$(http_code "http://127.0.0.1:${VOLUME_HOST_PORT}/readyz")" = 200 ] &&
+		volume_registered
+}
+
+wait_volume_ready() {
+	local waited=0
+	while [ "$waited" -lt 40 ]; do
+		volume_ready && return 0
+		sleep 2
+		waited=$((waited + 2))
+	done
+	return 1
+}
+
 listening_ports() {
 	runtime exec "$1" cat /proc/net/tcp /proc/net/tcp6 2>/dev/null |
 		awk '$4=="0A" {split($2,a,":"); print strtonum("0x" a[2])}' | sort -n -u
@@ -117,6 +186,10 @@ assert_listeners() {
 }
 
 main() {
+	PYTHON="$(resolve_python)" || {
+		printf 'REFUSED: a Python 3 interpreter is required\n' >&2
+		exit 2
+	}
 	command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1 || {
 		printf 'REFUSED: %s is required\n' "$CONTAINER_RUNTIME" >&2
 		exit 2
@@ -136,7 +209,8 @@ main() {
 
 	# Each role in its own container, addressed by name over a real network.
 	# None of this is exercised by the standalone profile.
-	start_role "$MASTER" "${VOLUMES[0]}" "$IMAGE" \
+	start_role "$MASTER" "${VOLUMES[0]}" \
+		-p "127.0.0.1:${MASTER_HOST_PORT}:9333" "$IMAGE" \
 		master -mdir=/data -ip="$MASTER"
 	if wait_for_port "$MASTER" 9333; then
 		ok "the master starts and listens"
@@ -146,7 +220,8 @@ main() {
 		exit 1
 	fi
 
-	start_role "$VOLUME_ROLE" "${VOLUMES[1]}" "$IMAGE" \
+	start_role "$VOLUME_ROLE" "${VOLUMES[1]}" \
+		-p "127.0.0.1:${VOLUME_HOST_PORT}:8080" "$IMAGE" \
 		volume -dir=/data -ip="$VOLUME_ROLE" -mserver="${MASTER}:9333" -max=4
 	if wait_for_port "$VOLUME_ROLE" 8080; then
 		ok "the volume server starts and registers with the master over the network"
@@ -155,7 +230,8 @@ main() {
 			"$(runtime logs "$VOLUME_ROLE" 2>&1 | tail -5)"
 	fi
 
-	start_role "$FILER" "${VOLUMES[2]}" "$IMAGE" \
+	start_role "$FILER" "${VOLUMES[2]}" \
+		-p "127.0.0.1:${FILER_HOST_PORT}:8888" "$IMAGE" \
 		filer -ip="$FILER" -master="${MASTER}:9333" -defaultStoreDir=/data
 	if wait_for_port "$FILER" 8888; then
 		ok "the filer starts and reaches the master"
@@ -166,6 +242,7 @@ main() {
 	# Environment flags belong to the runtime and must precede the image; the role
 	# and its arguments follow it.
 	start_role "$S3" "" \
+		-p "127.0.0.1:${S3_HOST_PORT}:8333" \
 		-e AWS_ACCESS_KEY_ID=cluster-key \
 		-e AWS_SECRET_ACCESS_KEY=cluster-secret \
 		"$IMAGE" s3 -filer="${FILER}:8888" -ip.bind=0.0.0.0
@@ -236,6 +313,70 @@ main() {
 		fi
 	done
 	[ "$all_ok" = true ] && ok "no role writes the secret access key to its logs"
+
+	# Native probe names do not all mean the same thing. These positive checks
+	# establish the documented healthy state; the dependency-failure checks below
+	# pin which endpoints actually detect loss of a required service.
+	if [ "$(http_code "http://127.0.0.1:${MASTER_HOST_PORT}/healthz")" = 200 ]; then
+		ok "master liveness answers while the process is serving"
+	else
+		bad "master liveness answers while the process is serving"
+	fi
+	if [ "$(http_code "http://127.0.0.1:${MASTER_HOST_PORT}/readyz")" = 200 ]; then
+		ok "master readiness confirms a known, unlocked leader"
+	else
+		bad "master readiness confirms a known, unlocked leader"
+	fi
+	if volume_ready; then
+		ok "volume readiness combines local health with registration in the master topology"
+	else
+		bad "volume readiness combines local health with registration in the master topology"
+	fi
+	if [ "$(http_code "http://127.0.0.1:${FILER_HOST_PORT}/readyz")" = 200 ]; then
+		ok "filer readiness confirms its metadata store can answer"
+	else
+		bad "filer readiness confirms its metadata store can answer"
+	fi
+	if s3_ready; then
+		ok "S3 readiness uses an authenticated API operation through the filer"
+	else
+		bad "S3 readiness uses an authenticated API operation through the filer"
+	fi
+
+	# Upstream's S3 /healthz and /readyz handlers return a static 200. Pin that
+	# limitation by removing the filer: the native endpoint stays green while an
+	# authenticated API operation fails. Operators must probe the operation.
+	runtime stop --time 30 "$FILER" >/dev/null
+	if [ "$(http_code "http://127.0.0.1:${S3_HOST_PORT}/readyz")" = 200 ] && ! s3_ready; then
+		ok "the S3 native readyz false-positive is detected when the filer is down"
+	else
+		bad "the S3 native readyz false-positive is detected when the filer is down"
+	fi
+	runtime start "$FILER" >/dev/null
+	wait_for_port "$FILER" 8888 || bad "the filer recovers after the readiness failure test"
+	if wait_http_code "http://127.0.0.1:${FILER_HOST_PORT}/readyz" 200 && s3_ready; then
+		ok "filer and S3 readiness recover after the dependency returns"
+	else
+		bad "filer and S3 readiness recover after the dependency returns"
+	fi
+
+	# Despite its source comment, the volume endpoint remains 200 after the master
+	# disappears. A useful readiness decision must also query the master topology.
+	runtime stop --time 30 "$MASTER" >/dev/null
+	if [ "$(http_code "http://127.0.0.1:${VOLUME_HOST_PORT}/readyz")" = 200 ] &&
+		! volume_ready; then
+		ok "the volume native readyz false-positive is detected when the master is down"
+	else
+		bad "the volume native readyz false-positive is detected when the master is down"
+	fi
+	runtime start "$MASTER" >/dev/null
+	wait_for_port "$MASTER" 9333 || bad "the master recovers after the readiness failure test"
+	if wait_http_code "http://127.0.0.1:${MASTER_HOST_PORT}/readyz" 200 &&
+		wait_volume_ready; then
+		ok "master and volume readiness recover after the dependency returns"
+	else
+		bad "master and volume readiness recover after the dependency returns"
+	fi
 
 	if [ "$KEEP" = true ]; then
 		printf '\nCluster left running (--keep).\n'
