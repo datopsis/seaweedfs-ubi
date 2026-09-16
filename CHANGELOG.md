@@ -12,6 +12,12 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a tested cold Podman backup and restore procedure. Master, volume, and
+  embedded filer state are exported only after every role stops, the original
+  volumes are deleted, and the archives are imported into different volume
+  names. Replacement container IDs must return the original S3 object byte for
+  byte; credentials are recreated separately and excluded from the archives.
+
 - Added bounded storage-exhaustion evidence. A separated master/volume fixture
   verifies a 3 MiB `tmpfs`, drives assigned writes until byte exhaustion is
   visible to the client and volume logs, and proves `-max=1` admits one volume

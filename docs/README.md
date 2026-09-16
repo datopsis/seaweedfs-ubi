@@ -20,8 +20,8 @@ The hardened image, separated-role topology, authenticated S3 path, multipart
 uploads, component-security measurements, client TLS, state survival across
 container lifecycle events, negative mTLS behavior, and operational profiles are
 exercised. Package 4 still owes the table-format path, replication and failure
-evidence, backup and restore, upgrade and rollback, and the human decisions
-listed at the end of this document.
+evidence, upgrade and rollback, and the human decisions listed at the end of
+this document.
 
 Package 1 is complete. Its decisions are recorded under
 [decisions taken](#decisions-taken), and the items still open are listed under
@@ -105,6 +105,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/ARCHITECTURE.md` — roles, listeners, data flow, trust boundaries | Present | 3 |
 | `docs/USE-CASES.md` — supported profiles and listener exposure | Present | 4 |
 | `docs/STORAGE.md` — measured state survival and durability boundary | Present | 4 |
+| `docs/BACKUP-RESTORE.md` — cold Podman state backup and restore | Present | 4 |
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Planned | 5 |
@@ -507,9 +508,12 @@ proves it in an automated suite.
       refused at `-max=1`. Inode exhaustion stays open because the rootless
       Podman backend rejects inode-limit mount options; it requires a suitable
       real Linux qualification host rather than a privileged test workaround.
-- [ ] Define and test backup and restore procedures for master metadata, filer
-      metadata, and volume data, including a restore into a replacement
-      deployment.
+- [x] Define and test a cold backup and restore procedure for master metadata,
+      embedded filer metadata, and volume data. `tests/backup-restore.sh` stops
+      the roles at a consistency boundary, exports each state volume, deletes the
+      originals, imports into new volume names, recreates credentials separately,
+      and reads the original object from replacement container IDs. External
+      filer backends require their own native procedures and remain undecided.
 - [ ] Define and test the upgrade and rollback procedure across an upstream
       version increment, including whether on-disk formats or the filer schema
       changed.
