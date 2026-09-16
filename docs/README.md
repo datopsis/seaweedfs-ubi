@@ -500,7 +500,13 @@ proves it in an automated suite.
       while that rack is absent. Both copies remain on one host, so the final
       item stays open pending the durability decision and real-host topology.
 - [ ] Test resource-exhaustion behavior: full disk, exhausted inodes, a bounded
-      `tmpfs`, and the volume count limit, confirming each fails visibly.
+      `tmpfs`, and the volume count limit, confirming each fails visibly. The
+      bounded-byte and volume-count cases are now measured by
+      `tests/resource-exhaustion.sh`: writes fail visibly to the client and logs
+      when a verified 3 MiB `tmpfs` fills, and a second volume is explicitly
+      refused at `-max=1`. Inode exhaustion stays open because the rootless
+      Podman backend rejects inode-limit mount options; it requires a suitable
+      real Linux qualification host rather than a privileged test workaround.
 - [ ] Define and test backup and restore procedures for master metadata, filer
       metadata, and volume data, including a restore into a replacement
       deployment.

@@ -12,6 +12,12 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added bounded storage-exhaustion evidence. A separated master/volume fixture
+  verifies a 3 MiB `tmpfs`, drives assigned writes until byte exhaustion is
+  visible to the client and volume logs, and proves `-max=1` admits one volume
+  while explicitly refusing another. Inode exhaustion remains unqualified
+  because the rootless Podman backend cannot create an inode-limited mount.
+
 - Added the first replicated-volume topology evidence. Two volume servers occupy
   distinct logical racks with replication `010`; the suite verifies the written
   object's exact bytes on both replicas, continued S3 reads after one volume

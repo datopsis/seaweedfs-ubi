@@ -67,10 +67,33 @@ Losing any one of the first three stores can make the object path incomplete
 even when the other two remain. Copying only volume bytes is not a backup of an
 S3 deployment, because the namespace and topology metadata are separate.
 
+## Resource exhaustion
+
+`tests/resource-exhaustion.sh` runs master and volume as separate restricted
+containers. One phase fixes the volume count at `-max=1`: the first volume-growth
+request succeeds and the second is refused with an explicit API error. This
+proves the configured limit is enforced and visible; it does not choose an
+appropriate production limit.
+
+The second phase mounts `/data` as a 3 MiB `tmpfs`, verifies the effective mount
+and size through `/proc/mounts`, then sends real assigned-volume writes until the
+filesystem fills. At least one write must succeed, a later write must fail, and
+the volume-server logs must contain a full-filesystem diagnostic. A `tmpfs` is
+used only to create deterministic byte pressure. It is not evidence for the
+latency, filesystem behavior, or recovery characteristics of a physical disk,
+CSI volume, or network storage backend.
+
+Inode exhaustion is still unqualified. The rootless Podman 6.0.2 backend used
+for this measurement rejects the `nr_inodes` tmpfs option, and manufacturing a
+small inode-limited filesystem would require privileged mounting that violates
+the runtime contract being tested. That case requires a real Linux qualification
+host with a rootless-compatible inode-limited storage fixture.
+
 ## Work still required before a durability claim
 
 The first release still needs a human decision on the durability statement it
 is willing to make. The one-host `010` result is a lower bound, not a substitute
 for the real-host topology that decision may require. The project also still
-owes physical-loss and resource-exhaustion failure injection, backup and restore
-procedures, and restore evidence against replacement storage.
+owes physical-loss and inode-exhaustion failure injection, backend-specific full
+disk qualification, backup and restore procedures, and restore evidence against
+replacement storage.
