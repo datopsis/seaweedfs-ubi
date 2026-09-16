@@ -112,7 +112,9 @@ wait_http_code() {
 
 metrics_ready() {
 	local url="$1"
-	curl -fsS --max-time 5 "$url" 2>/dev/null | grep -Eq '^# (HELP|TYPE) '
+	# Read the entire response: grep -q can close the pipe early and make curl
+	# fail with SIGPIPE under pipefail when a metrics payload is large.
+	curl -fsS --max-time 5 "$url" 2>/dev/null | grep -E '^# (HELP|TYPE) ' >/dev/null
 }
 
 s3_ready() {
