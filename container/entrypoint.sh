@@ -145,6 +145,30 @@ require_s3_identities() {
 		"SEAWEEDFS_UBI_REQUIRE_S3_AUTH=false and rely on your own review."
 }
 
+# Supplying a certificate without port.https upgrades the main S3 listener to
+# TLS. Supplying both does not move TLS to the second port: upstream leaves the
+# original listener serving plaintext beside it. That is useful during a
+# deliberate migration, but it is an unsafe surprise for an operator who reads
+# port.https as "make this port HTTPS", so the combination fails closed unless
+# the plaintext listener is explicitly accepted.
+require_no_plaintext_beside_tls() {
+	local role="$1" prefix="$2"
+	shift 2
+
+	local cert_flag="-${prefix}cert.file" https_flag="-${prefix}port.https" https_port
+	has_flag "$cert_flag" "$@" || return 0
+	has_flag "$https_flag" "$@" || return 0
+
+	https_port="$(flag_value "$https_flag" "$@")"
+	[ "$https_port" = "0" ] && return 0
+
+	refuse "the ${role} role was given ${cert_flag} together with ${https_flag}." \
+		"Upstream starts TLS on ${https_flag} and leaves the original S3 port" \
+		"serving plaintext. Omit ${https_flag} to upgrade the main listener to TLS." \
+		"For a deliberate dual-listener migration, set" \
+		"SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true."
+}
+
 # Two upstream S3 defaults diverge from the S3 API in ways a client will not
 # expect, and one of them loses data.
 #
@@ -199,11 +223,15 @@ main() {
 	local role="$1"
 	shift
 
-	local guard_dirs=true guard_auth=true
+	local guard_dirs=true guard_auth=true allow_plaintext_beside_tls=false
 	boolean SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR \
 		"${SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR:-}" true || guard_dirs=false
 	boolean SEAWEEDFS_UBI_REQUIRE_S3_AUTH \
 		"${SEAWEEDFS_UBI_REQUIRE_S3_AUTH:-}" true || guard_auth=false
+	if boolean SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS \
+		"${SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS:-}" false; then
+		allow_plaintext_beside_tls=true
+	fi
 
 	local injected=()
 
@@ -221,6 +249,8 @@ main() {
 		;;
 	s3)
 		[ "$guard_auth" = true ] && require_s3_identities s3 -config "$@"
+		[ "$allow_plaintext_beside_tls" = true ] ||
+			require_no_plaintext_beside_tls s3 "" "$@"
 
 		# In 4.46 the S3 role also opens an Iceberg REST Catalog on 8181 and a
 		# Lance Namespace server on 9101 unless each is given 0. Neither is in
@@ -255,6 +285,8 @@ main() {
 
 		[ "$guard_dirs" = true ] && require_data_directory mini -dir "$@"
 		[ "$guard_auth" = true ] && require_s3_identities mini -s3.config "$@"
+		[ "$allow_plaintext_beside_tls" = true ] ||
+			require_no_plaintext_beside_tls mini "s3." "$@"
 
 		# mini enables more than the object store by default. WebDAV and the
 		# Admin UI are outside the boundary, so they are off unless asked for.

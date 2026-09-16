@@ -42,6 +42,7 @@ upstream's `WEED_` configuration namespace.
 | --- | --- | --- |
 | `SEAWEEDFS_UBI_REQUIRE_S3_AUTH` | `true` | Refuse to start the S3 API with no identity source. |
 | `SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR` | `true` | Refuse a missing or temporary data directory. |
+| `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS` | `false` | Permit the S3 API to serve plaintext on its original port while TLS listens on `-port.https`. |
 | `SEAWEEDFS_UBI_STANDALONE` | unset (`false`) | Permit the `mini` role. |
 | `SEAWEEDFS_UBI_ENABLE_ICEBERG_CATALOG` | `false` | Allow upstream's embedded Iceberg REST Catalog listener. |
 | `SEAWEEDFS_UBI_ENABLE_LANCE_NAMESPACE` | `false` | Allow upstream's Lance Namespace listener. |
@@ -80,6 +81,23 @@ because upstream would fall back to allow-all.
   itself.
 - **It does not evaluate the permissions those identities carry.** An identity
   with admin rights on every bucket satisfies it.
+
+## The S3 TLS listener guard
+
+With a certificate and key but no `-port.https`, upstream upgrades the main S3
+listener to TLS. Adding `-port.https` does something materially different: it
+starts TLS on that port and leaves the original S3 port serving plaintext.
+
+The entrypoint therefore refuses `-cert.file` together with a nonzero
+`-port.https` for `s3`, and the corresponding `-s3.cert.file` and
+`-s3.port.https` flags for `mini`. Omit the HTTPS-port flag to serve TLS only.
+
+A deliberate migration may need both listeners temporarily. Set
+`SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true` to accept that exposure. The
+opt-out changes only the startup guard: the operator must still ensure that the
+plaintext port is not published beyond the intended migration boundary.
+
+An explicit HTTPS port of `0` is treated as disabled and is not refused.
 
 ## The data directory guard
 

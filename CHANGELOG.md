@@ -12,6 +12,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a fail-closed S3 TLS listener guard. The `s3` and `mini` profiles now
+  refuse a certificate combined with a nonzero HTTPS port because upstream
+  leaves the original S3 port serving plaintext. A deliberate dual-listener
+  migration requires `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true`.
+
 - Established the `seaweedfs-ubi` repository and planned GHCR image identity for
   a security-oriented, rootless SeaweedFS container on Red Hat UBI 9.
 - Established repository guidance for secure, rootless image development and

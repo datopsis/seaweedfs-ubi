@@ -163,15 +163,16 @@ What that configuration was confirmed to do:
 > Adding `-port.https` does **not** move TLS to a second port. It starts TLS
 > there and **leaves the original port serving plaintext**.
 
-Confirmed: with `-cert.file`, `-key.file` and `-port.https=8334`, the container
-listens on `8333`, `8334` and `18333`, and `8333` really does serve the S3 API in
-the clear. An operator reaching for `-port.https` to "enable HTTPS" ends up
-publishing both.
+Confirmed: upstream with `-cert.file`, `-key.file` and `-port.https=8334`
+listens on `8333`, `8334` and `18333`, and `8333` really does serve the S3 API
+in the clear. An operator reaching for `-port.https` to "enable HTTPS" would
+publish both.
 
-The safe shape is the one above: certificate and key, no `-port.https`. Whether
-this image should refuse the combination outright, the way it refuses an
-unauthenticated S3 gateway, is an open decision recorded in
-[the work plan](README.md#decisions-that-need-a-human).
+The image refuses that combination by default for both `s3` and `mini`. The safe
+shape is the one above: certificate and key, no `-port.https`. A deliberate
+dual-listener migration must set
+`SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true`; doing so accepts responsibility
+for keeping the plaintext port inside the intended migration boundary.
 
 ## What is not qualified yet
 
