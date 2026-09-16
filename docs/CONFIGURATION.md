@@ -256,6 +256,33 @@ path is required and no log rotation is the image's problem.
 Metrics are opt-in through upstream's `-metricsPort`; nothing is exposed by
 default.
 
+## Health and readiness
+
+One image starts five materially different profiles, so it does not declare one
+Dockerfile `HEALTHCHECK`. A single command would either probe the wrong role or
+collapse liveness and readiness into the same weak signal. The runtime or
+orchestrator must configure the role-specific probes below.
+
+| Role | Liveness | Qualified readiness | Important limit |
+| --- | --- | --- | --- |
+| `master` | `GET /healthz` on `9333` | `GET /readyz` on `9333` | readiness requires a known leader and refuses a locked leader |
+| `volume` | `GET /healthz` on `8080` | local `/readyz` **and** the volume present in the master's `/dir/status` topology | `/healthz` and `/readyz` share one handler; native `/readyz` remained `200` after the master stopped |
+| `filer` | `GET /healthz` on `8888` | `GET /readyz` on `8888` | both routes use the same metadata-store query; neither proves master or volume reachability |
+| `s3` | `GET /healthz` on `8333` | authenticated, signed `ListBuckets` (`GET /`) | native `/status`, `/healthz`, and `/readyz` are static `200` responses and stayed green with the filer down |
+| `mini` | local-only use: `GET /healthz` on its S3 listener | an authenticated S3 operation appropriate to the fixture | one process cannot report component isolation or clustered readiness |
+
+`tests/cluster.sh` measures both false-positive cases rather than inferring them
+from route names. It stops the filer and proves S3's native `/readyz` stays green
+while an authenticated operation fails. It separately stops the master and
+proves the volume's native `/readyz` stays green while the composite registration
+check fails. Both composites are then shown recovering when the dependency
+returns.
+
+The master, volume, and filer probe endpoints remain cluster-network surfaces;
+they must not be published to a client network merely so an external monitor can
+reach them. Run probes from the orchestrator or an operations network with the
+same boundary described in [`USE-CASES.md`](USE-CASES.md).
+
 ## What is not configured here
 
 TLS on the S3 listener, gRPC mTLS between components, volume read and write

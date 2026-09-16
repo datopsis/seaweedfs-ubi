@@ -537,8 +537,12 @@ proves it in an automated suite.
 - [ ] Implement and test structured logging and metrics profiles for each role,
       and qualify that credentials, tokens, and keys never appear in a log line
       or error body.
-- [ ] Define health and readiness checks per role that reflect real service
-      health rather than process liveness.
+- [x] Define and test health and readiness checks per role that reflect real
+      service health rather than process liveness. `tests/cluster.sh` pins two
+      native false positives: S3 `/readyz` stays green without its filer, and
+      volume `/readyz` stays green without its master. Qualified readiness uses
+      an authenticated S3 operation and volume registration in master topology,
+      respectively; the complete role matrix is in `docs/CONFIGURATION.md`.
 - [ ] Write `docs/USE-CASES.md`, `docs/STORAGE.md`, `docs/TLS.md`, and
       `docs/LOGGING.md` from the qualified results, and update `SECURITY.md`
       with the deployment-critical upstream behavior each one exposes.
