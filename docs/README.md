@@ -577,20 +577,22 @@ classification — and every configuration it does not support is named.
       least-privilege permissions; per-ref concurrency cancellation; immutable
       Action SHAs; pinned runners; timeouts; and hash-locked tooling. Give every
       required matrix a stable aggregate check name for branch protection. The
-      initial workflow exposes `validation`; the future native image matrix will
-      receive its own aggregate when it lands.
+      workflow exposes separate `validation` and `native image` aggregates.
 - [ ] In that workflow, run pre-commit and zizmor, scan repository configuration
       with Trivy, validate the artifact lock, exercise the offline negative
       acquisition tests, and prove assembly re-verifies its bundle with the
       build network disabled. Pre-commit, zizmor, Trivy configuration scanning,
       lock validation, and negative lock tests are present; artifact acquisition
-      and hermetic assembly remain for the native image jobs.
-- [ ] Build and execute natively on AMD64 and ARM64 rather than using emulation
+      and hermetic assembly are now in the native image jobs; explicit negative
+      assembly tests remain open.
+- [x] Build and execute natively on AMD64 and ARM64 rather than using emulation
       as runtime evidence. Run the restricted smoke suite on both; run the
       separated-role, authenticated S3, multipart, inter-component-security,
       client-TLS, and state-survival suites wherever their architecture and
       runtime prerequisites are met, without treating a skipped architecture as
-      evidence for it.
+      evidence for it. Each matrix job verifies its runner and image
+      architecture, and also runs observability, replication, exhaustion, and
+      cold restore checks. The aggregate fails unless both jobs succeed.
 - [ ] Add `.github/workflows/codeql.yml` for both GitHub Actions and the
       security-relevant Python acquisition, lock, and test tooling, using
       `security-extended`, read-only defaults, and only the `security-events`

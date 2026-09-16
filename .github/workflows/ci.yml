@@ -89,3 +89,100 @@ jobs:
         run: |
           test "${CONFIGURATION_RESULT}" = success
           test "${REPOSITORY_RESULT}" = success
+
+  native-image:
+    name: native image (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+            machine: x86_64
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+            machine: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    env:
+      CONTAINER_RUNTIME: podman
+      IMAGE: localhost/seaweedfs-ubi:ci-${{ matrix.architecture }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Confirm native architecture and required tools
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
+        run: |
+          test "$(uname -m)" = "${EXPECTED_MACHINE}"
+          for tool in podman openssl curl python3; do
+            command -v "${tool}"
+          done
+          podman version
+
+      - name: Validate reviewed artifact lock
+        run: python3 .github/scripts/check_artifact_lock.py artifacts/seaweedfs.lock.json
+
+      - name: Acquire verified architecture binary
+        run: bash scripts/fetch-artifacts.sh ${{ matrix.architecture }}
+
+      - name: Prove binary admission refuses bad inputs
+        run: bash tests/acquisition.sh
+
+      - name: Pull digest-pinned base images
+        run: bash scripts/fetch-base-images.sh
+
+      - name: Assemble with offline build network and no pulling
+        run: bash scripts/build-image.sh ${{ matrix.architecture }}
+
+      - name: Confirm native image architecture
+        env:
+          EXPECTED_ARCHITECTURE: ${{ matrix.architecture }}
+        run: >-
+          test "$(podman image inspect --format '{{.Architecture}}' "${IMAGE}")"
+          = "${EXPECTED_ARCHITECTURE}"
+
+      - name: Qualify restricted standalone runtime
+        run: bash tests/smoke.sh
+
+      - name: Qualify separated-role topology and readiness
+        run: bash tests/cluster.sh
+
+      - name: Qualify authenticated S3 and multipart
+        run: bash tests/s3.sh
+
+      - name: Qualify client-facing TLS
+        run: bash tests/s3-tls.sh
+
+      - name: Qualify inter-component security
+        run: bash tests/inter-component.sh
+
+      - name: Qualify observability listeners
+        run: bash tests/observability.sh
+
+      - name: Qualify state survival
+        run: bash tests/state-survival.sh
+
+      - name: Qualify one-host replicated-volume behavior
+        run: bash tests/replication.sh
+
+      - name: Qualify bounded storage exhaustion
+        run: bash tests/resource-exhaustion.sh
+
+      - name: Qualify cold backup and restore
+        run: bash tests/backup-restore.sh
+
+  native-image-result:
+    name: native image
+    if: ${{ always() }}
+    needs: native-image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require both native architecture jobs
+        env:
+          MATRIX_RESULT: ${{ needs.native-image.result }}
+        run: test "${MATRIX_RESULT}" = success
