@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "19 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validation:
+    name: repository validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install hash-locked repository tooling
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all:
+          --disable-pip-version-check
+          --requirement .github/requirements/pre-commit.txt
+
+      - name: Run repository checks
+        run: pre-commit run --all-files --show-diff-on-failure
+
+      - name: Run deterministic Python validation tests
+        run: python -m unittest discover --start-directory tests --pattern "test_*.py" --verbose
+
+      - name: Prove artifact-lock validation fails closed
+        run: bash tests/lock.sh
+
+      - name: Audit GitHub Actions security
+        uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99 # v0.6.3
+        with:
+          advanced-security: false
+          annotations: true
+          min-severity: medium
+
+  configuration-security:
+    name: configuration security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Scan repository configuration
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+
+  validation-result:
+    name: validation
+    if: ${{ always() }}
+    needs:
+      - validation
+      - configuration-security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every validation job
+        env:
+          CONFIGURATION_RESULT: ${{ needs.configuration-security.result }}
+          REPOSITORY_RESULT: ${{ needs.validation.result }}
+        run: |
+          test "${CONFIGURATION_RESULT}" = success
+          test "${REPOSITORY_RESULT}" = success

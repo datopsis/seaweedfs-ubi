@@ -191,21 +191,9 @@ import_volume() {
 
 archives_are_complete() {
 	local master_archive="$1" volume_archive="$2" filer_archive="$3" secret="$4"
-	"$PYTHON" - "$master_archive" "$volume_archive" "$filer_archive" "$secret" <<-'PYTHON'
-		import pathlib, sys, tarfile
-		for path in sys.argv[1:4]:
-		    with tarfile.open(path, "r:*") as archive:
-		        members = [member for member in archive.getmembers() if member.isfile()]
-		        unsafe = any(
-		            pathlib.PurePosixPath(member.name).is_absolute()
-		            or ".." in pathlib.PurePosixPath(member.name).parts
-		            for member in members
-		        )
-		        if not members or unsafe:
-		            raise SystemExit(f"archive {path!r} is empty or has an unsafe path")
-		    if sys.argv[4].encode() in open(path, "rb").read():
-		        raise SystemExit(f"runtime S3 secret appeared in state archive {path!r}")
-	PYTHON
+	"$PYTHON" "${REPO_ROOT}/scripts/lib/validate_backup.py" \
+		--forbid-value "$secret" \
+		"$master_archive" "$volume_archive" "$filer_archive"
 }
 
 main() {
