@@ -177,6 +177,9 @@ costs, and the exact trust limitations of each are set out in
   the measured size, including why the binary is deliberately not stripped.
 - [Configuration](docs/CONFIGURATION.md) documents the roles this image will
   start, the variables it adds, and what each startup guard does **not** check.
+- [Supported profiles and network exposure](docs/USE-CASES.md) defines which
+  listeners may face clients and why the upstream IP whitelist is only defense
+  in depth, not authentication or a replacement for network isolation.
 - [TLS and the boundary between the roles](docs/TLS.md) records what a
   `security.toml` actually closes, measured rather than assumed: it shuts the
   direct write path and leaves three read paths open, which no configuration in

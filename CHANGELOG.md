@@ -12,6 +12,17 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Expanded the package 5 roadmap from generic CI bullets into concrete,
+  reviewable workflows modeled on `datopsis/nginx-ubi`: least-privilege CI,
+  native architecture matrices, CodeQL for Actions and Python, OpenSSF
+  Scorecard, dependency review, workflow/configuration scanning, image scanners,
+  retained evidence, and stable aggregate checks for branch protection.
+- Added the supported-profile and listener-exposure matrix. It records that only
+  authenticated TLS S3 may face clients, and documents from the locked 4.46
+  source why `-whiteList` is only defense in depth: empty allows all, it uses the
+  socket peer address, selected handlers opt into it, and volume reads remain
+  open.
+
 - Added separated-role state-survival qualification. Acknowledged S3 objects are
   checked byte for byte after ordinary restart, graceful shutdown and container
   replacement, and an unclean stop, always under the restricted runtime and
