@@ -13,13 +13,15 @@ checked off and its evidence exists.
 
 ## Where to resume
 
-**Next task: finish work package 3**, then work package 4.
+**Next task: continue work package 4**, then implement the package 5 automation
+specified below.
 
-The image exists and is exercised: `scripts/build.sh` produces it and
-`tests/smoke.sh` asserts 20 properties against it under a read-only root with no
-capabilities. What remains in package 3 is the multi-container fixture for the
-separated roles, the hardened Compose stacks, `docs/ARCHITECTURE.md`, the image
-size accounting, and the two `mini` bucket defaults still to decide.
+The hardened image, separated-role topology, authenticated S3 path, multipart
+uploads, component-security measurements, client TLS, and state survival across
+container lifecycle events are exercised. Package 4 still owes the table-format
+path, replication and failure evidence, backup and restore, upgrade and rollback,
+negative mTLS behavior, operational profiles, and the human decisions listed at
+the end of this document.
 
 Package 1 is complete. Its decisions are recorded under
 [decisions taken](#decisions-taken), and the items still open are listed under
@@ -101,7 +103,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
 | `docs/CONFIGURATION.md` — variables this image adds and its guards | Present | 3 |
 | `docs/ARCHITECTURE.md` — roles, listeners, data flow, trust boundaries | Present | 3 |
-| `docs/USE-CASES.md` — supported profiles | Planned | 4 |
+| `docs/USE-CASES.md` — supported profiles and listener exposure | Present | 4 |
 | `docs/STORAGE.md` — measured state survival and durability boundary | Present | 4 |
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
 | `docs/LOGGING.md` — log and metrics profiles | Planned | 4 |
@@ -479,8 +481,10 @@ proves it in an automated suite.
 
 ### Cluster, durability, and state
 
-- [ ] Qualify the separated-role profile: master, volume, filer, and S3 in
-      distinct containers with explicit addresses and no shared filesystem.
+- [x] Qualify the separated-role profile: `tests/cluster.sh` runs master,
+      volume, filer, and S3 in distinct containers with explicit addresses and
+      separate volumes, asserts discovery and listener sets, and proves the S3
+      role needs no writable filesystem.
 - [ ] Decide and document the supported filer metadata store backends, with the
       credential handling and failure behavior of each.
 - [x] Prove data written through the S3 API survives container replacement,
@@ -517,10 +521,14 @@ proves it in an automated suite.
       the filer discloses object locations, the filer serves object content, and
       volume servers serve bytes by file id. All three are asserted, and network
       isolation is documented as the only available control.
-- [ ] Document the `-whiteList` IP restriction, its limits, and why it is not a
-      substitute for authentication.
-- [ ] State clearly, for every supported profile, which listeners may face a
-      client network and which must not.
+- [x] Document the `-whiteList` IP restriction, its limits, and why it is not a
+      substitute for authentication. `docs/USE-CASES.md` ties the guidance to
+      the exact 4.46 implementation: empty means allow-all, socket peer addresses
+      are used, and volume reads remain outside the guard.
+- [x] State clearly, for every supported profile, which listeners may face a
+      client network and which must not. The separated-role matrix permits only
+      authenticated TLS S3; the standalone profile is local-only and never
+      production evidence.
 
 ### Operations
 
@@ -539,10 +547,32 @@ classification — and every configuration it does not support is named.
 
 ## Package 5: CI, supply chain, and release automation
 
-- [ ] Add least-privilege CI with native AMD64 and ARM64 builds and smoke runs,
-      immutable third-party Action references, and hash-locked tooling.
-- [ ] Add repository and workflow security analysis, including CodeQL for
-      Actions, workflow auditing, configuration scanning, and OpenSSF Scorecard.
+- [ ] Add `.github/workflows/ci.yml`, modeled on the control shape used by
+      `datopsis/nginx-ubi`: pull-request, `main`, scheduled, and manual triggers;
+      least-privilege permissions; per-ref concurrency cancellation; immutable
+      Action SHAs; pinned runners; timeouts; and hash-locked tooling. Give every
+      required matrix a stable aggregate check name for branch protection.
+- [ ] In that workflow, run pre-commit and zizmor, scan repository configuration
+      with Trivy, validate the artifact lock, exercise the offline negative
+      acquisition tests, and prove assembly re-verifies its bundle with the
+      build network disabled.
+- [ ] Build and execute natively on AMD64 and ARM64 rather than using emulation
+      as runtime evidence. Run the restricted smoke suite on both; run the
+      separated-role, authenticated S3, multipart, inter-component-security,
+      client-TLS, and state-survival suites wherever their architecture and
+      runtime prerequisites are met, without treating a skipped architecture as
+      evidence for it.
+- [ ] Add `.github/workflows/codeql.yml` for both GitHub Actions and the
+      security-relevant Python acquisition, lock, and test tooling, using
+      `security-extended`, read-only defaults, and only the `security-events`
+      permission needed to publish results.
+- [ ] Add `.github/workflows/scorecard.yml`, following the pinned OpenSSF
+      Scorecard pattern in `datopsis/nginx-ubi`: `read-all` by default, narrowly
+      scoped SARIF and OIDC permissions, scheduled and branch-protection
+      triggers, retained SARIF, and code-scanning publication.
+- [ ] Add dependency-review coverage for pull requests and keep workflow
+      auditing, configuration scanning, and Scorecard findings separate from
+      image vulnerability results so each required check has one meaning.
 - [ ] Generate SPDX SBOMs with Syft for CI and release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical
@@ -557,7 +587,9 @@ classification — and every configuration it does not support is named.
 - [ ] Prove release assembly cannot pull an image, reach a package network, or
       resolve a version at build time.
 - [ ] Add monitored update proposals for the SeaweedFS release and the UBI base
-      digests, landing as reviewable pull requests.
+      digests, landing as reviewable pull requests. Keep this scheduled update
+      proposal separate from the release workflow: detecting a release must
+      never publish or silently change the reviewed lock.
 - [ ] Write `docs/CI.md` covering local checks, CI automation, where each piece
       of evidence lands, and how long it is kept.
 

@@ -86,6 +86,12 @@ re-verified at every version bump.
 - **Only the S3 listener is designed to face clients.** The master, volume, and
   filer listeners must not be reachable from an untrusted network.
 
+The upstream `-whiteList` option does not change that boundary. In the locked
+4.46 source it permits everyone when empty, applies only to selected handlers,
+and does not guard volume reads. It is IP-based defense in depth, not workload
+identity, encryption, or S3 authorization. The complete listener matrix and the
+proxy/NAT limitations are in [`docs/USE-CASES.md`](docs/USE-CASES.md).
+
 Every guard above is implemented and exercised: `tests/smoke.sh` asserts each
 refusal and its diagnostic, and `tests/cluster.sh` asserts the per-role listener
 sets from running containers. What remains unqualified is the deployment side of
