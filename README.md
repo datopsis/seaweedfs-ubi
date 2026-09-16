@@ -247,6 +247,7 @@ tests/inter-component.sh              # what a security.toml does and does not c
 tests/s3-tls.sh                       # TLS on the client-facing S3 listener
 tests/state-survival.sh                # state across restart, replacement and stops
 tests/replication.sh                  # two replicas across logical racks on one host
+tests/resource-exhaustion.sh          # bounded storage and volume-count failures
 ```
 
 `scripts/build.sh` is a convenience wrapper over three phases that are separate
@@ -281,6 +282,13 @@ replication `010`. It verifies the exact object bytes on both replicas, reads
 through S3 after one volume process stops, and confirms new replicated writes
 are not acknowledged while the required rack is absent. Both replicas still run
 on one host, so this is not node-, host-, disk-, or multi-zone-loss evidence.
+
+`tests/resource-exhaustion.sh` gives a volume server a measured 3 MiB `tmpfs`
+and drives real writes until the filesystem refuses one, requiring the failure
+to reach both the client and the volume logs. A separate phase proves `-max=1`
+admits one volume and visibly refuses another. The rootless Podman backend cannot
+set an inode limit, so inode exhaustion remains unqualified rather than being
+approximated with a privileged mount.
 
 `tests/s3.sh` is the one that sends signed requests, including multipart uploads. It stands up the cluster
 with three identities, drives the API with a small dependency-free SigV4 client,
