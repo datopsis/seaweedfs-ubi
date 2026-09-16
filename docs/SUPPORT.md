@@ -101,7 +101,7 @@ A standalone result may never be cited as evidence for a clustered claim.
 | S3 API compatibility | Unsupported | No conformance claim will be made without recorded per-operation results. |
 | Client-facing TLS on the S3 listener | Unsupported | Planned in work package 4. |
 | gRPC mTLS and volume JWTs between components | Unsupported | Planned in work package 4; upstream requires an operator-supplied `security.toml`. |
-| Durability, replication, and failure behavior | Unsupported | Cluster properties; a single-container result will never establish them. |
+| Durability, replication, and failure behavior | Unsupported | A one-host separated-role test measures two `010` replicas and volume-process loss, but does not establish host, node, disk, backend, or zone-loss durability. The supported statement and real-host topology remain undecided. |
 | Backup and restore | Unsupported | Procedures for master metadata, filer metadata, and volume data are planned in work package 4. |
 | Upstream version upgrade and rollback | Unsupported | Requires on-disk format and filer schema qualification per increment. |
 | FUSE mounting (`weed mount`) | Unsupported | Requires device access and privileges the hardened runtime refuses. |
