@@ -203,6 +203,8 @@ main() {
 		-e SEAWEEDFS_UBI_REQUIRE_S3_AUTH=yes -- s3
 	expect_refusal "the TLS opt-out also rejects an unrecognised boolean" "not true or false" \
 		-e SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=yes -- version
+	expect_refusal "an unknown log format is refused" "not supported" \
+		-e SEAWEEDFS_UBI_LOG_FORMAT=xml -- version
 
 	# ---- opting out is honoured, so the guard is a control and not a wall -----
 	#
@@ -317,7 +319,26 @@ main() {
 	fi
 
 	# ---- secrets must not appear in the logs ----------------------------------
-	if runtime logs "$CONTAINER" 2>&1 | grep -q 'smoke-secret'; then
+	local logs
+	logs="$(runtime logs "$CONTAINER" 2>&1)"
+	if printf '%s\n' "$logs" | "$PYTHON" -c '
+import json, sys
+records = []
+for line in sys.stdin:
+    try:
+        record = json.loads(line)
+    except json.JSONDecodeError:
+        continue
+    if isinstance(record, dict):
+        records.append(record)
+raise SystemExit(0 if records else 1)
+'; then
+		ok "server logs use the default structured JSON profile"
+	else
+		bad "server logs use the default structured JSON profile" \
+			"no JSON object was found in the server log"
+	fi
+	if printf '%s\n' "$logs" | grep -q 'smoke-secret'; then
 		bad "the secret access key does not appear in the logs" \
 			"it was found in container output"
 	else

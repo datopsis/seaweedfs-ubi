@@ -11,7 +11,7 @@ read a stored object straight off the volume server by file id. What each one
 returns is the real answer to "what does reaching a volume server get you".
 
 Usage:
-    directaccess.py <mode> <master-url> <volume-url> <filer-url> <bucket> <key>
+    directaccess.py <mode> <master-url> <volume-url> <filer-url> <bucket> <key> [token-out]
 
     mode: baseline  no security.toml is in effect
           secured   write JWTs are configured
@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -102,10 +103,11 @@ def multipart_body(filename: str, content: bytes) -> tuple[bytes, str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 7:
+    if len(argv) not in (7, 8):
         print(__doc__, file=sys.stderr)
         return 2
-    mode, master, volume, filer, bucket, key = argv[1:]
+    mode, master, volume, filer, bucket, key = argv[1:7]
+    token_out = argv[7] if len(argv) == 8 else None
 
     # ---- reading an object straight off the volume server -------------------
     fid, path = file_id(filer, bucket, key)
@@ -117,7 +119,12 @@ def main(argv: list[str]) -> int:
 
     # A shorter path to the same data, worth measuring separately: the filer will
     # simply hand over the object.
-    serves = filer_serves_content(filer, bucket, key, b"bytes behind the gateway")
+    serves = False
+    for _ in range(10):
+        serves = filer_serves_content(filer, bucket, key, b"bytes behind the gateway")
+        if serves:
+            break
+        time.sleep(1)
     if serves:
         ok("the filer serves the object's content without authentication")
     else:
@@ -135,15 +142,20 @@ def main(argv: list[str]) -> int:
     # collection that already holds data anyway.
     assignment = {}
     assign_status, assign_body = 0, b""
-    for query in (f"?collection={bucket}", ""):
-        assign_status, assign_body = fetch(f"{master}/dir/assign{query}")
-        if assign_status == 200:
-            try:
-                assignment = json.loads(assign_body)
-            except json.JSONDecodeError:
-                assignment = {}
-            if assignment.get("fid"):
-                break
+    for attempt in range(10):
+        for query in (f"?collection={bucket}", ""):
+            assign_status, assign_body = fetch(f"{master}/dir/assign{query}")
+            if assign_status == 200:
+                try:
+                    assignment = json.loads(assign_body)
+                except json.JSONDecodeError:
+                    assignment = {}
+                if assignment.get("fid"):
+                    break
+        if assignment.get("fid"):
+            break
+        if attempt < 9:
+            time.sleep(1)
 
     write_status = None
     if assignment.get("fid"):
@@ -165,9 +177,6 @@ def main(argv: list[str]) -> int:
               f"{assign_status}: {assign_body[:160]!r}")
 
     print(f"      observed: direct read HTTP {read_status}, direct write HTTP {write_status}")
-    if assignment.get("auth"):
-        print("      the master issued a write token, so write JWTs are in effect")
-
     if mode == "baseline":
         # This is the exposure the documentation warns about. It has to be shown
         # before the mitigation can be said to change anything.
@@ -189,6 +198,33 @@ def main(argv: list[str]) -> int:
             bad("with write JWTs configured, an untokened direct write is refused",
                 f"expected HTTP 401 or 403, got {write_status}",
                 "the volume server is accepting writes from anyone who can reach it")
+
+        rejected_token = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+            "eyJmaWQiOiJzZWF3ZWVkZnMtdWJpLW5vbi1kaXNjbG9zdXJlIn0."
+            "invalid-signature"
+        )
+        if token_out:
+            with open(token_out, "w", encoding="utf-8") as token_file:
+                token_file.write(rejected_token)
+        if assignment.get("fid"):
+            rejected_status, rejected_body = fetch(
+                f"{volume}/{assignment['fid']}",
+                method="POST",
+                body=content,
+                headers={
+                    "Authorization": f"Bearer {rejected_token}",
+                    "Content-Type": content_type,
+                },
+            )
+        else:
+            rejected_status, rejected_body = None, b""
+        if (rejected_status in (401, 403)
+                and rejected_token.encode() not in rejected_body):
+            ok("a rejected JWT is denied without being echoed in the error body")
+        else:
+            bad("a rejected JWT is denied without being echoed in the error body",
+                f"expected HTTP 401 or 403 without the token, got {rejected_status}")
 
         # The residual risk, asserted rather than hoped away. Upstream states that
         # read JWTs are not supported alongside a filer, and the S3 topology needs

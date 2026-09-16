@@ -19,6 +19,7 @@
 #   CONTAINER_RUNTIME  podman (default) or docker
 #   IMAGE              image under test (default localhost/seaweedfs-ubi:development)
 #   *_HOST_PORT        loopback ports used for role probes
+#   TEST_OBSERVABILITY enable one role-specific Prometheus listener per role
 
 set -euo pipefail
 
@@ -30,6 +31,7 @@ MASTER_HOST_PORT="${MASTER_HOST_PORT:-19336}"
 VOLUME_HOST_PORT="${VOLUME_HOST_PORT:-18082}"
 FILER_HOST_PORT="${FILER_HOST_PORT:-18890}"
 S3_HOST_PORT="${S3_HOST_PORT:-18336}"
+TEST_OBSERVABILITY="${TEST_OBSERVABILITY:-false}"
 PYTHON=""
 
 # Container arguments are absolute paths inside the container and must arrive
@@ -108,6 +110,11 @@ wait_http_code() {
 	return 1
 }
 
+metrics_ready() {
+	local url="$1"
+	curl -fsS --max-time 5 "$url" 2>/dev/null | grep -Eq '^# (HELP|TYPE) '
+}
+
 s3_ready() {
 	"$PYTHON" - "http://127.0.0.1:${S3_HOST_PORT}" <<-'PYTHON'
 		import sys
@@ -116,6 +123,16 @@ s3_ready() {
 		client = S3Client(sys.argv[1], "cluster-key", "cluster-secret")
 		sys.exit(0 if client.request("GET", "/").status == 200 else 1)
 	PYTHON
+}
+
+wait_s3_ready() {
+	local waited=0
+	while [ "$waited" -lt 40 ]; do
+		s3_ready && return 0
+		sleep 2
+		waited=$((waited + 2))
+	done
+	return 1
 }
 
 volume_registered() {
@@ -207,11 +224,33 @@ main() {
 		runtime volume create "$name" >/dev/null
 	done
 
+	local master_runtime=() volume_runtime=() filer_runtime=() s3_runtime=()
+	local master_metrics=() volume_metrics=() filer_metrics=() s3_metrics=()
+	local master_ports="9333 19333" volume_ports="8080 18080"
+	local filer_ports="8888 18888" s3_ports="8333 18333"
+	if [ "$TEST_OBSERVABILITY" = true ]; then
+		master_runtime=(-p 127.0.0.1:19224:9324)
+		volume_runtime=(-p 127.0.0.1:19225:9325)
+		filer_runtime=(-p 127.0.0.1:19226:9326)
+		s3_runtime=(-p 127.0.0.1:19227:9327)
+		master_metrics=(-metricsIp=0.0.0.0 -metricsPort=9324)
+		volume_metrics=(-metricsIp=0.0.0.0 -metricsPort=9325)
+		filer_metrics=(-metricsIp=0.0.0.0 -metricsPort=9326)
+		s3_metrics=(-metricsIp=0.0.0.0 -metricsPort=9327)
+		master_ports="9324 9333 19333"
+		volume_ports="8080 9325 18080"
+		filer_ports="8888 9326 18888"
+		s3_ports="8333 9327 18333"
+	elif [ "$TEST_OBSERVABILITY" != false ]; then
+		printf 'REFUSED: TEST_OBSERVABILITY must be true or false\n' >&2
+		exit 2
+	fi
+
 	# Each role in its own container, addressed by name over a real network.
 	# None of this is exercised by the standalone profile.
 	start_role "$MASTER" "${VOLUMES[0]}" \
-		-p "127.0.0.1:${MASTER_HOST_PORT}:9333" "$IMAGE" \
-		master -mdir=/data -ip="$MASTER"
+		-p "127.0.0.1:${MASTER_HOST_PORT}:9333" "${master_runtime[@]}" "$IMAGE" \
+		master -mdir=/data -ip="$MASTER" "${master_metrics[@]}"
 	if wait_for_port "$MASTER" 9333; then
 		ok "the master starts and listens"
 	else
@@ -221,8 +260,9 @@ main() {
 	fi
 
 	start_role "$VOLUME_ROLE" "${VOLUMES[1]}" \
-		-p "127.0.0.1:${VOLUME_HOST_PORT}:8080" "$IMAGE" \
-		volume -dir=/data -ip="$VOLUME_ROLE" -mserver="${MASTER}:9333" -max=4
+		-p "127.0.0.1:${VOLUME_HOST_PORT}:8080" "${volume_runtime[@]}" "$IMAGE" \
+		volume -dir=/data -ip="$VOLUME_ROLE" -mserver="${MASTER}:9333" -max=4 \
+		"${volume_metrics[@]}"
 	if wait_for_port "$VOLUME_ROLE" 8080; then
 		ok "the volume server starts and registers with the master over the network"
 	else
@@ -231,8 +271,9 @@ main() {
 	fi
 
 	start_role "$FILER" "${VOLUMES[2]}" \
-		-p "127.0.0.1:${FILER_HOST_PORT}:8888" "$IMAGE" \
-		filer -ip="$FILER" -master="${MASTER}:9333" -defaultStoreDir=/data
+		-p "127.0.0.1:${FILER_HOST_PORT}:8888" "${filer_runtime[@]}" "$IMAGE" \
+		filer -ip="$FILER" -master="${MASTER}:9333" -defaultStoreDir=/data \
+		"${filer_metrics[@]}"
 	if wait_for_port "$FILER" 8888; then
 		ok "the filer starts and reaches the master"
 	else
@@ -243,9 +284,10 @@ main() {
 	# and its arguments follow it.
 	start_role "$S3" "" \
 		-p "127.0.0.1:${S3_HOST_PORT}:8333" \
+		"${s3_runtime[@]}" \
 		-e AWS_ACCESS_KEY_ID=cluster-key \
 		-e AWS_SECRET_ACCESS_KEY=cluster-secret \
-		"$IMAGE" s3 -filer="${FILER}:8888" -ip.bind=0.0.0.0
+		"$IMAGE" s3 -filer="${FILER}:8888" -ip.bind=0.0.0.0 "${s3_metrics[@]}"
 	local s3_up=false
 	if wait_for_port "$S3" 8333; then
 		ok "the S3 gateway starts against a separate filer"
@@ -269,16 +311,34 @@ main() {
 
 	# Per-role listener inventories, measured. The standalone profile cannot show
 	# these, because in one process every port belongs to the same process.
-	assert_listeners "the master opens only its HTTP and gRPC ports" \
-		"$MASTER" "9333 19333"
-	assert_listeners "the volume server opens only its HTTP and gRPC ports" \
-		"$VOLUME_ROLE" "8080 18080"
-	assert_listeners "the filer opens only its HTTP and gRPC ports" \
-		"$FILER" "8888 18888"
+	assert_listeners "the master opens only the listeners selected by its profile" \
+		"$MASTER" "$master_ports"
+	assert_listeners "the volume server opens only the listeners selected by its profile" \
+		"$VOLUME_ROLE" "$volume_ports"
+	assert_listeners "the filer opens only the listeners selected by its profile" \
+		"$FILER" "$filer_ports"
 	# 18333 is the S3 role's gRPC companion, derived as 8333+10000 because
 	# -port.grpc is left at 0. It belongs here; 8181 and 9101 do not.
-	assert_listeners "the S3 gateway opens only its own ports, with Iceberg and Lance absent" \
-		"$S3" "8333 18333"
+	assert_listeners "the S3 gateway opens only its selected ports, with Iceberg and Lance absent" \
+		"$S3" "$s3_ports"
+
+	if [ "$TEST_OBSERVABILITY" = true ]; then
+		local metrics_ok=true role_url
+		for role_url in \
+			"master=http://127.0.0.1:19224/metrics" \
+			"volume=http://127.0.0.1:19225/metrics" \
+			"filer=http://127.0.0.1:19226/metrics" \
+			"s3=http://127.0.0.1:19227/metrics"; do
+			if ! metrics_ready "${role_url#*=}"; then
+				bad "every role exports Prometheus metrics only when explicitly enabled" \
+					"${role_url%%=*} did not return Prometheus exposition data"
+				metrics_ok=false
+				break
+			fi
+		done
+		[ "$metrics_ok" = true ] &&
+			ok "every role exports Prometheus metrics only when explicitly enabled"
+	fi
 
 	# Every role, in a topology where they are genuinely separate.
 	local role privileged all_ok=true
@@ -354,7 +414,7 @@ main() {
 	fi
 	runtime start "$FILER" >/dev/null
 	wait_for_port "$FILER" 8888 || bad "the filer recovers after the readiness failure test"
-	if wait_http_code "http://127.0.0.1:${FILER_HOST_PORT}/readyz" 200 && s3_ready; then
+	if wait_http_code "http://127.0.0.1:${FILER_HOST_PORT}/readyz" 200 && wait_s3_ready; then
 		ok "filer and S3 readiness recover after the dependency returns"
 	else
 		bad "filer and S3 readiness recover after the dependency returns"

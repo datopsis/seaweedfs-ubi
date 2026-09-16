@@ -224,6 +224,16 @@ main() {
 	shift
 
 	local guard_dirs=true guard_auth=true allow_plaintext_beside_tls=false
+	local log_format="${SEAWEEDFS_UBI_LOG_FORMAT:-json}"
+	local global_flags=(-logtostderr=true)
+	case "$log_format" in
+	json) global_flags+=(-log_json=true) ;;
+	text) ;;
+	*)
+		refuse "SEAWEEDFS_UBI_LOG_FORMAT is set to '${log_format}', which is not supported." \
+			"Set it to json or text. The default is json."
+		;;
+	esac
 	boolean SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR \
 		"${SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR:-}" true || guard_dirs=false
 	boolean SEAWEEDFS_UBI_REQUIRE_S3_AUTH \
@@ -329,7 +339,7 @@ main() {
 
 	# exec, so the server is PID 1 and receives signals directly. Logs go to the
 	# container's streams; no writable log path is required.
-	exec "$WEED" -logtostderr=true "$role" ${injected[@]+"${injected[@]}"} "$@"
+	exec "$WEED" "${global_flags[@]}" "$role" ${injected[@]+"${injected[@]}"} "$@"
 }
 
 main "$@"

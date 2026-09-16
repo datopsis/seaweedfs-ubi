@@ -184,6 +184,8 @@ costs, and the exact trust limitations of each are set out in
   `security.toml` actually closes, measured rather than assumed: it shuts the
   direct write path and leaves three read paths open, which no configuration in
   an S3 topology can close.
+- [Logging and metrics](docs/LOGGING.md) defines the structured-log default,
+  opt-in role metrics, exposure boundary, and measured secret-handling evidence.
 - [Hermetic build](docs/HERMETIC-BUILD.md) describes the assembly contract and is
   explicit about what network-free assembly does not defend against.
 - [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
@@ -202,7 +204,7 @@ costs, and the exact trust limitations of each are set out in
   license from SeaweedFS, UBI, and component terms.
 
 External artifact acquisition, hermetic build, configuration, architecture,
-deployment, storage and durability, TLS, logging, threat model, security
+deployment, storage and durability, TLS, threat model, security
 controls, cryptographic boundary, FIPS analysis, SCAP, and continuous
 integration will be added as their associated implementations and evidence are
 developed. The [work plan](docs/README.md#documentation-index) names the package
@@ -239,6 +241,7 @@ published, and platform qualification has not started.
 scripts/build.sh                      # acquire, verify, assemble
 tests/smoke.sh                        # the standalone profile, guards and behaviour
 tests/cluster.sh                      # the four roles as separate containers
+tests/observability.sh                # structured logs and opt-in role metrics
 tests/s3.sh                           # the S3 API, with real credentials
 tests/inter-component.sh              # what a security.toml does and does not close
 tests/s3-tls.sh                       # TLS on the client-facing S3 listener
@@ -261,12 +264,16 @@ bundle, and run the third disconnected. Assembly re-verifies the bundle, because
 a bundle is an ordinary directory and the two steps can be separated by a
 transfer.
 
-There are two fixtures because they prove different things. `tests/smoke.sh` is
+The fixtures prove different things. `tests/smoke.sh` is
 the fast one, covering functional behaviour and the startup guards against the
 standalone profile. `tests/cluster.sh` brings up `master`, `volume`, `filer`, and
 `s3` as separate containers on a real network, and covers what one process cannot
 show: discovery between roles, each role's exact listener set, and the S3 role
 needing no writable path at all.
+
+`tests/observability.sh` reuses that separated-role topology with one explicit
+metrics listener per role. It verifies Prometheus exposition on all four while
+the ordinary cluster run proves those listeners remain absent by default.
 
 `tests/s3.sh` is the one that sends signed requests, including multipart uploads. It stands up the cluster
 with three identities, drives the API with a small dependency-free SigV4 client,

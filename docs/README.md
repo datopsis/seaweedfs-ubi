@@ -17,11 +17,11 @@ checked off and its evidence exists.
 specified below.
 
 The hardened image, separated-role topology, authenticated S3 path, multipart
-uploads, component-security measurements, client TLS, and state survival across
-container lifecycle events are exercised. Package 4 still owes the table-format
-path, replication and failure evidence, backup and restore, upgrade and rollback,
-negative mTLS behavior, operational profiles, and the human decisions listed at
-the end of this document.
+uploads, component-security measurements, client TLS, state survival across
+container lifecycle events, negative mTLS behavior, and operational profiles are
+exercised. Package 4 still owes the table-format path, replication and failure
+evidence, backup and restore, upgrade and rollback, and the human decisions
+listed at the end of this document.
 
 Package 1 is complete. Its decisions are recorded under
 [decisions taken](#decisions-taken), and the items still open are listed under
@@ -106,7 +106,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/USE-CASES.md` — supported profiles and listener exposure | Present | 4 |
 | `docs/STORAGE.md` — measured state survival and durability boundary | Present | 4 |
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
-| `docs/LOGGING.md` — log and metrics profiles | Planned | 4 |
+| `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Planned | 5 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
@@ -534,16 +534,21 @@ proves it in an automated suite.
 
 ### Operations
 
-- [ ] Implement and test structured logging and metrics profiles for each role,
-      and qualify that credentials, tokens, and keys never appear in a log line
-      or error body.
+- [x] Implement and test structured logging and metrics profiles for each role.
+      `tests/observability.sh` measures an explicit Prometheus listener on every
+      separated role while the ordinary cluster profile proves metrics remain
+      off by default. The smoke, S3, cluster, and inter-component suites inspect
+      generated credentials, a rejected JWT, its signing key, and private-key
+      material in the exercised logs and rejected-request body;
+      `docs/LOGGING.md` records why
+      that evidence must not be generalized to every upstream path.
 - [x] Define and test health and readiness checks per role that reflect real
       service health rather than process liveness. `tests/cluster.sh` pins two
       native false positives: S3 `/readyz` stays green without its filer, and
       volume `/readyz` stays green without its master. Qualified readiness uses
       an authenticated S3 operation and volume registration in master topology,
       respectively; the complete role matrix is in `docs/CONFIGURATION.md`.
-- [ ] Write `docs/USE-CASES.md`, `docs/STORAGE.md`, `docs/TLS.md`, and
+- [x] Write `docs/USE-CASES.md`, `docs/STORAGE.md`, `docs/TLS.md`, and
       `docs/LOGGING.md` from the qualified results, and update `SECURITY.md`
       with the deployment-critical upstream behavior each one exposes.
 

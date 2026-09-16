@@ -12,6 +12,15 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a structured logging and metrics profile. Server logs default to JSON
+  with a strict text-format opt-out, while metrics require an explicit listener
+  per role and are documented for operations-network exposure only. The
+  separated-role suite proves metrics remain absent by default and verifies
+  Prometheus exposition and exact listener inventories when enabled. Secret
+  checks now cover generated S3 credentials, a rejected JWT, its signing key,
+  private-key material, and a rejected S3 request body within the exercised
+  paths.
+
 - Added role-specific health and readiness qualification. Master and filer use
   their meaningful native checks; S3 readiness is an authenticated API
   operation; volume readiness combines local health with registration in master

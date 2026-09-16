@@ -365,7 +365,28 @@ main() {
 	fi
 	"$PYTHON" "${REPO_ROOT}/tests/lib/directaccess.py" secured \
 		"http://127.0.0.1:19334" "http://127.0.0.1:18081" "http://127.0.0.1:18889" \
-		"$bucket" "$key" || total_failed=$((total_failed + 1))
+		"$bucket" "$key" "${WORK}/rejected-token" || total_failed=$((total_failed + 1))
+
+	local signing_key rejected_token s3_secret private_key_fragment secured_logs="" role
+	signing_key="$(awk -F'"' '/^key = "/ {print $2; exit}' "${WORK}/security.toml")"
+	rejected_token="$(cat "${WORK}/rejected-token" 2>/dev/null || true)"
+	s3_secret="$("$PYTHON" -c \
+		'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["identities"][0]["credentials"][0]["secretKey"])' \
+		"${WORK}/s3.json")"
+	private_key_fragment="$(sed -n '2p' "${WORK}/client.key")"
+	for role in master volume filer s3; do
+		secured_logs+="$(runtime logs "${PHASE_PREFIX}-secured-${role}" 2>&1)"
+	done
+	if [ -n "$signing_key" ] && [ -n "$rejected_token" ] && [ -n "$s3_secret" ] &&
+		[ -n "$private_key_fragment" ] &&
+		! printf '%s' "$secured_logs" |
+			grep -F -e "$signing_key" -e "$rejected_token" -e "$s3_secret" \
+				-e "$private_key_fragment" >/dev/null; then
+		printf 'ok    generated credentials, tokens, and keys stay out of secured-role logs\n'
+	else
+		printf 'FAIL  generated credentials, tokens, and keys stay out of secured-role logs\n'
+		total_failed=$((total_failed + 1))
+	fi
 
 	printf '\n'
 	if [ "$total_failed" -eq 0 ]; then
