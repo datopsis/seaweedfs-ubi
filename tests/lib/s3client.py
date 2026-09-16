@@ -336,7 +336,13 @@ def run(endpoint: str, config_path: Path) -> int:
     checks.expect_denied("an anonymous read is refused", anonymous.get_object("alpha", key).status)
     checks.expect_denied("an anonymous write is refused", anonymous.put_object("alpha", "anon.txt", b"x").status)
     checks.expect_denied("an anonymous bucket listing is refused", anonymous.list_objects("alpha").status)
-    checks.expect_denied("a valid key with the wrong secret is refused", wrong.get_object("alpha", key).status)
+    rejected = wrong.get_object("alpha", key)
+    checks.expect_denied("a valid key with the wrong secret is refused", rejected.status)
+    sensitive_values = (*creds["alpha"], "not-the-right-secret")
+    if any(value.encode() in rejected.body for value in sensitive_values):
+        checks.bad("a rejected request does not echo credentials in its error body")
+    else:
+        checks.ok("a rejected request does not echo credentials in its error body")
 
     # The reason two identities exist. A tenant confined to its own bucket must
     # not reach another's, which is the boundary a shared catalog depends on.

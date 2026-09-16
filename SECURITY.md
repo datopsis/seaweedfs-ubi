@@ -85,6 +85,12 @@ re-verified at every version bump.
   default. An operator running upstream directly should know they are there.
 - **Only the S3 listener is designed to face clients.** The master, volume, and
   filer listeners must not be reachable from an untrusted network.
+- **Metrics are an unauthenticated operations endpoint.** They are disabled by
+  default and must be enabled per role with an explicit bind address and port.
+  Keep them on a protected operations network, never the client network. Server
+  logs are JSON by default, but entrypoint messages remain plain text; collectors
+  must accept both and logs must still be handled as sensitive operational data.
+  See [logging and metrics](docs/LOGGING.md).
 
 The upstream `-whiteList` option does not change that boundary. In the locked
 4.46 source it permits everyone when empty, applies only to selected handlers,
@@ -93,9 +99,10 @@ identity, encryption, or S3 authorization. The complete listener matrix and the
 proxy/NAT limitations are in [`docs/USE-CASES.md`](docs/USE-CASES.md).
 
 Every guard above is implemented and exercised: `tests/smoke.sh` asserts each
-refusal and its diagnostic, and `tests/cluster.sh` asserts the per-role listener
-sets from running containers. What remains unqualified is the deployment side of
-the third item, since tested `security.toml` examples are owed by work package 4.
+refusal and its diagnostic, `tests/cluster.sh` asserts the default per-role
+listener sets from running containers, and `tests/inter-component.sh` measures
+the `security.toml` boundary. Real-host and platform qualification remain future
+work; container tests are not evidence for those environments.
 
 ## Scanner results require context
 

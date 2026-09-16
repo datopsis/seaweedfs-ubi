@@ -46,10 +46,11 @@ upstream's `WEED_` configuration namespace.
 | `SEAWEEDFS_UBI_STANDALONE` | unset (`false`) | Permit the `mini` role. |
 | `SEAWEEDFS_UBI_ENABLE_ICEBERG_CATALOG` | `false` | Allow upstream's embedded Iceberg REST Catalog listener. |
 | `SEAWEEDFS_UBI_ENABLE_LANCE_NAMESPACE` | `false` | Allow upstream's Lance Namespace listener. |
+| `SEAWEEDFS_UBI_LOG_FORMAT` | `json` | Select structured `json` or traditional `text` server logs. |
 
-Each is strictly `true` or `false`. **Any other value is a startup failure**, so
-a misspelling cannot quietly disable a control — which is the failure mode a
-permissive parser would introduce.
+The control variables are strictly `true` or `false`, and the log format is
+strictly `json` or `text`. **Any other value is a startup failure**, so a
+misspelling cannot quietly change a control or logging profile.
 
 ## The S3 authentication guard
 
@@ -250,11 +251,17 @@ directly rather than through a shell that would swallow them.
 
 ## Logging
 
-Logs go to the container's streams with `-logtostderr=true`, so no writable log
-path is required and no log rotation is the image's problem.
+Server logs use upstream's JSON format by default. Set
+`SEAWEEDFS_UBI_LOG_FORMAT=text` for the traditional format. Both go to the
+container's streams with `-logtostderr=true`, so no writable log path is
+required and no log rotation is the image's problem. Entrypoint messages emitted
+before the server starts remain plain text.
 
-Metrics are opt-in through upstream's `-metricsPort`; nothing is exposed by
-default.
+Metrics are opt-in through upstream's `-metricsIp` and `-metricsPort`; nothing is
+exposed by default. Give each role a distinct unprivileged port and expose it
+only on a protected operations network because the endpoint is unauthenticated.
+The measured profiles and evidence boundaries are in [logging and
+metrics](LOGGING.md).
 
 ## Health and readiness
 
