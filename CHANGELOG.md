@@ -12,6 +12,13 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added the first replicated-volume topology evidence. Two volume servers occupy
+  distinct logical racks with replication `010`; the suite verifies the written
+  object's exact bytes on both replicas, continued S3 reads after one volume
+  process stops, and refusal to acknowledge a new replicated write while that
+  rack is absent. Both replicas remain on one host, so the result is explicitly
+  not host-, node-, disk-, backend-, or zone-loss evidence.
+
 - Added a structured logging and metrics profile. Server logs default to JSON
   with a strict text-format opt-out, while metrics require an explicit listener
   per role and are documented for operations-network exposure only. The

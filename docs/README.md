@@ -494,7 +494,11 @@ proves it in an automated suite.
       the result explicitly separate from replication or node-loss evidence.
 - [ ] Qualify a replicated volume topology sufficient to make a durability
       statement, and state plainly which durability properties the first release
-      does **not** claim.
+      does **not** claim. The first bounded result is now measured:
+      `tests/replication.sh` verifies two copies across distinct logical racks,
+      continued reads after one volume process stops, and refusal of new writes
+      while that rack is absent. Both copies remain on one host, so the final
+      item stays open pending the durability decision and real-host topology.
 - [ ] Test resource-exhaustion behavior: full disk, exhausted inodes, a bounded
       `tmpfs`, and the volume count limit, confirming each fails visibly.
 - [ ] Define and test backup and restore procedures for master metadata, filer
@@ -540,8 +544,8 @@ proves it in an automated suite.
       off by default. The smoke, S3, cluster, and inter-component suites inspect
       generated credentials, a rejected JWT, its signing key, and private-key
       material in the exercised logs and rejected-request body;
-      `docs/LOGGING.md` records why
-      that evidence must not be generalized to every upstream path.
+      `docs/LOGGING.md` records why that evidence must not be generalized to
+      every upstream path.
 - [x] Define and test health and readiness checks per role that reflect real
       service health rather than process liveness. `tests/cluster.sh` pins two
       native false positives: S3 `/readyz` stays green without its filer, and

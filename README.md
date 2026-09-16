@@ -246,6 +246,7 @@ tests/s3.sh                           # the S3 API, with real credentials
 tests/inter-component.sh              # what a security.toml does and does not close
 tests/s3-tls.sh                       # TLS on the client-facing S3 listener
 tests/state-survival.sh                # state across restart, replacement and stops
+tests/replication.sh                  # two replicas across logical racks on one host
 ```
 
 `scripts/build.sh` is a convenience wrapper over three phases that are separate
@@ -274,6 +275,12 @@ needing no writable path at all.
 `tests/observability.sh` reuses that separated-role topology with one explicit
 metrics listener per role. It verifies Prometheus exposition on all four while
 the ordinary cluster run proves those listeners remain absent by default.
+
+`tests/replication.sh` creates two volume servers in distinct logical racks with
+replication `010`. It verifies the exact object bytes on both replicas, reads
+through S3 after one volume process stops, and confirms new replicated writes
+are not acknowledged while the required rack is absent. Both replicas still run
+on one host, so this is not node-, host-, disk-, or multi-zone-loss evidence.
 
 `tests/s3.sh` is the one that sends signed requests, including multipart uploads. It stands up the cluster
 with three identities, drives the API with a small dependency-free SigV4 client,
