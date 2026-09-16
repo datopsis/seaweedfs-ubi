@@ -188,6 +188,8 @@ costs, and the exact trust limitations of each are set out in
   opt-in role metrics, exposure boundary, and measured secret-handling evidence.
 - [Cold backup and restore](docs/BACKUP-RESTORE.md) defines the coordinated
   Podman volume procedure, restoration checks, and its evidence boundary.
+- [Continuous integration](docs/CI.md) documents the automated foundation,
+  stable required check, local equivalents, and work not yet automated.
 - [Hermetic build](docs/HERMETIC-BUILD.md) describes the assembly contract and is
   explicit about what network-free assembly does not defend against.
 - [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several

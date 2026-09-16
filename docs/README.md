@@ -108,7 +108,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/BACKUP-RESTORE.md` — cold Podman state backup and restore | Present | 4 |
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
-| `docs/CI.md` — automation and local checks | Planned | 5 |
+| `docs/CI.md` — automation and local checks | Present | 5 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
 | `docs/CONTROL-IMPLEMENTATION.md` — per-control justification | Planned | 6 |
@@ -572,15 +572,19 @@ classification — and every configuration it does not support is named.
 
 ## Package 5: CI, supply chain, and release automation
 
-- [ ] Add `.github/workflows/ci.yml`, modeled on the control shape used by
+- [x] Add `.github/workflows/ci.yml`, modeled on the control shape used by
       `datopsis/nginx-ubi`: pull-request, `main`, scheduled, and manual triggers;
       least-privilege permissions; per-ref concurrency cancellation; immutable
       Action SHAs; pinned runners; timeouts; and hash-locked tooling. Give every
-      required matrix a stable aggregate check name for branch protection.
+      required matrix a stable aggregate check name for branch protection. The
+      initial workflow exposes `validation`; the future native image matrix will
+      receive its own aggregate when it lands.
 - [ ] In that workflow, run pre-commit and zizmor, scan repository configuration
       with Trivy, validate the artifact lock, exercise the offline negative
       acquisition tests, and prove assembly re-verifies its bundle with the
-      build network disabled.
+      build network disabled. Pre-commit, zizmor, Trivy configuration scanning,
+      lock validation, and negative lock tests are present; artifact acquisition
+      and hermetic assembly remain for the native image jobs.
 - [ ] Build and execute natively on AMD64 and ARM64 rather than using emulation
       as runtime evidence. Run the restricted smoke suite on both; run the
       separated-role, authenticated S3, multipart, inter-component-security,
@@ -615,8 +619,9 @@ classification — and every configuration it does not support is named.
       digests, landing as reviewable pull requests. Keep this scheduled update
       proposal separate from the release workflow: detecting a release must
       never publish or silently change the reviewed lock.
-- [ ] Write `docs/CI.md` covering local checks, CI automation, where each piece
-      of evidence lands, and how long it is kept.
+- [ ] Complete `docs/CI.md` with image and release evidence locations and
+      retention periods. The document now covers the foundation checks and local
+      equivalents; artifact retention does not exist until image jobs land.
 
 **Exit criteria.** Every image this project publishes is built, tested,
 inventoried, scanned, attested, and signed by automation that a reviewer can

@@ -12,6 +12,13 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added the CI validation foundation with least-privilege triggers, immutable
+  Action pins, hash-locked pre-commit tooling, deterministic unit and negative
+  lock tests, zizmor workflow auditing, Trivy configuration scanning, and a
+  stable `validation` aggregate for branch protection. Backup archive validation
+  now shares one implementation between the restore fixture and eight negative
+  and positive unit cases.
+
 - Added a tested cold Podman backup and restore procedure. Master, volume, and
   embedded filer state are exported only after every role stops, the original
   volumes are deleted, and the archives are imported into different volume
