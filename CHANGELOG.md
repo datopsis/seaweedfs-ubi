@@ -12,6 +12,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added negative gRPC mTLS qualification. The inter-component suite now proves
+  that a client certificate from the configured CA reaches the HTTP/2 protocol,
+  while a client presenting no certificate and one signed by an unrelated CA
+  are both refused before gRPC traffic is accepted.
+
 - Expanded the package 5 roadmap from generic CI bullets into concrete,
   reviewable workflows modeled on `datopsis/nginx-ubi`: least-privilege CI,
   native architecture matrices, CodeQL for Actions and Python, OpenSSF

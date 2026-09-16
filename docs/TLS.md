@@ -62,6 +62,13 @@ Two distinct things, worth separating because they protect different attacks.
 other. It does not touch the HTTP listeners, which is why it changes none of the
 read paths above — those are plain HTTP on the volume and filer ports.
 
+The suite also connects an HTTP/2 client to the master's gRPC listener. A client
+certificate signed by the configured CA reaches the protocol and receives an
+HTTP/2 frame; a client with no certificate and a client whose certificate is
+signed by an unrelated CA are both refused before any gRPC traffic is accepted.
+That negative result is what establishes mutual authentication rather than only
+showing that TLS was enabled.
+
 **Write JWTs** make the master the issuer of write authority. The master hands a
 short-lived token with each write assignment, and the volume server refuses a
 write that does not carry one. An attacker who can reach the volume server but
@@ -180,15 +187,10 @@ Stated plainly, because this document would otherwise read as more complete than
 it is.
 
 - **Certificate rotation** without downtime.
-- **mTLS failure behaviour.** The suite proves the cluster works with mTLS
-  configured; it does not yet prove a client presenting no certificate, or one
-  from another CA, is refused. Demonstrating that needs a gRPC client the suite
-  does not have.
 - **HTTPS on the master, volume, and filer listeners**, which `security.toml`
   also supports and which would change the read-path analysis above.
 
-The first and last of those are the ones that would most change this document,
-and both are owed by work package 4.
+Both remaining items are owed by work package 4.
 
 ## Related documents
 

@@ -510,9 +510,11 @@ proves it in an automated suite.
       volume, filer, and S3, and prove the cluster serves S3 with it in effect.
       `tests/inter-component.sh` generates a throwaway CA and per-role
       certificates and runs the cluster with them.
-- [ ] Prove a gRPC client without a valid certificate, or with one from another
-      CA, is refused. The suite shows mTLS working but not mTLS rejecting, which
-      needs a gRPC client it does not have.
+- [x] Prove a client connecting to a gRPC listener without a certificate, or
+      with one from another CA, is refused. `tests/lib/mtlschecks.py` speaks the
+      HTTP/2 connection preface used by gRPC: a client certificate from the
+      configured CA receives a protocol frame, while both invalid cases are
+      rejected before application traffic is accepted.
 - [x] Provide a tested example enabling volume write JWTs, and prove a direct
       volume write without a token is refused: measured, HTTP 401.
 - [x] Establish what the mitigation does **not** cover, which turned out to
