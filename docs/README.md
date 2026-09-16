@@ -102,7 +102,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/CONFIGURATION.md` — variables this image adds and its guards | Present | 3 |
 | `docs/ARCHITECTURE.md` — roles, listeners, data flow, trust boundaries | Present | 3 |
 | `docs/USE-CASES.md` — supported profiles | Planned | 4 |
-| `docs/STORAGE.md` — durability, replication, backup, restore | Planned | 4 |
+| `docs/STORAGE.md` — measured state survival and durability boundary | Present | 4 |
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
 | `docs/LOGGING.md` — log and metrics profiles | Planned | 4 |
 | `docs/CI.md` — automation and local checks | Planned | 5 |
@@ -483,9 +483,11 @@ proves it in an automated suite.
       distinct containers with explicit addresses and no shared filesystem.
 - [ ] Decide and document the supported filer metadata store backends, with the
       credential handling and failure behavior of each.
-- [ ] Prove data written through the S3 API survives container replacement,
+- [x] Prove data written through the S3 API survives container replacement,
       restart, and an unclean stop, and that acknowledged writes are not lost on
-      graceful shutdown.
+      graceful shutdown. `tests/state-survival.sh` exercises all four roles as
+      separate containers, reuses only their declared named volumes, and keeps
+      the result explicitly separate from replication or node-loss evidence.
 - [ ] Qualify a replicated volume topology sufficient to make a durability
       statement, and state plainly which durability properties the first release
       does **not** claim.

@@ -12,6 +12,12 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added separated-role state-survival qualification. Acknowledged S3 objects are
+  checked byte for byte after ordinary restart, graceful shutdown and container
+  replacement, and an unclean stop, always under the restricted runtime and
+  with the same explicit data volumes. The accompanying storage guidance states
+  why this is not replication, node-loss, backup, or multi-node evidence.
+
 - Added a fail-closed S3 TLS listener guard. The `s3` and `mini` profiles now
   refuse a certificate combined with a nonzero HTTPS port because upstream
   leaves the original S3 port serving plaintext. A deliberate dual-listener
