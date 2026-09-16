@@ -124,6 +124,27 @@ generate_certificates() {
 			return 1
 		fi
 	done
+
+	# A second trust domain exists only for the negative client-authentication
+	# check. The server never trusts this CA.
+	if ! output="$(ssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+		-keyout "${dir}/other-ca.key" -out "${dir}/other-ca.crt" \
+		-subj "/CN=seaweedfs-ubi-untrusted-ca" 2>&1)"; then
+		printf 'REFUSED: could not create the unrelated test CA\n%s\n' "$output" >&2
+		return 1
+	fi
+	if ! output="$(ssl req -newkey rsa:2048 -nodes \
+		-keyout "${dir}/other-client.key" -out "${dir}/other-client.csr" \
+		-subj "/CN=untrusted-client" 2>&1)"; then
+		printf 'REFUSED: could not create the unrelated client key\n%s\n' "$output" >&2
+		return 1
+	fi
+	if ! output="$(ssl x509 -req -in "${dir}/other-client.csr" -days 1 \
+		-CA "${dir}/other-ca.crt" -CAkey "${dir}/other-ca.key" -CAcreateserial \
+		-out "${dir}/other-client.crt" 2>&1)"; then
+		printf 'REFUSED: could not sign the unrelated client certificate\n%s\n' "$output" >&2
+		return 1
+	fi
 }
 
 write_security_toml() {
@@ -197,6 +218,7 @@ seed_config_volume() {
 # Mounting the whole directory read-only is how an operator would supply it.
 run_phase() {
 	local phase="$1" with_security="$2" master_port="$3" volume_port="$4" filer_port="$5" s3_port="$6"
+	local master_grpc_port="$7"
 	local network="${PHASE_PREFIX}-${phase}"
 	local cfg="${PHASE_PREFIX}-${phase}-config"
 	local m="${PHASE_PREFIX}-${phase}-master"
@@ -217,6 +239,7 @@ run_phase() {
 		"${RESTRICTED[@]}" "${config_mount[@]}" \
 		-v "${PHASE_PREFIX}-${phase}-master:/data" \
 		-p "127.0.0.1:${master_port}:9333" \
+		-p "127.0.0.1:${master_grpc_port}:19333" \
 		"$IMAGE" master -mdir=/data -ip="$m" >/dev/null
 	wait_for_port "$m" 9333 || {
 		printf 'REFUSED: master did not start in %s\n%s\n' "$phase" "$(runtime logs "$m" 2>&1 | tail -8)" >&2
@@ -297,7 +320,7 @@ main() {
 
 	# ---------------- phase 1: the exposure, demonstrated -------------------
 	printf 'Phase 1: no security.toml -- demonstrating the documented exposure\n\n'
-	run_phase baseline false 19333 18080 18888 18333 || exit 1
+	run_phase baseline false 19333 18080 18888 18333 29333 || exit 1
 	"$PYTHON" - "http://127.0.0.1:18333" "${WORK}/s3.json" "$bucket" "$key" <<-'PYTHON'
 		import json, sys
 		sys.path.insert(0, "tests/lib")
@@ -316,7 +339,12 @@ main() {
 
 	# ---------------- phase 2: the mitigation, and its limit ----------------
 	printf '\nPhase 2: security.toml with gRPC mTLS and write JWTs\n\n'
-	run_phase secured true 19334 18081 18889 18334 || exit 1
+	run_phase secured true 19334 18081 18889 18334 29334 || exit 1
+	"$PYTHON" "${REPO_ROOT}/tests/lib/mtlschecks.py" \
+		127.0.0.1 29334 "${WORK}/ca.crt" \
+		"${WORK}/client.crt" "${WORK}/client.key" \
+		"${WORK}/other-client.crt" "${WORK}/other-client.key" ||
+		total_failed=$((total_failed + 1))
 	if "$PYTHON" - "http://127.0.0.1:18334" "${WORK}/s3.json" "$bucket" "$key" <<-'PYTHON'
 		import json, sys
 		sys.path.insert(0, "tests/lib")
