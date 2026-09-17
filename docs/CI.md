@@ -3,7 +3,8 @@
 CI runs deterministic repository validation and a native image matrix on AMD64
 and ARM64. A green matrix demonstrates the listed tests on GitHub-hosted Ubuntu
 runners for the reviewed development image. It is not release-image, RHEL,
-OpenShift, multi-host, vulnerability, SBOM, provenance, or signing evidence.
+OpenShift, multi-host, vulnerability, release-SBOM, provenance, or signing
+evidence.
 
 ## Triggers and authority
 
@@ -67,6 +68,14 @@ state-survival, one-host replication, bounded resource-exhaustion, and cold
 backup/restore suites. These retain their individual scope limits: the
 one-host replication test is not multi-node durability evidence, and a bounded
 `tmpfs` is not a physical-disk failure test.
+
+After assembly, each native job saves its development image as a local OCI
+archive and scans that archive with pinned Syft. It validates the SPDX 2.3
+document for a SeaweedFS Go module and Go dependency inventory, then retains
+the per-architecture SPDX JSON as a CI artifact for 14 days. The OCI archive
+itself is temporary and is not published. These are image-inventory artifacts
+for the tested development builds; they are not vulnerability scan results,
+release-image SBOMs, provenance, or signatures.
 
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.
@@ -138,8 +147,8 @@ repository-owned command.
 
 ## Work still required
 
-CI still needs SBOM generation, Trivy and Grype image gates,
-image and release evidence retention,
+CI still needs release-image SBOM generation, Trivy and Grype image gates,
+release evidence retention,
 provenance, signing, and release automation. The lock's publisher-signature
 negative cases remain a separate networked suite; acquisition itself verifies
 the index and architecture manifest positively in each native job. A skipped or

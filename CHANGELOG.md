@@ -20,6 +20,10 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added per-architecture SPDX SBOM generation for CI development images, with
+  a checked SeaweedFS Go inventory and 14-day retained artifacts. Release-image
+  SBOMs, vulnerability gates, provenance, and signing remain separate work.
+
 - Added a pinned, read-only pull-request dependency review that blocks newly
   introduced High or Critical advisories across all dependency scopes visible
   to GitHub's dependency graph. The graph is enabled and the new check is
