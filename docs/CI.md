@@ -45,10 +45,14 @@ image architecture before running it. The jobs do not install emulators.
 
 For each architecture, CI validates the reviewed lock, verifies the signed
 upstream image index and architecture manifest, extracts the binary by digest,
-and runs negative admission tests. It pulls digest-pinned UBI bases in a separate
-networked step, then invokes `scripts/build-image.sh`, which re-verifies the
-bundle, forbids pulling, and disables Podman's build network. The development
-image is not published by these jobs.
+and runs negative admission and assembly tests. The assembly tests verify that
+a missing or altered bundle, changed lock, or unavailable pinned base prevents
+a build invocation. A runtime shim also checks the `--pull=never` and
+`--network=none` command arguments; it does not substitute for the real build.
+CI pulls digest-pinned UBI bases in a separate networked step, then invokes
+`scripts/build-image.sh`, which re-verifies the bundle, forbids pulling, and
+disables Podman's build network. The development image is not published by
+these jobs.
 
 Every native job then runs the restricted-runtime smoke, separated-role cluster,
 authenticated S3 and multipart, S3 TLS, inter-component security, observability,
@@ -70,14 +74,19 @@ python -m unittest discover --start-directory tests --pattern 'test_*.py' --verb
 bash tests/lock.sh
 ```
 
+After acquiring an admitted binary with `scripts/fetch-artifacts.sh`, run
+`bash tests/assembly.sh` to exercise the offline assembly refusals. This test
+uses a runtime shim and does not build an image; the native CI jobs also run
+the real Podman assembly.
+
 Trivy and zizmor are pinned CI Actions in this increment; local invocations are
 not documented as equivalent until their installation and version pins have a
 repository-owned command.
 
 ## Work still required
 
-CI still needs explicit negative assembly tests, CodeQL, Scorecard, dependency
-review, SBOM generation, Trivy and Grype image gates, evidence retention,
+CI still needs CodeQL, Scorecard, dependency review, SBOM generation, Trivy
+and Grype image gates, evidence retention,
 provenance, signing, and release automation. The lock's publisher-signature
 negative cases remain a separate networked suite; acquisition itself verifies
 the index and architecture manifest positively in each native job. A skipped or

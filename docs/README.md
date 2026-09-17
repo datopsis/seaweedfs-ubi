@@ -578,13 +578,13 @@ classification — and every configuration it does not support is named.
       Action SHAs; pinned runners; timeouts; and hash-locked tooling. Give every
       required matrix a stable aggregate check name for branch protection. The
       workflow exposes separate `validation` and `native image` aggregates.
-- [ ] In that workflow, run pre-commit and zizmor, scan repository configuration
+- [x] In that workflow, run pre-commit and zizmor, scan repository configuration
       with Trivy, validate the artifact lock, exercise the offline negative
       acquisition tests, and prove assembly re-verifies its bundle with the
       build network disabled. Pre-commit, zizmor, Trivy configuration scanning,
-      lock validation, and negative lock tests are present; artifact acquisition
-      and hermetic assembly are now in the native image jobs; explicit negative
-      assembly tests remain open.
+      lock validation, negative lock and acquisition tests, and explicit
+      negative assembly tests run in CI. Native image jobs also perform the
+      actual no-pull build with its network disabled.
 - [x] Build and execute natively on AMD64 and ARM64 rather than using emulation
       as runtime evidence. Run the restricted smoke suite on both; run the
       separated-role, authenticated S3, multipart, inter-component-security,

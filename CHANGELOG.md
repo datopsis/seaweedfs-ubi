@@ -12,6 +12,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added negative assembly checks to both native CI jobs. They prove that a
+  missing or altered bundle, changed lock, or unavailable pinned base prevents
+  a build, and that an admitted bundle reaches an offline, no-pull Podman build
+  command. The separate real build remains the image-assembly evidence.
+
 - Added native AMD64 and ARM64 image CI jobs. Each verifies the runner and image
   architecture, admits the locked binary through the signed-digest path,
   exercises negative acquisition checks, assembles with Podman's build network
