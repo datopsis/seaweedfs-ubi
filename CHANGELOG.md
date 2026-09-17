@@ -12,6 +12,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a pinned OpenSSF Scorecard workflow with scoped OIDC and SARIF upload
+  permissions, five-day SARIF retention, and code-scanning publication. README
+  badges now show the `main` workflow status for CI, CodeQL, and Scorecard
+  without implying a supported image release or minimum security score.
+
 - Added a separate CodeQL workflow for GitHub Actions and Python, with
   `security-extended` queries, immutable Action pins, least-privilege upload
   permissions, and a stable aggregate check. Results go to GitHub code scanning;

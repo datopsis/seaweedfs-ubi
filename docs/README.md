@@ -598,10 +598,12 @@ classification — and every configuration it does not support is named.
       `security-extended`, read-only defaults, and only the `security-events`
       write permission needed to publish results. The workflow analyzes each
       language separately and exposes a stable `codeql` aggregate check.
-- [ ] Add `.github/workflows/scorecard.yml`, following the pinned OpenSSF
+- [x] Add `.github/workflows/scorecard.yml`, following the pinned OpenSSF
       Scorecard pattern in `datopsis/nginx-ubi`: `read-all` by default, narrowly
       scoped SARIF and OIDC permissions, scheduled and branch-protection
-      triggers, retained SARIF, and code-scanning publication.
+      triggers, five-day retained SARIF, and code-scanning publication. The
+      workflow also runs on `main` pushes and manual dispatch; it does not
+      treat a successful analysis as a passing vulnerability gate.
 - [ ] Add dependency-review coverage for pull requests and keep workflow
       auditing, configuration scanning, and Scorecard findings separate from
       image vulnerability results so each required check has one meaning.
