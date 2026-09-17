@@ -630,9 +630,12 @@ classification — and every configuration it does not support is named.
       treat Scorecard's undetected packaging workflow as proof that container
       assembly did not run. Signed-release coverage remains tied to the first
       actual image release, not a source-only tag.
-- [ ] Add dependency-review coverage for pull requests and keep workflow
+- [x] Add dependency-review coverage for pull requests and keep workflow
       auditing, configuration scanning, and Scorecard findings separate from
       image vulnerability results so each required check has one meaning.
+      The PR-only check blocks newly introduced High or Critical advisories
+      in all dependency scopes recognized by GitHub's dependency graph; it
+      cannot inventory the prebuilt `weed` binary or replace image scanning.
 - [ ] Generate SPDX SBOMs with Syft for CI and release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical

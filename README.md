@@ -3,6 +3,7 @@
 [![CI](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/scorecard.yml)
+[![Dependency Review](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/dependency-review.yml/badge.svg)](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/dependency-review.yml)
 
 These badges show workflow status on `main`, not a released or platform-qualified
 image. The Scorecard badge shows analysis completion, not a minimum score.

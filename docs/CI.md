@@ -86,6 +86,16 @@ the code has no findings, and it is not an image vulnerability scan.
 
 ## Repository security posture
 
+`.github/workflows/dependency-review.yml` runs only for pull requests with a
+read-only token. It compares dependencies recognized by GitHub's dependency
+graph between the base and proposed revisions, and fails on newly introduced
+High or Critical advisories in runtime, development, or unknown scopes. It
+does not waive lower-severity findings, establish a license policy, inspect
+the prebuilt `weed` binary's Go dependency inventory, or scan the assembled
+image. The stable `dependency review` job is intended as a required check;
+its first PR run and repository ruleset must be verified before treating it as
+an enforced merge gate.
+
 `.github/workflows/scorecard.yml` runs OpenSSF Scorecard on pushes to `main`,
 weekly schedules, branch-protection-rule changes, and manual dispatch. It uses
 read-only workflow defaults and narrows the analysis job to repository read,
@@ -125,7 +135,7 @@ repository-owned command.
 
 ## Work still required
 
-CI still needs dependency review, SBOM generation, Trivy and Grype image gates,
+CI still needs SBOM generation, Trivy and Grype image gates,
 image and release evidence retention,
 provenance, signing, and release automation. The lock's publisher-signature
 negative cases remain a separate networked suite; acquisition itself verifies
