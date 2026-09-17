@@ -636,8 +636,13 @@ classification — and every configuration it does not support is named.
       The PR-only check blocks newly introduced High or Critical advisories
       in all dependency scopes recognized by GitHub's dependency graph; it
       cannot inventory the prebuilt `weed` binary or replace image scanning.
-- [ ] Generate SPDX SBOMs with Syft for CI and release images, recording the
-      `weed` binary and its resolvable Go dependency inventory as components.
+- [x] Generate and retain per-architecture SPDX SBOMs with Syft for native CI
+      development images. Validate that the inventory contains SeaweedFS and
+      resolvable Go modules; do not confuse an inventory with a vulnerability
+      scan or release-image evidence.
+- [ ] Generate SPDX SBOMs for the eventual release images, recording the
+      `weed` binary and its resolvable Go dependency inventory as components,
+      and bind each release SBOM to the published image digest.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical
       findings, and retain the complete inventory including unfixed findings.
 - [ ] Define the triage policy for findings against the Go dependency

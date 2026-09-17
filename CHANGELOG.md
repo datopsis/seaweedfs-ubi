@@ -12,6 +12,9 @@ only to published container images; repository-only changes remain under
 
 ### Fixed
 
+- Bound the generated secret to the backup-archive validator's option even
+  when the secret begins with a hyphen, preserving the archive exclusion check.
+
 - Set a TLS 1.2 minimum for the gRPC mTLS test client, removing the older
   protocol negotiation flagged by CodeQL without changing the test's
   client-certificate scope.
@@ -19,6 +22,10 @@ only to published container images; repository-only changes remain under
   initial separated-role readiness, using the existing bounded recovery probe.
 
 ### Added
+
+- Added per-architecture SPDX SBOM generation for CI development images, with
+  a checked SeaweedFS Go inventory and 14-day retained artifacts. Release-image
+  SBOMs, vulnerability gates, provenance, and signing remain separate work.
 
 - Added a pinned, read-only pull-request dependency review that blocks newly
   introduced High or Critical advisories across all dependency scopes visible

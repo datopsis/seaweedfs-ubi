@@ -148,6 +148,32 @@ jobs:
           test "$(podman image inspect --format '{{.Architecture}}' "${IMAGE}")"
           = "${EXPECTED_ARCHITECTURE}"
 
+      - name: Download pinned Syft
+        id: syft
+        uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          syft-version: v1.51.1
+
+      - name: Generate and validate native image SPDX SBOM
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          SYFT_CMD: ${{ steps.syft.outputs.cmd }}
+          SYFT_CHECK_FOR_APP_UPDATE: "false"
+        run: |
+          archive="${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.tar"
+          sbom="${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.spdx.json"
+          podman save --format oci-archive --output "${archive}" "${IMAGE}"
+          "${SYFT_CMD}" "oci-archive:${archive}" -o "spdx-json=${sbom}"
+          python3 tests/lib/spdxchecks.py "${sbom}"
+
+      - name: Retain native image SPDX SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: development-image-${{ matrix.architecture }}-spdx
+          path: ${{ runner.temp }}/seaweedfs-ci-${{ matrix.architecture }}.spdx.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Qualify restricted standalone runtime
         run: bash tests/smoke.sh
 

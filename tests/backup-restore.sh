@@ -192,7 +192,7 @@ import_volume() {
 archives_are_complete() {
 	local master_archive="$1" volume_archive="$2" filer_archive="$3" secret="$4"
 	"$PYTHON" "${REPO_ROOT}/scripts/lib/validate_backup.py" \
-		--forbid-value "$secret" \
+		--forbid-value="$secret" \
 		"$master_archive" "$volume_archive" "$filer_archive"
 }
 
