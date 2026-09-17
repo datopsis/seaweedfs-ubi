@@ -12,6 +12,9 @@ only to published container images; repository-only changes remain under
 
 ### Fixed
 
+- Bound the generated secret to the backup-archive validator's option even
+  when the secret begins with a hyphen, preserving the archive exclusion check.
+
 - Set a TLS 1.2 minimum for the gRPC mTLS test client, removing the older
   protocol negotiation flagged by CodeQL without changing the test's
   client-certificate scope.

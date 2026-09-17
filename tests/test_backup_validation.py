@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import pathlib
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -70,6 +71,23 @@ class BackupArchiveValidationTests(unittest.TestCase):
         path = self.archive_with("data/state.db", b"prefix generated-secret suffix")
         with self.assertRaisesRegex(BackupValidationError, "forbidden runtime value"):
             validate_archive(path, (b"generated-secret",))
+
+    def test_cli_refuses_a_forbidden_value_starting_with_a_hyphen(self) -> None:
+        path = self.archive_with("data/state.db", b"prefix -leading-secret suffix")
+        validator = pathlib.Path(__file__).parents[1] / "scripts" / "lib" / "validate_backup.py"
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(validator),
+                "--forbid-value=-leading-secret",
+                str(path),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("forbidden runtime value", result.stderr)
 
 
 if __name__ == "__main__":
