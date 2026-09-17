@@ -257,6 +257,23 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Convert native image Trivy inventory to code-scanning results
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          inventory="${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.trivy.json"
+          report="${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.trivy.sarif"
+          trivy convert --format sarif --output "${report}" "${inventory}"
+          python3 -c 'import json,sys; report=json.load(open(sys.argv[1], encoding="utf-8")); assert report.get("version") == "2.1.0" and isinstance(report.get("runs"), list) and report["runs"] and all(run.get("tool", {}).get("driver", {}).get("name") == "Trivy" and isinstance(run.get("results"), list) for run in report["runs"])' "${report}"
+
+      - name: Retain native image Trivy code-scanning results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: development-image-${{ matrix.architecture }}-trivy-sarif
+          path: ${{ runner.temp }}/seaweedfs-ci-${{ matrix.architecture }}.trivy.sarif
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Qualify restricted standalone runtime
         run: bash tests/smoke.sh
 
@@ -327,8 +344,20 @@ jobs:
           name: development-image-${{ matrix.architecture }}-grype-sarif
           path: ${{ runner.temp }}/grype-sarif
 
-      - name: Publish development-image findings to code scanning
+      - name: Publish Grype development-image findings to code scanning
         uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
           sarif_file: ${{ runner.temp }}/grype-sarif/seaweedfs-ci-${{ matrix.architecture }}.grype.sarif
           category: grype-development-image-${{ matrix.architecture }}
+
+      - name: Download native image Trivy SARIF
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: development-image-${{ matrix.architecture }}-trivy-sarif
+          path: ${{ runner.temp }}/trivy-sarif
+
+      - name: Publish Trivy development-image findings to code scanning
+        uses: github/codeql-action/upload-sarif@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
+        with:
+          sarif_file: ${{ runner.temp }}/trivy-sarif/seaweedfs-ci-${{ matrix.architecture }}.trivy.sarif
+          category: trivy-development-image-${{ matrix.architecture }}
