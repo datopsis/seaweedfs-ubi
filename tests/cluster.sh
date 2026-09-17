@@ -389,7 +389,9 @@ main() {
 	else
 		bad "master readiness confirms a known, unlocked leader"
 	fi
-	if volume_ready; then
+	# Listener startup can precede the master's topology update. Require the
+	# same bounded, topology-aware readiness check used after master recovery.
+	if wait_volume_ready; then
 		ok "volume readiness combines local health with registration in the master topology"
 	else
 		bad "volume readiness combines local health with registration in the master topology"

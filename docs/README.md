@@ -604,6 +604,25 @@ classification — and every configuration it does not support is named.
       triggers, five-day retained SARIF, and code-scanning publication. The
       workflow also runs on `main` pushes and manual dispatch; it does not
       treat a successful analysis as a passing vulnerability gate.
+- [x] Require the `validation`, `native image`, and `codeql` aggregate checks
+      from GitHub Actions on the default branch, using an active ruleset with
+      up-to-date branches. This closes the missing-required-checks finding
+      prospectively; it cannot repair historical CI or SAST coverage. Track
+      the first Scorecard results and remaining work in
+      [`SCORECARD.md`](SCORECARD.md).
+- [ ] Add meaningful fuzz targets for the untrusted artifact-lock, admission,
+      and configuration parsing boundaries, run them in CI, and record corpus,
+      sanitizer, and duration limits. Do not claim fuzzing coverage from
+      ordinary unit or integration tests.
+- [ ] Assess the OpenSSF Best Practices badge criteria and pursue the badge
+      only when the required evidence and independent review actually exist.
+- [ ] Decide whether mandatory human approval, stale-review dismissal,
+      last-push approval, and CODEOWNERS ownership are appropriate for this
+      repository. Implement the agreed policy without silently replacing the
+      current approved automated merge workflow.
+- [ ] Reassess Scorecard after the required-checks ruleset is visible to a
+      subsequent run. Continue tracking CI/SAST coverage on new changes;
+      repository age and earlier untested changes cannot be backfilled.
 - [ ] Add dependency-review coverage for pull requests and keep workflow
       auditing, configuration scanning, and Scorecard findings separate from
       image vulnerability results so each required check has one meaning.

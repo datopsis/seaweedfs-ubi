@@ -19,6 +19,12 @@ depending on matrix job names that may change later. A failed or unavailable
 architecture makes the `native image` aggregate fail; no architecture is
 silently skipped.
 
+An active ruleset on the default branch requires `validation`, `native image`,
+and `codeql` from the GitHub Actions app, with the pull request branch up to
+date before merge. The existing pull-request and history-protection ruleset
+remains in place. These required checks apply to future merges; they cannot
+retroactively validate earlier commits or pull requests.
+
 ## Current automated checks
 
 The repository-validation job:
@@ -94,6 +100,9 @@ category remains distinct from CodeQL and future image vulnerability results.
 The default GitHub token may not expose every classic branch-protection setting
 to Scorecard, so a partial branch-protection result must not be treated as proof
 that no protection exists.
+The first published Scorecard run and its findings are tracked in
+[`SCORECARD.md`](SCORECARD.md); score changes are assessed from later runs,
+not inferred from a ruleset edit.
 
 ## Local equivalent
 
