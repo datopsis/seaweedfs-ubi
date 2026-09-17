@@ -15,6 +15,8 @@ only to published container images; repository-only changes remain under
 - Set a TLS 1.2 minimum for the gRPC mTLS test client, removing the older
   protocol negotiation flagged by CodeQL without changing the test's
   client-certificate scope.
+- Wait for the volume to appear in the master's topology before asserting
+  initial separated-role readiness, using the existing bounded recovery probe.
 
 ### Added
 
