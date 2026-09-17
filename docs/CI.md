@@ -20,10 +20,11 @@ architecture makes the `native image` aggregate fail; no architecture is
 silently skipped.
 
 An active ruleset on the default branch requires `validation`, `native image`,
-and `codeql` from the GitHub Actions app, with the pull request branch up to
-date before merge. The existing pull-request and history-protection ruleset
-remains in place. These required checks apply to future merges; they cannot
-retroactively validate earlier commits or pull requests.
+`codeql`, and `dependency review` from the GitHub Actions app, with the pull
+request branch up to date before merge. The existing pull-request and
+history-protection ruleset remains in place. These required checks apply to
+future merges; they cannot retroactively validate earlier commits or pull
+requests.
 
 ## Current automated checks
 
@@ -92,9 +93,11 @@ graph between the base and proposed revisions, and fails on newly introduced
 High or Critical advisories in runtime, development, or unknown scopes. It
 does not waive lower-severity findings, establish a license policy, inspect
 the prebuilt `weed` binary's Go dependency inventory, or scan the assembled
-image. The stable `dependency review` job is intended as a required check;
-its first PR run and repository ruleset must be verified before treating it as
-an enforced merge gate.
+image. GitHub's dependency graph was enabled after the first PR attempt
+reported it unavailable; the [rerun](https://github.com/datopsis/seaweedfs-ubi/actions/runs/35176565149)
+passed. The stable `dependency review` job is now required by the default-branch
+ruleset. An empty or incomplete graph is not evidence that the image has no
+vulnerable components; SBOM and image scanners remain separate work.
 
 `.github/workflows/scorecard.yml` runs OpenSSF Scorecard on pushes to `main`,
 weekly schedules, branch-protection-rule changes, and manual dispatch. It uses

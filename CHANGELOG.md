@@ -22,7 +22,8 @@ only to published container images; repository-only changes remain under
 
 - Added a pinned, read-only pull-request dependency review that blocks newly
   introduced High or Critical advisories across all dependency scopes visible
-  to GitHub's dependency graph. It is distinct from future image scanning.
+  to GitHub's dependency graph. The graph is enabled and the new check is
+  required on the default branch. This is distinct from future image scanning.
 
 - Recorded the initial and first follow-up OpenSSF Scorecard findings and roadmap,
   and documented the required `validation`, `native image`, and `codeql`
