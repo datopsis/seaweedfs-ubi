@@ -23,6 +23,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added main-only publication of per-architecture Grype SARIF to GitHub code
+  scanning for triage, with SARIF retained alongside the full JSON inventory.
+  Pull-request jobs remain read-only; alert publication is not a vulnerability
+  gate.
+
 - Added pinned Grype scans of both native CI development images, retaining
   complete per-architecture JSON vulnerability inventories for 14 days. These
   report-only scans do not yet enforce the planned fixed High/Critical gate.
