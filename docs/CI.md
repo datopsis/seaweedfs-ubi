@@ -112,6 +112,16 @@ identifies a container image and includes both OS and language-package scan
 targets. A successful Trivy inventory does not mean zero findings, satisfy
 the fixed High/Critical gate, or qualify a release image. The Docker-format
 archive is temporary and is not published.
+The [first Trivy inventory run](https://github.com/datopsis/seaweedfs-ubi/actions/runs/35209080479)
+reported 11 findings per architecture: seven OS-package and four Go-binary
+findings. Its fixed High `CVE-2026-84445` is the same gRPC advisory Grype calls
+`GHSA-2v4p-qf9q-27wj` ([Go vulnerability record](https://pkg.go.dev/vuln/GO-2026-6443)).
+Trivy rates `CVE-2026-78662` and `CVE-2026-56855` Medium, while Grype rates
+their aliases `GO-2026-6354` and `GO-2026-6355` High
+([records](https://pkg.go.dev/vuln/GO-2026-6354),
+[records](https://pkg.go.dev/vuln/GO-2026-6355)). Both scanners report those
+`x/crypto` issues as fixed upstream. The severity disagreement and alias mapping
+need explicit triage; neither scanner's lower rating is a waiver of the other.
 
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.

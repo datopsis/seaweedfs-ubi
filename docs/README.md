@@ -658,6 +658,10 @@ classification — and every configuration it does not support is named.
       findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
       reviewed SeaweedFS update or other upstream resolution, then enable the
       gate without suppressing those findings to obtain a green check.
+- [ ] Reconcile scanner aliases and severity differences in the triage policy:
+      Trivy and Grype both report the fixed gRPC issue, while Trivy rates the
+      two fixed `x/crypto` issues Medium and Grype rates them High. The future
+      gates must not silently adopt the lower rating or double-count aliases.
 - [ ] Define the triage policy for findings against the Go dependency
       inventory, which are reported against upstream SeaweedFS rather than
       proven exploitable in this packaging.
