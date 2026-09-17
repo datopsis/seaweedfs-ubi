@@ -20,7 +20,7 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
-- Recorded the first OpenSSF Scorecard findings and their follow-up roadmap,
+- Recorded the initial and first follow-up OpenSSF Scorecard findings and roadmap,
   and documented the required `validation`, `native image`, and `codeql`
   default-branch checks.
 

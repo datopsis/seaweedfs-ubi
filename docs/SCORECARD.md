@@ -9,6 +9,14 @@ are the evidence; published results may be superseded by later runs. Scorecard
 SARIF is retained by the workflow for five days. The ruleset below was added
 *after* this scan, so the 6.3 score does not measure its effect.
 
+A [second run](https://github.com/datopsis/seaweedfs-ubi/actions/runs/35175188541)
+on merged `main` at `fc87d5e` on 2026-09-17 UTC reported **6.4/10**.
+Branch Protection rose from 3 to 4 and CI Tests from 1 to 2, with 6 of 27
+historical merged pull requests checked by CI. SAST remained 7. These are
+observed changes, not proof that the required-checks ruleset caused every
+score difference; coverage denominators also changed. Continue to assess
+future runs against the exact evaluated commit and check details.
+
 The initial run exposed these follow-ups:
 
 | Check | Initial score | Finding and disposition |
@@ -21,15 +29,28 @@ The initial run exposed these follow-ups:
 | Best Practices | 0 | No OpenSSF Best Practices badge. Assess its criteria and apply only when the required evidence exists; do not add an unearned badge. |
 | Maintained | 0 | The repository was less than 90 days old at the scan. This is time-bound and cannot be repaired by a code change. Continue normal maintenance and reassess when eligible. |
 
+The second run also reported **Contributors 0** because it found contributors
+from zero distinct organizations. This is a participation signal, not a reason
+to manufacture contributors or grant repository access. Reassess as the project
+gains genuine maintainers and external contributions. **Packaging -1** means
+Scorecard did not detect a supported package workflow; do not equate that
+heuristic with the container build evidence described in `CI.md`. **Signed
+Releases -1** reflects that no release exists yet. Package 5 already requires
+digest-bound signing before a release, and no source-only tag or release should
+be created to improve this score.
+
 The separate CodeQL `py/insecure-protocol` alert found that the gRPC mTLS
 test client permitted TLS 1.0/1.1 negotiation. That client now sets a TLS 1.2
 minimum. Its hostname-verification exception remains narrowly scoped to
 testing client-certificate authentication; the S3 TLS suite separately checks
 server identity with a SAN-bearing certificate. A successful CodeQL workflow
 alone does not imply every code-scanning finding is resolved; verify the alert
-state after analysis of the merged fix.
+state after analysis of the merged fix. The
+[post-merge CodeQL run](https://github.com/datopsis/seaweedfs-ubi/actions/runs/35175188578)
+passed and [the alert](https://github.com/datopsis/seaweedfs-ubi/security/code-scanning/1)
+was marked fixed on 2026-09-17 UTC.
 
-The next reassessment should record a new run ID, evaluated commit, score,
+Each further reassessment should record its run ID, evaluated commit, score,
 check-level changes, and any findings that remain. Do not infer a score change
 solely from the ruleset configuration or treat an age-based or historical
 metric as a current control failure.

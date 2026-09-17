@@ -620,9 +620,16 @@ classification — and every configuration it does not support is named.
       last-push approval, and CODEOWNERS ownership are appropriate for this
       repository. Implement the agreed policy without silently replacing the
       current approved automated merge workflow.
-- [ ] Reassess Scorecard after the required-checks ruleset is visible to a
-      subsequent run. Continue tracking CI/SAST coverage on new changes;
-      repository age and earlier untested changes cannot be backfilled.
+- [x] Reassess Scorecard after the required-checks ruleset is visible to a
+      subsequent run. The first follow-up score was 6.4, up from 6.3;
+      branch-protection and CI-test checks improved. Continue tracking CI/SAST
+      coverage on new changes; repository age and earlier untested changes
+      cannot be backfilled.
+- [ ] Reassess the contributor-diversity finding as genuine participation
+      grows. Do not manufacture contributors, grant access for a score, or
+      treat Scorecard's undetected packaging workflow as proof that container
+      assembly did not run. Signed-release coverage remains tied to the first
+      actual image release, not a source-only tag.
 - [ ] Add dependency-review coverage for pull requests and keep workflow
       auditing, configuration scanning, and Scorecard findings separate from
       image vulnerability results so each required check has one meaning.
