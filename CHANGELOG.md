@@ -10,7 +10,17 @@ only to published container images; repository-only changes remain under
 
 ## [Unreleased]
 
+### Fixed
+
+- Set a TLS 1.2 minimum for the gRPC mTLS test client, removing the older
+  protocol negotiation flagged by CodeQL without changing the test's
+  client-certificate scope.
+
 ### Added
+
+- Recorded the first OpenSSF Scorecard findings and their follow-up roadmap,
+  and documented the required `validation`, `native image`, and `codeql`
+  default-branch checks.
 
 - Added a pinned OpenSSF Scorecard workflow with scoped OIDC and SARIF upload
   permissions, five-day SARIF retention, and code-scanning publication. README

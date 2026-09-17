@@ -21,6 +21,7 @@ def attempt(
     key_file: str | None,
 ) -> tuple[bool, str]:
     context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_file)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     # This check isolates client authentication. Server hostname verification is
     # independently qualified by the S3 TLS suite with a SAN-bearing certificate.
     context.check_hostname = False
