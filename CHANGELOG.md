@@ -12,6 +12,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a separate CodeQL workflow for GitHub Actions and Python, with
+  `security-extended` queries, immutable Action pins, least-privilege upload
+  permissions, and a stable aggregate check. Results go to GitHub code scanning;
+  a passing job does not assert that no findings exist.
+
 - Added negative assembly checks to both native CI jobs. They prove that a
   missing or altered bundle, changed lock, or unavailable pinned base prevents
   a build, and that an admitted bundle reaches an offline, no-pull Podman build

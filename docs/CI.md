@@ -64,6 +64,20 @@ one-host replication test is not multi-node durability evidence, and a bounded
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.
 
+## Code scanning
+
+`.github/workflows/codeql.yml` analyzes GitHub Actions workflows and the
+repository's Python tooling in separate jobs using the `security-extended`
+query suite. It runs for pull requests, pushes to `main`, weekly schedules,
+and manual dispatch. Checkout does not persist credentials; the CodeQL jobs
+have read-only repository and Actions access, with `security-events: write`
+as their sole write permission for code-scanning publication. A stable
+`codeql` aggregate fails if either language analysis fails or is skipped.
+
+Results are published to GitHub code scanning, not committed to the repository.
+A successful workflow means both analyses ran and uploaded; it does not mean
+the code has no findings, and it is not an image vulnerability scan.
+
 ## Local equivalent
 
 ```console
@@ -85,8 +99,8 @@ repository-owned command.
 
 ## Work still required
 
-CI still needs CodeQL, Scorecard, dependency review, SBOM generation, Trivy
-and Grype image gates, evidence retention,
+CI still needs Scorecard, dependency review, SBOM generation, Trivy and Grype
+image gates, evidence retention,
 provenance, signing, and release automation. The lock's publisher-signature
 negative cases remain a separate networked suite; acquisition itself verifies
 the index and architecture manifest positively in each native job. A skipped or
