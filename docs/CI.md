@@ -93,6 +93,16 @@ reported. These are scanner findings, not an exploitability determination or a
 waiver. The fixed findings require upstream-version triage before a gate can
 pass; the JSON artifacts retain package versions, fix data, and other findings.
 
+Each native job also retains Grype SARIF for 14 days. On `main` only, after both
+native jobs pass, a separate job downloads each SARIF and uploads it under a
+distinct architecture category to GitHub's Security → Code scanning alerts.
+This publication job alone has `security-events: write`; pull-request jobs have
+read-only credentials and do not publish alerts. The dashboard is for triage,
+not a vulnerability gate or proof of release-image security. JSON remains the
+more complete scanner inventory, including findings that a SARIF viewer may
+not display in the same detail. Alert dismissal requires a documented triage
+reason and is not a substitute for remediating a fixed finding.
+
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.
 

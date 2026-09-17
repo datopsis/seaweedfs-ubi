@@ -643,6 +643,9 @@ classification — and every configuration it does not support is named.
 - [x] Generate and retain complete, per-architecture Grype JSON vulnerability
       inventories for the native CI development images without suppressing
       unfixed findings. Inventory generation is not yet a vulnerability gate.
+- [x] Publish per-architecture Grype SARIF from successful `main` CI runs to
+      GitHub code-scanning alerts for triage, retaining the full JSON inventory
+      separately. Publication does not turn findings into a passing gate.
 - [ ] Generate SPDX SBOMs for the eventual release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components,
       and bind each release SBOM to the published image digest.
