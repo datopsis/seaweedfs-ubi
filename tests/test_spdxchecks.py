@@ -51,6 +51,14 @@ class SpdxValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(SbomValidationError, "SeaweedFS"):
             validate_spdx(document)
 
+    def test_refuses_main_module_without_dependencies(self) -> None:
+        document = self.document()
+        document["packages"] = [
+            package("pkg:golang/github.com/seaweedfs/seaweedfs@v4.46")
+        ]
+        with self.assertRaisesRegex(SbomValidationError, "no SeaweedFS dependencies"):
+            validate_spdx(document)
+
     def test_refuses_malformed_reference(self) -> None:
         document = self.document()
         document["packages"] = [{"externalRefs": "not a list"}]

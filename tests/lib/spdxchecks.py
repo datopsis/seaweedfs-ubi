@@ -42,6 +42,8 @@ def validate_spdx(document: object) -> tuple[int, int]:
         raise SbomValidationError("SPDX document has no Go module inventory")
     if not seaweedfs_modules:
         raise SbomValidationError("SPDX document does not identify SeaweedFS")
+    if not go_modules - seaweedfs_modules:
+        raise SbomValidationError("SPDX document has no SeaweedFS dependencies")
     return len(packages), len(go_modules)
 
 
