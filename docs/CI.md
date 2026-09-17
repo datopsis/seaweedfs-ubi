@@ -95,7 +95,8 @@ pass; the JSON artifacts retain package versions, fix data, and other findings.
 
 Each native job also retains Grype SARIF for 14 days. On `main` only, after both
 native jobs pass, a separate job downloads each SARIF and uploads it under a
-distinct architecture category to GitHub's Security → Code scanning alerts.
+distinct scanner and architecture category to GitHub's Security → Code
+scanning alerts.
 This publication job alone has `security-events: write`; pull-request jobs have
 read-only credentials and do not publish alerts. The dashboard is for triage,
 not a vulnerability gate or proof of release-image security. JSON remains the
@@ -111,7 +112,14 @@ per-architecture JSON artifacts for 14 days. CI validates that the report
 identifies a container image and includes both OS and language-package scan
 targets. A successful Trivy inventory does not mean zero findings, satisfy
 the fixed High/Critical gate, or qualify a release image. The Docker-format
-archive is temporary and is not published.
+archive is temporary and is not published. The native job also converts the
+validated Trivy JSON inventory to SARIF without scanning the image a second
+time and retains that SARIF for 14 days. After both native jobs pass on `main`,
+the same narrowly permissioned publication job uploads Trivy SARIF under
+separate per-architecture categories. These alerts are additional triage
+views, not a vulnerability gate; compare scanner aliases and severity before
+treating Grype and Trivy alerts as independent findings.
+
 The [first Trivy inventory run](https://github.com/datopsis/seaweedfs-ubi/actions/runs/35209080479)
 reported 11 findings per architecture: seven OS-package and four Go-binary
 findings. Its fixed High `CVE-2026-84445` is the same gRPC advisory Grype calls

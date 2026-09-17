@@ -649,6 +649,10 @@ classification — and every configuration it does not support is named.
 - [x] Generate and retain unfiltered Trivy JSON vulnerability inventories for
       both native CI development images, with validation that OS and language
       package targets were scanned. This is not yet a Trivy vulnerability gate.
+- [x] Convert both native Trivy development-image inventories to SARIF and
+      publish separate per-architecture code-scanning categories from successful
+      `main` CI runs, retaining JSON as the full inventory. Alerts are for triage,
+      not a vulnerability gate.
 - [ ] Generate SPDX SBOMs for the eventual release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components,
       and bind each release SBOM to the published image digest.
