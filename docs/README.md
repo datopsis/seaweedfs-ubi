@@ -593,10 +593,11 @@ classification — and every configuration it does not support is named.
       evidence for it. Each matrix job verifies its runner and image
       architecture, and also runs observability, replication, exhaustion, and
       cold restore checks. The aggregate fails unless both jobs succeed.
-- [ ] Add `.github/workflows/codeql.yml` for both GitHub Actions and the
+- [x] Add `.github/workflows/codeql.yml` for both GitHub Actions and the
       security-relevant Python acquisition, lock, and test tooling, using
       `security-extended`, read-only defaults, and only the `security-events`
-      permission needed to publish results.
+      write permission needed to publish results. The workflow analyzes each
+      language separately and exposes a stable `codeql` aggregate check.
 - [ ] Add `.github/workflows/scorecard.yml`, following the pinned OpenSSF
       Scorecard pattern in `datopsis/nginx-ubi`: `read-all` by default, narrowly
       scoped SARIF and OIDC permissions, scheduled and branch-protection
