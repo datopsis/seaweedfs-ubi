@@ -3,7 +3,7 @@
 CI runs deterministic repository validation and a native image matrix on AMD64
 and ARM64. A green matrix demonstrates the listed tests on GitHub-hosted Ubuntu
 runners for the reviewed development image. It is not release-image, RHEL,
-OpenShift, multi-host, vulnerability, release-SBOM, provenance, or signing
+OpenShift, multi-host, vulnerability-gate, release-SBOM, provenance, or signing
 evidence.
 
 ## Triggers and authority
@@ -76,6 +76,14 @@ the per-architecture SPDX JSON as a CI artifact for 14 days. The OCI archive
 itself is temporary and is not published. These are image-inventory artifacts
 for the tested development builds; they are not vulnerability scan results,
 release-image SBOMs, provenance, or signatures.
+
+Each native job also scans that same local OCI archive with pinned Grype and
+retains the complete JSON vulnerability inventory for 14 days. This first
+inventory run does not suppress unfixed findings or fail on vulnerable packages;
+its purpose is to expose and triage the actual image findings before enforcing
+the planned fixed High/Critical gate. A green CI result therefore means the
+scan ran and produced a parseable report, not that the image is vulnerability
+free. The reports describe development images only, not release candidates.
 
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.

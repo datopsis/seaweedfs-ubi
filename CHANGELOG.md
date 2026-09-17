@@ -23,6 +23,10 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added pinned Grype scans of both native CI development images, retaining
+  complete per-architecture JSON vulnerability inventories for 14 days. These
+  report-only scans do not yet enforce the planned fixed High/Critical gate.
+
 - Added per-architecture SPDX SBOM generation for CI development images, with
   a checked SeaweedFS Go inventory and 14-day retained artifacts. Release-image
   SBOMs, vulnerability gates, provenance, and signing remain separate work.

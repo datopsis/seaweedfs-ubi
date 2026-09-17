@@ -640,6 +640,9 @@ classification — and every configuration it does not support is named.
       development images. Validate that the inventory contains SeaweedFS and
       resolvable Go modules; do not confuse an inventory with a vulnerability
       scan or release-image evidence.
+- [x] Generate and retain complete, per-architecture Grype JSON vulnerability
+      inventories for the native CI development images without suppressing
+      unfixed findings. Inventory generation is not yet a vulnerability gate.
 - [ ] Generate SPDX SBOMs for the eventual release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components,
       and bind each release SBOM to the published image digest.
