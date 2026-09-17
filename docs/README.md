@@ -646,6 +646,9 @@ classification — and every configuration it does not support is named.
 - [x] Publish per-architecture Grype SARIF from successful `main` CI runs to
       GitHub code-scanning alerts for triage, retaining the full JSON inventory
       separately. Publication does not turn findings into a passing gate.
+- [x] Generate and retain unfiltered Trivy JSON vulnerability inventories for
+      both native CI development images, with validation that OS and language
+      package targets were scanned. This is not yet a Trivy vulnerability gate.
 - [ ] Generate SPDX SBOMs for the eventual release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components,
       and bind each release SBOM to the published image digest.

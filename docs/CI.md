@@ -103,6 +103,16 @@ more complete scanner inventory, including findings that a SARIF viewer may
 not display in the same detail. Alert dismissal requires a documented triage
 reason and is not a substitute for remediating a fixed finding.
 
+Trivy separately scans a Docker-format export of the same local development
+image, because its tar-file input does not use the OCI archive consumed by
+Syft and Grype. The action and scanner version are pinned; only vulnerability
+scanning is enabled, with all severities and unfixed findings retained in
+per-architecture JSON artifacts for 14 days. CI validates that the report
+identifies a container image and includes both OS and language-package scan
+targets. A successful Trivy inventory does not mean zero findings, satisfy
+the fixed High/Critical gate, or qualify a release image. The Docker-format
+archive is temporary and is not published.
+
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.
 
