@@ -648,6 +648,10 @@ classification — and every configuration it does not support is named.
       and bind each release SBOM to the published image digest.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical
       findings, and retain the complete inventory including unfixed findings.
+- [ ] Triage the first Grype development-image inventory's three fixed High
+      findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
+      reviewed SeaweedFS update or other upstream resolution, then enable the
+      gate without suppressing those findings to obtain a green check.
 - [ ] Define the triage policy for findings against the Go dependency
       inventory, which are reported against upstream SeaweedFS rather than
       proven exploitable in this packaging.
