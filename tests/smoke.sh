@@ -158,8 +158,18 @@ main() {
 	printf 'Smoke testing %s (SeaweedFS %s, %s)\n\n' "$IMAGE" "$version" "$variant"
 
 	# ---- identity and provenance -------------------------------------------
-	local reported
-	reported="$(runtime run --rm "${RESTRICTED[@]}" "$IMAGE" version 2>&1 | head -1)"
+	local reported status
+	set +e
+	reported="$(runtime run --rm "${RESTRICTED[@]}" "$IMAGE" version 2>&1)"
+	status=$?
+	set -e
+	if [ "$status" -ne 0 ]; then
+		bad "the image starts and reports its version" \
+			"runtime exited ${status}: ${reported}"
+		printf '\n%s passed, %s failed\n' "$passed" "$failed"
+		exit 1
+	fi
+	reported="${reported%%$'\n'*}"
 	if [ "${reported#*"$version"}" != "$reported" ] &&
 		[ "${reported#*"$marker"}" != "$reported" ] &&
 		[ "${reported#*"${commit:0:9}"}" != "$reported" ]; then
