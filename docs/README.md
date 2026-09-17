@@ -646,6 +646,9 @@ classification — and every configuration it does not support is named.
 - [x] Publish per-architecture Grype SARIF from successful `main` CI runs to
       GitHub code-scanning alerts for triage, retaining the full JSON inventory
       separately. Publication does not turn findings into a passing gate.
+- [x] Generate and retain unfiltered Trivy JSON vulnerability inventories for
+      both native CI development images, with validation that OS and language
+      package targets were scanned. This is not yet a Trivy vulnerability gate.
 - [ ] Generate SPDX SBOMs for the eventual release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components,
       and bind each release SBOM to the published image digest.
@@ -655,6 +658,10 @@ classification — and every configuration it does not support is named.
       findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
       reviewed SeaweedFS update or other upstream resolution, then enable the
       gate without suppressing those findings to obtain a green check.
+- [ ] Reconcile scanner aliases and severity differences in the triage policy:
+      Trivy and Grype both report the fixed gRPC issue, while Trivy rates the
+      two fixed `x/crypto` issues Medium and Grype rates them High. The future
+      gates must not silently adopt the lower rating or double-count aliases.
 - [ ] Define the triage policy for findings against the Go dependency
       inventory, which are reported against upstream SeaweedFS rather than
       proven exploitable in this packaging.

@@ -218,6 +218,45 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Export native image for Trivy
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: >-
+          podman save --format docker-archive
+          --output "${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.docker.tar"
+          "${IMAGE}"
+
+      - name: Inventory native image vulnerabilities with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          input: ${{ runner.temp }}/seaweedfs-ci-${{ matrix.architecture }}.docker.tar
+          version: v0.74.0
+          scanners: vuln
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          list-all-pkgs: true
+          format: json
+          output: ${{ runner.temp }}/seaweedfs-ci-${{ matrix.architecture }}.trivy.json
+          exit-code: "0"
+          cache: "false"
+          cache-dir: ${{ runner.temp }}/trivy-cache
+
+      - name: Validate native image Trivy inventory
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: >-
+          python3 tests/lib/trivychecks.py
+          "${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.trivy.json"
+
+      - name: Retain native image Trivy vulnerability inventory
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: development-image-${{ matrix.architecture }}-trivy
+          path: ${{ runner.temp }}/seaweedfs-ci-${{ matrix.architecture }}.trivy.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Qualify restricted standalone runtime
         run: bash tests/smoke.sh
 
