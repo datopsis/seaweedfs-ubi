@@ -132,6 +132,9 @@ jobs:
       - name: Prove binary admission refuses bad inputs
         run: bash tests/acquisition.sh
 
+      - name: Prove assembly refuses altered or missing inputs
+        run: bash tests/assembly.sh
+
       - name: Pull digest-pinned base images
         run: bash scripts/fetch-base-images.sh
 
