@@ -1,5 +1,12 @@
 # SeaweedFS on Red Hat UBI 9
 
+[![CI](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/datopsis/seaweedfs-ubi/actions/workflows/scorecard.yml)
+
+These badges show workflow status on `main`, not a released or platform-qualified
+image. The Scorecard badge shows analysis completion, not a minimum score.
+
 `seaweedfs-ubi` builds a security-oriented, rootless
 [SeaweedFS](https://github.com/seaweedfs/seaweedfs) container: a distributed
 storage system providing S3-compatible object storage, a POSIX-like file

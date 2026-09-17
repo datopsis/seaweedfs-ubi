@@ -78,6 +78,23 @@ Results are published to GitHub code scanning, not committed to the repository.
 A successful workflow means both analyses ran and uploaded; it does not mean
 the code has no findings, and it is not an image vulnerability scan.
 
+## Repository security posture
+
+`.github/workflows/scorecard.yml` runs OpenSSF Scorecard on pushes to `main`,
+weekly schedules, branch-protection-rule changes, and manual dispatch. It uses
+read-only workflow defaults and narrows the analysis job to repository read,
+OIDC publication, and code-scanning upload permissions. It publishes its
+results to the OpenSSF service and uploads SARIF to GitHub code scanning. The
+SARIF is also retained as a workflow artifact for five days. Scorecard does not
+run on pull requests because published Scorecard results have stricter workflow
+requirements; the normal CI and CodeQL workflows still validate the PR.
+
+Scorecard evaluates repository practices, not the built image. Its code-scanning
+category remains distinct from CodeQL and future image vulnerability results.
+The default GitHub token may not expose every classic branch-protection setting
+to Scorecard, so a partial branch-protection result must not be treated as proof
+that no protection exists.
+
 ## Local equivalent
 
 ```console
@@ -99,8 +116,8 @@ repository-owned command.
 
 ## Work still required
 
-CI still needs Scorecard, dependency review, SBOM generation, Trivy and Grype
-image gates, evidence retention,
+CI still needs dependency review, SBOM generation, Trivy and Grype image gates,
+image and release evidence retention,
 provenance, signing, and release automation. The lock's publisher-signature
 negative cases remain a separate networked suite; acquisition itself verifies
 the index and architecture manifest positively in each native job. A skipped or
