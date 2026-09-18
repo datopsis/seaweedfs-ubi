@@ -681,9 +681,15 @@ classification — and every configuration it does not support is named.
 - [x] Record an ELF symbol-table inventory of both locked binaries for the
       advisory-listed SSH, OpenPGP, and gRPC symbols. Presence and absence are
       observations, not a reachability decision or vulnerability waiver.
-- [ ] Review transitive call paths and run pinned `govulncheck` binary-mode
-      analysis on both exact binaries before making any reachability-based
-      disposition. Retain tool and vulnerability-database versions and results.
+- [x] Run pinned `govulncheck` binary-mode analysis on both exact binaries,
+      retaining raw JSON and tool/database versions. This is inventory, not a
+      passing vulnerability gate or a supported-role call graph.
+- [ ] Review transitive call paths before making any reachability-based
+      disposition of the SSH, OpenPGP, or gRPC xDS findings.
+- [ ] Triage the two AWS S3 Crypto SDK module-level findings newly surfaced by
+      binary-mode `govulncheck` (GO-2022-0635 and GO-2022-0646), including
+      package/symbol use and whether an upstream replacement is needed. Do not
+      dismiss them from a module-only scan or treat them as an approved waiver.
 - [ ] Investigate supported-role reachability and replacement options for the
       unfixed, Unknown-severity `GO-2026-5932` report against `x/crypto/openpgp`.
 - [ ] Verify that Trivy code-scanning alert identity remains stable across

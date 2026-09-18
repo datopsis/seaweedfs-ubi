@@ -62,6 +62,17 @@ CI pulls digest-pinned UBI bases in a separate networked step, then invokes
 disables Podman's build network. The development image is not published by
 these jobs.
 
+Before assembly, each native job also re-verifies its locked `weed` binary and
+runs `govulncheck` v1.8.0 in symbol-level binary mode using a pinned Go 1.27.1
+toolchain. It retains the raw streaming JSON under
+`development-binary-<architecture>-govulncheck` for 14 days. The report
+records the scanner version and Go vulnerability database timestamp. Its
+validator checks the scan mode and module inventory, but does not turn known
+findings into a pass or fail: the planned fixed High/Critical image gate is
+separate. Binary-mode results cannot establish supported-role call paths or
+replace the image-level Grype and Trivy inventories. The [Go triage record](GO-VULNERABILITY-TRIAGE.md)
+records the first pinned run and its newly surfaced module-level findings.
+
 Every native job then runs the restricted-runtime smoke, separated-role cluster,
 authenticated S3 and multipart, S3 TLS, inter-component security, observability,
 state-survival, one-host replication, bounded resource-exhaustion, and cold
