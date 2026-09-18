@@ -4,9 +4,9 @@ This document covers what this packaging adds on top of upstream SeaweedFS: the
 roles it will start, the variables it defines, the guards those variables
 control, and — at least as important — what each guard does **not** check.
 
-Upstream's own configuration is unchanged and is documented upstream. Everything
-after the role name is passed through untouched, apart from the defaults listed
-under [injected defaults](#injected-defaults).
+Upstream's own configuration is unchanged and is documented upstream. Role
+arguments are passed through except for the startup guards below and the
+defaults listed under [injected defaults](#injected-defaults).
 
 ## Roles
 
@@ -28,6 +28,15 @@ gRPC ports are the HTTP port plus 10000, which is upstream's convention when
 Every other subcommand is refused, including `server`, `webdav`, `iam`, `mount`,
 and the message broker. `server` is refused specifically so there is one
 supported single-process command rather than two overlapping ones; `mini` is it.
+
+Upstream `filer` can also start embedded S3, WebDAV, IAM, or SFTP services.
+This image refuses enabling them with `-s3`, `-webdav`, `-iam`, or `-sftp`
+(including `--` spellings and true-valued assignments). They would bypass the
+separated-role boundary; embedded S3 would also bypass the `s3` role's
+identity-source guard.
+Explicit `=false` or `=0` assignments remain valid. Use the separately
+guarded `s3` role for the S3 API. The opt-in `mini` profile is a different,
+development-only boundary, not a production substitute.
 
 A refused role exits `78` (`EX_CONFIG`) and names what is supported. The
 informational roles keep working regardless, so a container that refuses to start

@@ -184,6 +184,18 @@ main() {
 	expect_refusal "an unsupported role is refused" "is not a role this image supports" -- server
 	expect_refusal "the mount role is refused" "is not a role this image supports" -- mount
 	expect_refusal "webdav is refused" "is not a role this image supports" -- webdav
+	expect_refusal "filer cannot embed an unauthenticated S3 gateway" "embedded s3 service" \
+		-- filer -s3=true
+	expect_refusal "filer cannot embed WebDAV" "embedded webdav service" \
+		-- filer -webdav
+	expect_refusal "filer cannot embed IAM" "embedded iam service" \
+		-- filer -iam=1
+	expect_refusal "filer cannot embed SFTP" "embedded sftp service" \
+		-- filer -sftp=true
+	expect_refusal "filer cannot embed SFTP using a long flag" "embedded sftp service" \
+		-- filer --sftp=true
+	expect_refusal "a later SFTP enable cannot override a disable" "embedded sftp service" \
+		-- filer -sftp=false -sftp=true
 
 	# ---- the data directory guard -------------------------------------------
 	expect_refusal "master without -mdir is refused" "without -mdir" -- master
