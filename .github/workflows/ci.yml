@@ -129,6 +129,44 @@ jobs:
       - name: Acquire verified architecture binary
         run: bash scripts/fetch-artifacts.sh ${{ matrix.architecture }}
 
+      - name: Set up pinned Go for binary vulnerability analysis
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.27.1"
+          check-latest: false
+          cache: false
+
+      - name: Install pinned govulncheck
+        env:
+          GOBIN: ${{ runner.temp }}/govulncheck-bin
+          GOPROXY: https://proxy.golang.org
+          GOSUMDB: sum.golang.org
+          GOTOOLCHAIN: local
+        run: |
+          mkdir -p "${GOBIN}"
+          go version
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+          "${GOBIN}/govulncheck" -version
+
+      - name: Inventory locked binary Go vulnerabilities
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          GOBIN: ${{ runner.temp }}/govulncheck-bin
+        run: |
+          binary=".artifact-bundle/${ARCHITECTURE}/weed"
+          report="${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.govulncheck.json"
+          python3 scripts/lib/verify.py artifacts/seaweedfs.lock.json "${ARCHITECTURE}" "${binary}"
+          "${GOBIN}/govulncheck" -mode binary -json "${binary}" > "${report}"
+          python3 tests/lib/govulnchecks.py "${report}" v1.8.0
+
+      - name: Retain locked binary Go vulnerability inventory
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: development-binary-${{ matrix.architecture }}-govulncheck
+          path: ${{ runner.temp }}/seaweedfs-ci-${{ matrix.architecture }}.govulncheck.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Prove binary admission refuses bad inputs
         run: bash tests/acquisition.sh
 
