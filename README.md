@@ -198,6 +198,8 @@ costs, and the exact trust limitations of each are set out in
   Podman volume procedure, restoration checks, and its evidence boundary.
 - [Continuous integration](docs/CI.md) documents the automated foundation,
   stable required check, local equivalents, and work not yet automated.
+- [Go vulnerability triage](docs/GO-VULNERABILITY-TRIAGE.md) records the current
+  binary findings, scanner alias policy, and preliminary upstream update check.
 - [Hermetic build](docs/HERMETIC-BUILD.md) describes the assembly contract and is
   explicit about what network-free assembly does not defend against.
 - [Build variants](docs/BUILD-VARIANTS.md) records which of upstream's several
