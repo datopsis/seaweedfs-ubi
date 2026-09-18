@@ -674,6 +674,13 @@ classification — and every configuration it does not support is named.
       binaries clear the three fixed High Go findings. The 4.47 source manifest
       raises `x/crypto` to its fixed floor but retains the affected gRPC version;
       this preliminary check is not binary or runtime qualification.
+- [x] Trace the locked 4.46 SFTP source path through `filer` and refuse its
+      embedded S3, WebDAV, IAM, and SFTP services at the entrypoint. The S3
+      switch otherwise bypasses the separated S3 authentication guard; the
+      SFTP switch otherwise exposes the SSH code path under a supported role.
+- [ ] Obtain per-architecture binary-symbol evidence for the SSH, OpenPGP, and
+      gRPC xDS advisories, and review transitive call paths before making any
+      reachability-based disposition. Source import searches alone are not proof.
 - [ ] Investigate supported-role reachability and replacement options for the
       unfixed, Unknown-severity `GO-2026-5932` report against `x/crypto/openpgp`.
 - [ ] Verify that Trivy code-scanning alert identity remains stable across

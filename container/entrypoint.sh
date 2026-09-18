@@ -82,6 +82,35 @@ flag_value() {
 	return 0
 }
 
+# The filer subcommand can also launch other servers. Those bypass the guards
+# on their standalone roles (notably S3's identity check), and SFTP, WebDAV,
+# and IAM are outside this image's qualified separated-role profile. Inspect
+# every occurrence: a later true must not override an earlier false unnoticed.
+refuse_filer_embedded_services() {
+	local argument flag
+	for argument in "$@"; do
+		for flag in -s3 --s3 -webdav --webdav -iam --iam -sftp --sftp; do
+			case "$argument" in
+			"$flag")
+				refuse "the filer role cannot start the embedded ${flag##*-} service." \
+					"Run supported roles in separate containers; unsupported services" \
+					"are outside this image's qualified boundary."
+				;;
+			"$flag"=*)
+				case "${argument#*=}" in
+				false | 0) ;;
+				*)
+					refuse "the filer role cannot start the embedded ${flag##*-} service." \
+						"Run supported roles in separate containers; unsupported services" \
+						"are outside this image's qualified boundary."
+					;;
+				esac
+				;;
+			esac
+		done
+	done
+}
+
 # Upstream defaults the master metadata directory and the volume data directory
 # to the process temporary directory. On this image that is a tmpfs, so a
 # forgotten flag produces a component that reports healthy and loses its state
@@ -254,8 +283,9 @@ main() {
 		;;
 	filer)
 		# The filer's store location comes from filer.toml rather than a flag, so
-		# there is nothing here to check. Its durability is the operator's, and it
-		# is stated as such in docs/CONFIGURATION.md.
+		# its durability is the operator's. Do not allow its opt-in embedded
+		# services to bypass the separated-role boundary or S3 startup guards.
+		refuse_filer_embedded_services "$@"
 		;;
 	s3)
 		[ "$guard_auth" = true ] && require_s3_identities s3 -config "$@"
