@@ -109,6 +109,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Present | 5 |
+| `docs/GO-VULNERABILITY-TRIAGE.md` — binary findings and alias policy | Present | 5 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
 | `docs/CONTROL-IMPLEMENTATION.md` — per-control justification | Planned | 6 |
@@ -662,13 +663,22 @@ classification — and every configuration it does not support is named.
       findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
       reviewed SeaweedFS update or other upstream resolution, then enable the
       gate without suppressing those findings to obtain a green check.
-- [ ] Reconcile scanner aliases and severity differences in the triage policy:
+- [x] Reconcile scanner aliases and severity differences in the triage policy:
       Trivy and Grype both report the fixed gRPC issue, while Trivy rates the
       two fixed `x/crypto` issues Medium and Grype rates them High. The future
       gates must not silently adopt the lower rating or double-count aliases.
-- [ ] Define the triage policy for findings against the Go dependency
+- [x] Define the triage policy for findings against the Go dependency
       inventory, which are reported against upstream SeaweedFS rather than
       proven exploitable in this packaging.
+- [ ] Qualify a reviewed upstream candidate whose measured AMD64 and ARM64
+      binaries clear the three fixed High Go findings. The 4.47 source manifest
+      raises `x/crypto` to its fixed floor but retains the affected gRPC version;
+      this preliminary check is not binary or runtime qualification.
+- [ ] Investigate supported-role reachability and replacement options for the
+      unfixed, Unknown-severity `GO-2026-5932` report against `x/crypto/openpgp`.
+- [ ] Verify that Trivy code-scanning alert identity remains stable across
+      successive `main` analyses. Its SARIF lacks supplied fingerprints; add
+      stable image-finding fingerprints if GitHub creates duplicate alerts.
 - [ ] Produce BuildKit provenance and SBOM attestations, and digest-bound
       keyless Cosign signatures.
 - [ ] Add a release workflow with strict tag validation that refuses to publish

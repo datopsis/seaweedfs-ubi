@@ -131,6 +131,11 @@ their aliases `GO-2026-6354` and `GO-2026-6355` High
 `x/crypto` issues as fixed upstream. The severity disagreement and alias mapping
 need explicit triage; neither scanner's lower rating is a waiver of the other.
 
+The [Go vulnerability triage record](GO-VULNERABILITY-TRIAGE.md) groups aliases,
+records the current 4.46 findings and preliminary 4.47 source-manifest check,
+and defines how the future gate must treat severity disagreements. It does not
+approve an exception or qualify a new image.
+
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.
 
