@@ -678,9 +678,12 @@ classification — and every configuration it does not support is named.
       embedded S3, WebDAV, IAM, and SFTP services at the entrypoint. The S3
       switch otherwise bypasses the separated S3 authentication guard; the
       SFTP switch otherwise exposes the SSH code path under a supported role.
-- [ ] Obtain per-architecture binary-symbol evidence for the SSH, OpenPGP, and
-      gRPC xDS advisories, and review transitive call paths before making any
-      reachability-based disposition. Source import searches alone are not proof.
+- [x] Record an ELF symbol-table inventory of both locked binaries for the
+      advisory-listed SSH, OpenPGP, and gRPC symbols. Presence and absence are
+      observations, not a reachability decision or vulnerability waiver.
+- [ ] Review transitive call paths and run pinned `govulncheck` binary-mode
+      analysis on both exact binaries before making any reachability-based
+      disposition. Retain tool and vulnerability-database versions and results.
 - [ ] Investigate supported-role reachability and replacement options for the
       unfixed, Unknown-severity `GO-2026-5932` report against `x/crypto/openpgp`.
 - [ ] Verify that Trivy code-scanning alert identity remains stable across
