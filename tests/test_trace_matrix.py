@@ -103,6 +103,20 @@ def test_not_a_unittest_method():
         with self.assertRaisesRegex(ValueError, "must immediately precede"):
             trace.render(self.root)
 
+    def test_shell_suite_marker_is_linked_only_as_a_suite(self) -> None:
+        self.write("tests/s3.sh", "# Requirements: L3-SUP-001\nmain() {\n    :\n}\n")
+        matrix = trace.render(self.root)
+        self.assertIn("tests/s3.sh:1 (main suite)", matrix)
+        self.assertIn("not particular assertions", matrix)
+
+    def test_shell_marker_must_precede_main_and_name_a_test_requirement(self) -> None:
+        self.write("tests/s3.sh", "# Requirements: L3-SUP-001\nhelper() {\n    :\n}\n")
+        with self.assertRaisesRegex(ValueError, "shell marker must immediately precede main"):
+            trace.render(self.root)
+        self.write("tests/s3.sh", "# Requirements: L3-SUP-999\nmain() {\n    :\n}\n")
+        with self.assertRaisesRegex(ValueError, "unknown marker L3-SUP-999"):
+            trace.render(self.root)
+
     def test_actual_matrix_matches_checked_in_sources(self) -> None:
         self.assertEqual(
             (ROOT / "docs/TRACE-MATRIX.md").read_text(encoding="utf-8"),

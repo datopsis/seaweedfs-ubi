@@ -23,6 +23,12 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Planned a staged functional qualification suite, including release-critical
+  real-host tests and an optional, approval-gated AWS multi-AZ environment;
+  no infrastructure has been provisioned.
+- Linked the existing S3 shell suite to its API requirement at suite level,
+  without treating a link as a passing result or blanket conformance evidence.
+
 - Started the SeaweedFS-specific L1/L2/L3 requirement tree and generated trace
   matrix, with fail-closed structural and Python test-link checks. The tree is
   incomplete, and a test link is not release-candidate evidence.
