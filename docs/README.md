@@ -791,6 +791,48 @@ control-origination, decision-record, and evidence-lifecycle methods only after
 applying them to SeaweedFS's storage and distributed-system boundary. Complete
 this package before the first release, not as post-release documentation.
 
+### Datopsis container-hardening adoption
+
+Adopt [`datopsis/container-hardening`](https://github.com/datopsis/container-hardening)
+as a version-pinned assessment process. Its reusable workflow has not yet been
+proven by a caller. A successful invocation is an audit result, not release
+authorization, a STIG result, or evidence for an untested architecture, role,
+topology, or platform. Do not weaken this repository's first-release gates to
+obtain a conformance score.
+
+- [x] Retain machine-readable native development evidence for each architecture,
+      naming the exact commit, CI run and attempt, local image ID, completed
+      suites, and evidence limits. Reconcile both architecture records before
+      the stable `native image` check passes. This is an evidence transport
+      foundation, not criterion-level proof or a release-candidate digest.
+- [ ] Select and pin a full reviewed `container-hardening` commit; maintain one
+      explicit revision across the profile, validation tools, and reusable
+      workflow. Verify that the called workflow itself runs at that revision.
+- [ ] Perform source applicability and baseline decisions with an accountable
+      cyber reviewer. Add a complete `hardening-profile.json` with honest,
+      time-bounded deviations; do not invent reviewer approval or waive the
+      fixed High/Critical release gate through a profile exception.
+- [ ] Map every required IMG criterion to SeaweedFS L1/L2/L3 requirements and
+      scope-matching tests. Preserve the existing alphanumeric requirement IDs;
+      identify gaps rather than reusing a web-server requirement or claiming
+      that one passing suite establishes an entire criterion.
+- [ ] Extend native CI to emit validated criterion evidence per architecture,
+      role, topology, and configuration. Aggregate it without overwriting files;
+      fail on malformed, duplicate, stale, or cross-run results. Keep standalone
+      and one-host results distinct from multi-host and replication claims.
+- [ ] Produce and review the OSCAL component definition and control matrix for
+      this image, including explicit deployment/host/organization handoffs and
+      research-required decisions. Gate unresolved applicability before release.
+- [ ] Call the pinned reusable conformance workflow from a pull request after
+      its profile, component, requirements, and evidence inputs are real; test
+      negative cases and record any first-caller defects for correction in the
+      shared repository. Require the resulting check only after its semantics
+      and cross-repository permissions have been exercised successfully.
+- [ ] Bind a final conformance assessment to the exact multi-architecture
+      candidate index and child digests, with release-candidate evidence for
+      both architectures and every supported role. Keep this separate from the
+      independent cyber review, vulnerability gates, and signed-release gate.
+
 ### Product requirements and decisions
 
 - [ ] Reconstruct a stable L1/L2/L3 product requirement tree covering the image,

@@ -345,17 +345,91 @@ jobs:
       - name: Qualify cold backup and restore
         run: bash tests/backup-restore.sh
 
+      - name: Record scoped native development evidence
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          image_id="$(podman image inspect --format '{{.Id}}' "${IMAGE}")"
+          python3 scripts/lib/native_evidence.py write \
+            --architecture "${ARCHITECTURE}" --image-id "${image_id}" \
+            --commit "${SOURCE_COMMIT}" --run-id "${RUN_ID}" \
+            --run-attempt "${RUN_ATTEMPT}" \
+            --output "${RUNNER_TEMP}/native-${ARCHITECTURE}.json"
+
+      - name: Retain scoped native development evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: development-native-evidence-${{ matrix.architecture }}
+          path: ${{ runner.temp }}/native-${{ matrix.architecture }}.json
+          if-no-files-found: error
+          retention-days: 14
+
+  native-evidence:
+    name: reconcile native development evidence
+    needs: native-image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download AMD64 evidence
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: development-native-evidence-amd64
+          path: ${{ runner.temp }}/native-evidence
+
+      - name: Download ARM64 evidence
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: development-native-evidence-arm64
+          path: ${{ runner.temp }}/native-evidence
+
+      - name: Require matching run and both native architectures
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          python3 scripts/lib/native_evidence.py reconcile \
+            "${RUNNER_TEMP}/native-evidence/native-amd64.json" \
+            "${RUNNER_TEMP}/native-evidence/native-arm64.json" \
+            --commit "${SOURCE_COMMIT}" --run-id "${RUN_ID}" \
+            --run-attempt "${RUN_ATTEMPT}" \
+            --output "${RUNNER_TEMP}/native-evidence/development-summary.json"
+
+      - name: Retain reconciled development evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: development-native-evidence
+          path: ${{ runner.temp }}/native-evidence/*.json
+          if-no-files-found: error
+          retention-days: 14
+
   native-image-result:
     name: native image
     if: ${{ always() }}
-    needs: native-image
+    needs:
+      - native-image
+      - native-evidence
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Require both native architecture jobs
         env:
           MATRIX_RESULT: ${{ needs.native-image.result }}
-        run: test "${MATRIX_RESULT}" = success
+          EVIDENCE_RESULT: ${{ needs.native-evidence.result }}
+        run: |
+          test "${MATRIX_RESULT}" = success
+          test "${EVIDENCE_RESULT}" = success
 
   publish-image-alerts:
     name: publish image alerts (${{ matrix.architecture }})

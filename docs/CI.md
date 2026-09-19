@@ -55,6 +55,15 @@ The native matrix uses `ubuntu-24.04` for AMD64 and `ubuntu-24.04-arm` for
 ARM64. Each job checks `uname -m` before acquisition, and checks the assembled
 image architecture before running it. The jobs do not install emulators.
 
+After all native suites pass, each job retains a machine-readable development
+record for 14 days with its architecture, source commit, run ID and attempt,
+local image ID, and completed suite names. A separate job downloads both
+records and refuses missing, duplicate, stale, or cross-run architecture
+evidence. The stable `native image` check requires this reconciliation as well
+as both native jobs. The combined `development-native-evidence` artifact is
+transport for a later standard assessment: it asserts no IMG criterion or
+control, contains no published image digest, and is not release eligibility.
+
 For each architecture, CI validates the reviewed lock, verifies the signed
 upstream image index and architecture manifest, extracts the binary by digest,
 and runs negative admission and assembly tests. The assembly tests verify that
