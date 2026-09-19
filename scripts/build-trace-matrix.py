@@ -1,8 +1,9 @@
 """Generate a conservative product-requirement trace view.
 
 Only an immediately preceding ``# Requirements: ID ...`` comment on a Python
-``test_*`` function is treated as a test link. The link says nothing about a
-test result, architecture, topology, or release-candidate evidence.
+``test_*`` method or shell ``main()`` is treated as a test link. Shell links
+identify a suite, not an individual assertion. Links say nothing about results,
+architecture, topology, or release-candidate evidence.
 """
 
 from __future__ import annotations
@@ -83,6 +84,20 @@ def load_requirements(root: Path) -> dict[str, Requirement]:
 
 def collect_test_links(root: Path, requirements: dict[str, Requirement]) -> dict[str, list[str]]:
     links: dict[str, list[str]] = defaultdict(list)
+
+    def add_marker(path: Path, line: int, marker: str, target: str) -> None:
+        identifiers = marker.removeprefix("# Requirements:").split()
+        if not identifiers:
+            raise ValueError(f"{path.name}:{line}: empty marker")
+        for identifier in identifiers:
+            if not ID.fullmatch(identifier):
+                raise ValueError(f"{path.name}:{line}: malformed marker {identifier}")
+            if identifier not in requirements:
+                raise ValueError(f"{path.name}:{line}: unknown marker {identifier}")
+            if "Test" not in requirements[identifier].methods:
+                raise ValueError(f"{path.name}:{line}: {identifier} does not declare Test")
+            links[identifier].append(f"tests/{path.name}:{line} ({target})")
+
     for path in sorted((root / "tests").glob("test_*.py")):
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
@@ -103,17 +118,15 @@ def collect_test_links(root: Path, requirements: dict[str, Requirement]) -> dict
             function = functions.get(line + 1)
             if function is None or function.col_offset != column:
                 raise ValueError(f"{path.name}:{line}: marker must immediately precede a discovered unittest test method")
-            identifiers = token.string.removeprefix("# Requirements:").split()
-            if not identifiers:
-                raise ValueError(f"{path.name}:{line}: empty marker")
-            for identifier in identifiers:
-                if not ID.fullmatch(identifier):
-                    raise ValueError(f"{path.name}:{line}: malformed marker {identifier}")
-                if identifier not in requirements:
-                    raise ValueError(f"{path.name}:{line}: unknown marker {identifier}")
-                if "Test" not in requirements[identifier].methods:
-                    raise ValueError(f"{path.name}:{line}: {identifier} does not declare Test")
-                links[identifier].append(f"tests/{path.name}:{line} ({function.name})")
+            add_marker(path, line, token.string, function.name)
+    for path in sorted((root / "tests").glob("*.sh")):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        for index, line in enumerate(lines):
+            if not line.startswith("# Requirements:"):
+                continue
+            if index + 1 >= len(lines) or lines[index + 1] != "main() {":
+                raise ValueError(f"{path.name}:{index + 1}: shell marker must immediately precede main()")
+            add_marker(path, index + 1, line, "main suite")
     return links
 
 
@@ -134,8 +147,9 @@ def render(root: Path) -> str:
         "**Generated; do not edit.** Run `python scripts/build-trace-matrix.py` to regenerate.",
         "CI checks for drift and broken links. It does not require all gaps to be closed yet.",
         "",
-        "This first increment links only Python unit-test methods. Shell scenario",
-        "markers and manual assessment records are not indexed yet; a missing link",
+        "Python method and selected shell-suite markers are indexed. Shell markers",
+        "identify entire suites, not particular assertions. Other shell suites and",
+        "manual assessment records are not indexed yet; a missing link",
         "may mean existing evidence has not been traced, not that no test exists.",
         "",
         "A test link means only that a named test is intended to verify the stated",

@@ -127,6 +127,7 @@ write_config() {
 	PYTHON
 }
 
+# Requirements: L3-API-001
 main() {
 	PYTHON="$(resolve_python)" || {
 		printf 'REFUSED: a Python 3 interpreter is required\n' >&2

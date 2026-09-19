@@ -105,6 +105,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/BUILD-VARIANTS.md` — which upstream build is admitted, and why | Present | 1, 2 |
 | `docs/SUPPORT.md` — support classifications and lifecycle | Present | 1 |
 | `docs/QUALIFICATION.md` — evidence ledger schema | Present | 1 |
+| `docs/FUNCTIONAL-TEST-PLAN.md` — staged functional cases and optional AWS qualification design | Plan only | 4, 7 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
@@ -118,7 +119,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/CI.md` — automation and local checks | Present | 5 |
 | `docs/GO-VULNERABILITY-TRIAGE.md` — binary findings and alias policy | Present | 5 |
 | `docs/L1-REQ.md`, `docs/L2-REQ.md`, `docs/L3-REQ.md` — stable product requirements and explicit non-requirements | Initial incomplete draft | 6 |
-| `docs/TRACE-MATRIX.md` — generated requirement-to-verification view | Initial Python-test links; shell and manual evidence pending | 6 |
+| `docs/TRACE-MATRIX.md` — generated requirement-to-verification view | Initial Python and selected shell-suite links; other shell and manual evidence pending | 6 |
 | `docs/adr/` — accepted, superseded, and proposed design decisions | Planned | 6 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
@@ -481,7 +482,9 @@ proves it in an automated suite.
 - [ ] Qualify the table-format path end to end: write and read Iceberg tables
       through `lakekeeper-ubi` against this image, replacing the unhardened
       fixture that project uses today. Pin the engine toolchain so the result is
-      reproducible.
+      reproducible. Use the case inventory in
+      [`docs/FUNCTIONAL-TEST-PLAN.md`](FUNCTIONAL-TEST-PLAN.md); this plan does
+      not itself qualify the path.
 - [x] Test identity isolation: two bucket-scoped identities, proving one cannot
       read, write, or list the other's bucket, alongside an anonymous caller and a
       valid key with the wrong secret being refused.
@@ -769,8 +772,9 @@ this package before the first release, not as post-release documentation.
       generated-file drift in CI. Record analysis, inspection, demonstration,
       and interview evidence separately from executable-test coverage; a green
       matrix is not proof that external-platform procedures were performed.
-      The initial generator checks L1/L2/L3 structure and Python unit-test
-      markers; shell scenario and manual-evidence linking, full requirement
+      The generator checks L1/L2/L3 structure, Python unit-test markers, and
+      selected shell-suite markers; assertion-level shell and manual-evidence
+      linking, full requirement
       inventory, and release-candidate review remain open.
 - [ ] Establish reviewable architecture decision records for decisions expensive
       to reverse or easy to misread: accepted variant and acquisition path,

@@ -3,8 +3,9 @@
 **Generated; do not edit.** Run `python scripts/build-trace-matrix.py` to regenerate.
 CI checks for drift and broken links. It does not require all gaps to be closed yet.
 
-This first increment links only Python unit-test methods. Shell scenario
-markers and manual assessment records are not indexed yet; a missing link
+Python method and selected shell-suite markers are indexed. Shell markers
+identify entire suites, not particular assertions. Other shell suites and
+manual assessment records are not indexed yet; a missing link
 may mean existing evidence has not been traced, not that no test exists.
 
 A test link means only that a named test is intended to verify the stated
@@ -18,8 +19,8 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | Measure | Count |
 | --- | ---: |
 | L1 / L2 / L3 requirements | 9 / 17 / 14 |
-| Leaf requirements linked to a test | 6 |
-| Testable leaves missing a test link | 10 |
+| Leaf requirements linked to a test | 7 |
+| Testable leaves missing a test link | 9 |
 | Leaves awaiting manual evidence | 3 |
 
 ## L1 requirements
@@ -62,7 +63,7 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 
 | ID | Parent | Methods | Test links | Trace state |
 | --- | --- | --- | --- | --- |
-| `L3-API-001` | `L2-API-001` | Test | — | missing test link |
+| `L3-API-001` | `L2-API-001` | Test | `tests/s3.sh:130 (main suite)` | test linked |
 | `L3-CFG-001` | `L2-CFG-001` | Test | — | missing test link |
 | `L3-CFG-002` | `L2-CFG-002` | Test | — | missing test link |
 | `L3-DAT-001` | `L2-DAT-001` | Test | `tests/test_backup_validation.py:52 (test_refuses_parent_traversal)`<br>`tests/test_backup_validation.py:57 (test_refuses_an_absolute_path)`<br>`tests/test_backup_validation.py:62 (test_refuses_a_symbolic_link)` | test linked |
