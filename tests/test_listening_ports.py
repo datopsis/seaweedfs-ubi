@@ -8,6 +8,7 @@ from lib.listening_ports import listening_ports
 
 
 class ListeningPortsTests(unittest.TestCase):
+    # Requirements: L3-OBS-001
     def test_decodes_ipv4_and_ipv6_listeners_and_sorts_them(self) -> None:
         lines = [
             "  sl  local_address rem_address   st\n",
@@ -18,6 +19,7 @@ class ListeningPortsTests(unittest.TestCase):
         ]
         self.assertEqual(listening_ports(lines), [8080, 9333])
 
+    # Requirements: L3-OBS-001
     def test_empty_and_non_listening_input_has_no_ports(self) -> None:
         self.assertEqual(listening_ports(["", "header", "0: 00000000:1F90 x 01"]), [])
 

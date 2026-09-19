@@ -117,8 +117,8 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Present | 5 |
 | `docs/GO-VULNERABILITY-TRIAGE.md` — binary findings and alias policy | Present | 5 |
-| `docs/L1-REQ.md`, `docs/L2-REQ.md`, `docs/L3-REQ.md` — stable product requirements and explicit non-requirements | Planned | 6 |
-| `docs/TRACE-MATRIX.md` — generated requirement-to-verification view | Planned | 6 |
+| `docs/L1-REQ.md`, `docs/L2-REQ.md`, `docs/L3-REQ.md` — stable product requirements and explicit non-requirements | Initial incomplete draft | 6 |
+| `docs/TRACE-MATRIX.md` — generated requirement-to-verification view | Initial Python-test links; shell and manual evidence pending | 6 |
 | `docs/adr/` — accepted, superseded, and proposed design decisions | Planned | 6 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
@@ -769,6 +769,9 @@ this package before the first release, not as post-release documentation.
       generated-file drift in CI. Record analysis, inspection, demonstration,
       and interview evidence separately from executable-test coverage; a green
       matrix is not proof that external-platform procedures were performed.
+      The initial generator checks L1/L2/L3 structure and Python unit-test
+      markers; shell scenario and manual-evidence linking, full requirement
+      inventory, and release-candidate review remain open.
 - [ ] Establish reviewable architecture decision records for decisions expensive
       to reverse or easy to misread: accepted variant and acquisition path,
       supported-role and standalone boundary, fail-closed S3 behavior,

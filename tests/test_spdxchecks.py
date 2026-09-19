@@ -28,6 +28,7 @@ class SpdxValidationTests(unittest.TestCase):
             ],
         }
 
+    # Requirements: L3-EVD-001
     def test_accepts_seaweedfs_and_go_inventory(self) -> None:
         self.assertEqual(validate_spdx(self.document()), (2, 2))
 
@@ -39,18 +40,21 @@ class SpdxValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(SbomValidationError, "no packages"):
             validate_spdx({"spdxVersion": "SPDX-2.3", "packages": []})
 
+    # Requirements: L3-EVD-001
     def test_refuses_missing_go_inventory(self) -> None:
         document = self.document()
         document["packages"] = [package("pkg:rpm/redhat/ubi9@9.0")]
         with self.assertRaisesRegex(SbomValidationError, "no Go module"):
             validate_spdx(document)
 
+    # Requirements: L3-EVD-001
     def test_refuses_missing_seaweedfs(self) -> None:
         document = self.document()
         document["packages"] = [package("pkg:golang/golang.org/x/net@v0.0.0")]
         with self.assertRaisesRegex(SbomValidationError, "SeaweedFS"):
             validate_spdx(document)
 
+    # Requirements: L3-EVD-001
     def test_refuses_main_module_without_dependencies(self) -> None:
         document = self.document()
         document["packages"] = [

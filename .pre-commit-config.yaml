@@ -62,6 +62,13 @@ repos:
         entry: python .github/scripts/check_artifact_lock.py
         files: ^artifacts/.*\.lock\.json$
 
+      - id: check-requirement-trace
+        name: validate generated requirement trace
+        language: python
+        entry: python scripts/build-trace-matrix.py --check
+        pass_filenames: false
+        files: ^(docs/(L[123]-REQ|TRACE-MATRIX)\.md|scripts/build-trace-matrix\.py|tests/test_.*\.py)$
+
       - id: forbid-coauthor-trailers
         name: forbid co-author attribution trailers
         language: pygrep

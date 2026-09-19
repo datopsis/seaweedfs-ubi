@@ -36,6 +36,9 @@ The repository-validation job:
 - runs every pre-commit check, including shellcheck, actionlint, Containerfile
   linting, private-key detection, and artifact-lock validation;
 - runs deterministic Python unit tests, including negative backup-archive cases;
+- checks the generated initial L1/L2/L3 requirement trace for structural errors,
+  stale Python test markers, and committed-view drift; this does not close
+  unlinked or manually assessed requirements or qualify a release;
 - runs `tests/lock.sh`, which proves realistic inconsistent artifact locks are
   refused; and
 - audits workflow security with zizmor.

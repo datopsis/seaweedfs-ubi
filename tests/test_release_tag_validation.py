@@ -66,6 +66,7 @@ class ReleaseTagValidationTests(unittest.TestCase):
         )
         self.assertEqual(result["dailySequence"], 3)
 
+    # Requirements: L3-REL-001
     def test_refuses_malformed_tags(self) -> None:
         tags = (
             "4.46-ubi9-r20260918.1",
@@ -85,6 +86,7 @@ class ReleaseTagValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReleaseTagError, "not a real ISO calendar date"):
             self.validate("v4.46-ubi9-r20260230.1")
 
+    # Requirements: L3-REL-001
     def test_refuses_backdated_or_future_date(self) -> None:
         for date in ("20260917", "20260919"):
             with self.subTest(date=date), self.assertRaisesRegex(
@@ -103,6 +105,7 @@ class ReleaseTagValidationTests(unittest.TestCase):
                 self.lock_text = lock_text
                 self.validate("v4.46-ubi9-r20260918.1")
 
+    # Requirements: L3-REL-001
     def test_refuses_version_not_in_artifact_lock(self) -> None:
         with self.assertRaisesRegex(ReleaseTagError, "artifact lock version"):
             self.validate("v4.47-ubi9-r20260918.1")
@@ -111,6 +114,7 @@ class ReleaseTagValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReleaseTagError, "Containerfile base major"):
             self.validate("v4.46-ubi10-r20260918.1")
 
+    # Requirements: L3-REL-001
     def test_refuses_disagreeing_base_majors(self) -> None:
         self.write_containerfile(9, 10)
         with self.assertRaisesRegex(ReleaseTagError, "base UBI majors disagree"):
@@ -128,16 +132,19 @@ class ReleaseTagValidationTests(unittest.TestCase):
                 self.containerfile_text = containerfile_text
                 self.validate("v4.46-ubi9-r20260918.1")
 
+    # Requirements: L3-REL-001
     def test_refuses_unpinned_base(self) -> None:
         self.write_containerfile(9, 9, pinned=False)
         with self.assertRaisesRegex(ReleaseTagError, "not a digest-pinned UBI image"):
             self.validate("v4.46-ubi9-r20260918.1")
 
+    # Requirements: L3-REL-001
     def test_refuses_reused_immutable_tag(self) -> None:
         tag = "v4.46-ubi9-r20260918.1"
         with self.assertRaisesRegex(ReleaseTagError, "already exists"):
             self.validate(tag, [tag])
 
+    # Requirements: L3-REL-001
     def test_refuses_skipped_or_filled_sequence(self) -> None:
         existing = [
             "v4.45-ubi9-r20260918.1",

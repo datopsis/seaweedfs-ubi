@@ -44,6 +44,9 @@ jobs:
       - name: Run deterministic Python validation tests
         run: python -m unittest discover --start-directory tests --pattern "test_*.py" --verbose
 
+      - name: Check generated product requirement trace
+        run: python scripts/build-trace-matrix.py --check
+
       - name: Prove artifact-lock validation fails closed
         run: bash tests/lock.sh
 
