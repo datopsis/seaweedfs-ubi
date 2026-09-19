@@ -23,6 +23,9 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Recorded upstream's merged gRPC advisory fix and the remaining post-4.47
+  release, binary-measurement, and both-architecture scan gates on the roadmap.
+
 - Added a fail-closed OCI candidate-index identity verifier that binds exact
   index, architecture-manifest, and image-config bytes to independently named
   digests; no candidate image has yet been produced or qualified.

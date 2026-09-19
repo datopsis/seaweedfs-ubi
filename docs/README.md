@@ -695,6 +695,23 @@ classification — and every configuration it does not support is named.
       findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
       reviewed SeaweedFS update or other upstream resolution, then enable the
       gate without suppressing those findings to obtain a green check.
+- [x] Identify upstream's source-level resolution for the gRPC advisory:
+      SeaweedFS [PR #11374](https://github.com/seaweedfs/seaweedfs/pull/11374)
+      was merged to `master` on 2026-09-17 and changes
+      `google.golang.org/grpc` from v1.85.0-dev to
+      v1.85.0-dev.0.20260915183914-4e49413dcab7, beyond the
+      [GO-2026-6443 fixed floor](https://pkg.go.dev/vuln/GO-2026-6443).
+      It also raises the Go toolchain requirement to 1.26.6. No duplicate
+      upstream issue is needed for that already-merged change; this checkbox
+      records only the source update, not a fixed released binary or image.
+- [ ] Watch for the first upstream release **after** PR #11374 and check that
+      its tagged source and publisher-signed `large_disk` image actually contain
+      the fixed gRPC version. As checked on 2026-09-19, upstream's latest
+      published release is [4.47](https://github.com/seaweedfs/seaweedfs/releases/tag/4.47)
+      (2026-09-14), which predates that merge and still specifies the affected
+      v1.85.0-dev. Do not close this item from `master` alone; admit the new
+      release through the reviewed lock, measure both AMD64 and ARM64 binaries,
+      and rerun the full image scans and qualification suite.
 - [x] Reconcile scanner aliases and severity differences in the triage policy:
       Trivy and Grype both report the fixed gRPC issue, while Trivy rates the
       two fixed `x/crypto` issues Medium and Grype rates them High. The future
@@ -704,8 +721,10 @@ classification — and every configuration it does not support is named.
       proven exploitable in this packaging.
 - [ ] Qualify a reviewed upstream candidate whose measured AMD64 and ARM64
       binaries clear the three fixed High Go findings. The 4.47 source manifest
-      raises `x/crypto` to its fixed floor but retains the affected gRPC version;
-      this preliminary check is not binary or runtime qualification.
+      raises `x/crypto` to its fixed floor but retains the affected gRPC version.
+      PR #11374 changes gRPC on `master`, not in 4.47; neither source check is
+      binary or runtime qualification. Keep the gate open until a later
+      released, admitted candidate clears it on both architectures.
 - [x] Trace the locked 4.46 SFTP source path through `filer` and refuse its
       embedded S3, WebDAV, IAM, and SFTP services at the entrypoint. The S3
       switch otherwise bypasses the separated S3 authentication guard; the
