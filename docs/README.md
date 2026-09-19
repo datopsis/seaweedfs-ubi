@@ -682,6 +682,9 @@ classification — and every configuration it does not support is named.
 - [ ] Generate SPDX SBOMs for the eventual release images, recording the
       `weed` binary and its resolvable Go dependency inventory as components,
       and bind each release SBOM to the published image digest.
+- [x] Add a negatively tested OCI candidate-index identity verifier for exact
+      index, AMD64/ARM64 manifest, and image-config bytes. No candidate image
+      exists yet; this is not candidate evidence or a release gate.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical
       findings, and retain the complete inventory including unfixed findings.
 - [x] Implement and negatively test a fail-closed decision primitive for the

@@ -23,6 +23,10 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a fail-closed OCI candidate-index identity verifier that binds exact
+  index, architecture-manifest, and image-config bytes to independently named
+  digests; no candidate image has yet been produced or qualified.
+
 - Added a fail-closed paired Grype/Trivy vulnerability decision evaluator with
   negative tests. It rejects the current fixed High findings but is not yet a
   release-candidate gate.

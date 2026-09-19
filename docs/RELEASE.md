@@ -34,7 +34,12 @@ and [verification guide](https://docs.sigstore.dev/cosign/verifying/verify/).
    assembly path. Record the exact index and architecture digests, source
    commit, artifact-lock digest, base digests, build inputs, tool versions, and
    provenance. Candidate location and retention must allow testing *that same
-   digest* without presenting it as a published release.
+   digest* without presenting it as a published release. The candidate-index
+   verifier in `scripts/lib/validate_candidate_index.py` checks independently
+   supplied index and architecture digests against raw OCI index, manifest, and
+   image-config bytes, including the exact Linux AMD64/ARM64 platform mapping.
+   It must be run against bytes fetched by digest from the candidate registry;
+   merely supplying mutually consistent local files is not registry evidence.
 2. Run fixed High/Critical Trivy **and** Grype gates, retain full inventories
    and release-digest-bound SPDX SBOMs, and resolve or formally disposition
    findings under the existing policy. The current development-image scans
@@ -65,3 +70,8 @@ must be settled before enabling publication. An image rebuilt after testing
 would have a different digest and require fresh qualification. Until then, the
 intentional failure step in `release.yml` is a release safety control, not a
 temporary waiver.
+
+The index verifier checks identity and platform claims only. It does **not**
+fetch or verify layer blobs, prove the build source or artifact lock, validate
+image behavior, or authenticate the registry. The future candidate pipeline
+must supply those independent checks and retain the raw bytes and results.

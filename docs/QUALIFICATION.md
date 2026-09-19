@@ -53,6 +53,13 @@ with a reviewed rationale instead of deleting a field.
 | Created and reviewed | UTC timestamps and reviewer identities. |
 | Support period | Start, supersession date when known, and end-of-support date. |
 
+For a future candidate, retain the raw OCI index, both architecture manifests,
+both image configurations, and the result of
+`scripts/lib/validate_candidate_index.py` against digests obtained independently
+from the candidate registry. This validates the index-to-manifest-to-config
+identity chain and platform mapping; it does not qualify layers, runtime
+behavior, provenance, or the registry itself.
+
 ### Build and supplier inputs
 
 Record the SeaweedFS release tag exactly as upstream published it, the **release
