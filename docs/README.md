@@ -82,10 +82,10 @@ Three things are worth knowing about that shape:
 ### Chosen order
 
 Packages **2 → 3 → 4 → 5** proceed first, producing a working, tested, and
-automatically built image. Packages 6, 7, and 8 are then reassessed against what
-the image has become and who is asking for it. This ordering is deliberate: the
-compliance package in 6 describes a boundary, and describing a boundary that is
-still moving wastes the work.
+automatically built image. Packages 6, 7, and 8 then close the design/cyber,
+platform, and release gates against the image actually built; they are not
+optional. This ordering keeps the security assessment tied to a measured
+boundary rather than an imagined one.
 
 ## Documentation index
 
@@ -214,9 +214,9 @@ before the packages it depends on.
 7. Deployment and platform qualification.
 8. Signed first release.
 
-Packages 1 through 5 are committed. Packages 6, 7, and 8 are reassessed once the
-image exists, for the reason given under
-[chosen order](#chosen-order).
+Packages 1 through 8 gate the first release. The scope and applicable control
+baseline for package 6 require a recorded cyber-review decision; neither that
+decision nor the package's work may be omitted because the image already runs.
 
 ## Package 1: repository contract, scope, and evidence ownership
 
