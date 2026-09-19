@@ -62,6 +62,21 @@ selected UBI major version against the locked base images, the daily sequence
 against existing immutable tags, and that the tagged commit is the protected
 `main` release commit.
 
+The deterministic portion is implemented by
+`scripts/lib/validate_release_tag.py`. A caller must provide the workflow's UTC
+date and a newline-delimited snapshot of existing repository tags; the validator
+refuses a backdated date, a reused or non-next sequence, a version that differs
+from the artifact lock, a UBI major that differs from either Containerfile base,
+or a base that is not digest-pinned. It emits the admitted fields as JSON for a
+later workflow step. It deliberately performs no network lookup.
+
+This validator is necessary but not sufficient release admission. The future
+tag workflow must obtain a complete tag snapshot, prove the tagged commit is the
+protected `main` release commit, require matching candidate evidence and all
+release gates, and only then build or publish. Until that workflow exists and is
+qualified, running the validator does not create a release candidate or grant
+publication authority.
+
 ## Upstream makes no compatibility promise
 
 SeaweedFS is past `1.0` but is not semantically versioned. Releases are numbered
