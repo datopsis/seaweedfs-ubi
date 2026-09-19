@@ -156,7 +156,7 @@ operator's.
 | Boundary | Owned by | Enforced by |
 | --- | --- | --- |
 | S3 client to gateway | the image, partly | the fail-closed identity guard; TLS is the operator's |
-| Between roles | **the operator** | `security.toml`: gRPC mTLS, volume read and write JWTs |
+| Between roles | **the operator** | `security.toml`: gRPC mTLS and volume write JWTs; network isolation is still required because direct HTTP reads remain open |
 | Role to its data | the runtime | read-only root, one writable mount, non-root uid |
 | Build inputs to image | the image | the admission gate and the reviewed lock |
 | Network reachability | the operator | network policy; the image cannot enforce it |

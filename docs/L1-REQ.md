@@ -59,8 +59,10 @@ operations and clients for which compatibility evidence exists.
 
 **Statement.** A qualified separated-role deployment SHALL protect the
 master, volume, filer, and S3 paths with tested network restrictions, gRPC
-mutual TLS, and volume read/write JWTs; a standalone result SHALL NOT be used
-as evidence for these controls.
+mutual TLS, and volume write JWTs. Because read JWTs are unavailable in the
+filer-backed S3 topology, direct filer and volume read paths SHALL be isolated
+from client networks and the residual exposure SHALL be documented and
+assessed. A standalone result SHALL NOT be used as evidence for these controls.
 
 **Verification.** Test, Demonstration.
 

@@ -82,7 +82,8 @@ conformance.
 **Parent.** L1-INT-001
 
 **Statement.** Separated-role tests SHALL reject an untrusted gRPC peer and a
-direct volume request lacking a valid read or write JWT.
+direct volume write lacking a valid JWT, and SHALL demonstrate that direct
+filer and volume reads remain possible without a read JWT in the S3 topology.
 
 **Verification.** Test.
 
@@ -91,7 +92,8 @@ direct volume request lacking a valid read or write JWT.
 **Parent.** L1-INT-001
 
 **Statement.** The deployment SHALL restrict master, volume, filer, and gRPC
-listeners to the documented component or operations networks.
+listeners to the documented component or operations networks; clients SHALL
+not reach direct filer or volume read paths that bypass S3 identities.
 
 **Verification.** Demonstration.
 
