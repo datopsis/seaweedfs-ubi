@@ -684,14 +684,22 @@ classification — and every configuration it does not support is named.
 - [x] Run pinned `govulncheck` binary-mode analysis on both exact binaries,
       retaining raw JSON and tool/database versions. This is inventory, not a
       passing vulnerability gate or a supported-role call graph.
-- [ ] Review transitive call paths before making any reachability-based
-      disposition of the SSH, OpenPGP, or gRPC xDS findings.
-- [ ] Triage the two AWS S3 Crypto SDK module-level findings newly surfaced by
+- [x] Review the exact 4.46 `large_disk` source import graph for the SSH,
+      OpenPGP, and gRPC xDS findings. SSH has a positive SFTP path; OpenPGP is
+      absent; client-side Google direct-path support links the xDS server
+      package without a SeaweedFS call to the affected server constructor.
+      These static results are version-specific and do not waive fixed findings.
+- [x] Triage the two AWS S3 Crypto SDK module-level findings newly surfaced by
       binary-mode `govulncheck` (GO-2022-0635 and GO-2022-0646), including
-      package/symbol use and whether an upstream replacement is needed. Do not
-      dismiss them from a module-only scan or treat them as an approved waiver.
-- [ ] Investigate supported-role reachability and replacement options for the
+      package/symbol use and whether an upstream replacement is needed. The
+      vulnerable `service/s3/s3crypto` package is absent from the source graph
+      and both binaries, although other AWS SDK v1 packages are used. Retain
+      the records and reassess on version bumps; this is not a waiver.
+- [x] Investigate supported-role reachability and replacement options for the
       unfixed, Unknown-severity `GO-2026-5932` report against `x/crypto/openpgp`.
+      The package is absent from the exact source graph and both binary symbol
+      inventories, so there is no application package to replace today. Keep
+      the module-level result visible and repeat the review on every bump.
 - [ ] Verify that Trivy code-scanning alert identity remains stable across
       successive `main` analyses. Its SARIF lacks supplied fingerprints; add
       stable image-finding fingerprints if GitHub creates duplicate alerts.
