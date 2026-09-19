@@ -11,17 +11,22 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 class CyberDocumentationTests(unittest.TestCase):
     def test_image_requirements_cover_each_required_criterion_once(self):
-        text = (ROOT / "requirements.md").read_text(encoding="utf-8")
+        text = (ROOT / "docs" / "L2-REQ.md").read_text(encoding="utf-8")
         blocks = re.findall(
-            r"^### (SWD-\d{3})\s*\n(.*?)(?=^### SWD-\d{3}\s*$|\Z)",
+            r"^### (L2-[A-Z]{3}-\d{3})\s*\n(.*?)(?=^### L2-[A-Z]{3}-\d{3}\s*$|\Z)",
             text, re.M | re.S,
         )
-        self.assertEqual([identifier for identifier, _ in blocks],
-                         [f"SWD-{number:03d}" for number in range(1, 35)])
-        for number, (_, body) in enumerate(blocks, 1):
-            self.assertEqual(re.findall(r"^- Criterion: (IMG-\d{2})$", body, re.M),
-                             [f"IMG-{number:02d}"])
-            self.assertRegex(body, r"(?m)^- (Existing development check|Needed check): ")
+        mapped = [re.findall(r"^\*\*Criterion\.\*\* (IMG-\d{2})$", body, re.M)
+                  for _, body in blocks]
+        self.assertTrue(all(len(criteria) <= 1 for criteria in mapped))
+        identifiers = [criteria[0] for criteria in mapped if criteria]
+        self.assertEqual(sorted(identifiers), [f"IMG-{number:02d}" for number in range(1, 35)])
+        self.assertEqual(len(identifiers), len(set(identifiers)))
+        mapped_l2 = {identifier for (identifier, _), criteria in zip(blocks, mapped) if criteria}
+        l3 = (ROOT / "docs" / "L3-REQ.md").read_text(encoding="utf-8")
+        l3_parents = set(re.findall(r"^\*\*Parent\.\*\* (L2-[A-Z]{3}-\d{3})$", l3, re.M))
+        self.assertFalse(mapped_l2 - l3_parents,
+                         f"IMG requirements without L3 decomposition: {mapped_l2 - l3_parents}")
 
     def test_all_required_criterion_rows_are_present_once(self):
         text = (ROOT / "docs" / "HARDENING-CRITERIA.md").read_text(encoding="utf-8")

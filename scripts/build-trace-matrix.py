@@ -21,7 +21,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ID = re.compile(r"L([123])-[A-Z]{3}-\d{3}")
 HEADING = re.compile(r"^### (L[123]-[A-Z]{3}-\d{3})\s*$", re.MULTILINE)
-FIELD = re.compile(r"^\*\*(Parent|Statement|Verification)\.\*\*\s*(.*)$", re.MULTILINE)
+FIELD = re.compile(r"^\*\*(Parent|Criterion|Statement|Verification)\.\*\*\s*(.*)$", re.MULTILINE)
+CRITERION = re.compile(r"IMG-\d{2}")
 METHODS = {"Test", "Analysis", "Inspection", "Demonstration"}
 
 
@@ -29,6 +30,7 @@ METHODS = {"Test", "Analysis", "Inspection", "Demonstration"}
 class Requirement:
     identifier: str
     parent: str | None
+    criterion: str | None
     statement: str
     methods: tuple[str, ...]
 
@@ -57,11 +59,14 @@ def parse_document(path: Path, level: int) -> dict[str, Requirement]:
         if not method_list or any(method not in METHODS for method in method_list):
             raise ValueError(f"{identifier}: invalid verification methods")
         parent = fields.get("Parent")
+        criterion = fields.get("Criterion")
+        if criterion and (level != 2 or not CRITERION.fullmatch(criterion)):
+            raise ValueError(f"{identifier}: criterion must be an IMG ID on L2")
         if level == 1 and parent:
             raise ValueError(f"{identifier}: L1 must not have a parent")
         if level > 1 and (not parent or not ID.fullmatch(parent)):
             raise ValueError(f"{identifier}: missing or malformed parent")
-        found[identifier] = Requirement(identifier, parent, fields["Statement"], method_list)
+        found[identifier] = Requirement(identifier, parent, criterion, fields["Statement"], method_list)
     return found
 
 
@@ -79,6 +84,12 @@ def load_requirements(root: Path) -> dict[str, Requirement]:
                 raise ValueError(f"{requirement.identifier}: parent is not the preceding level")
             if requirement.parent[3:6] != requirement.identifier[3:6]:
                 raise ValueError(f"{requirement.identifier}: parent category differs")
+    criteria: dict[str, str] = {}
+    for requirement in found.values():
+        if requirement.criterion:
+            previous = criteria.setdefault(requirement.criterion, requirement.identifier)
+            if previous != requirement.identifier:
+                raise ValueError(f"{requirement.criterion}: mapped by both {previous} and {requirement.identifier}")
     return found
 
 
@@ -156,6 +167,9 @@ def render(root: Path) -> str:
         "behavior. It is not a passing test result, a release-candidate assessment,",
         "or evidence for another architecture, role, topology, or platform.",
         "`Decomposed` means a child exists, not that the parent is satisfied.",
+        "An IMG criterion on L2 is a draft requirement mapping, not a score or",
+        "conformance result. L2 leaves without test links still need L3",
+        "decomposition or a scope-matching verification record.",
         "Manual methods need separately reviewed evidence in the qualification ledger.",
         "",
         "## Initial trace state",
@@ -163,21 +177,26 @@ def render(root: Path) -> str:
         "| Measure | Count |",
         "| --- | ---: |",
         f"| L1 / L2 / L3 requirements | {sum(key.startswith('L1') for key in requirements)} / {sum(key.startswith('L2') for key in requirements)} / {sum(key.startswith('L3') for key in requirements)} |",
+        f"| IMG criteria with an L2 requirement | {sum(bool(item.criterion) for item in requirements.values())} |",
         f"| Leaf requirements linked to a test | {len(linked)} |",
         f"| Testable leaves missing a test link | {len(missing)} |",
         f"| Leaves awaiting manual evidence | {len(manual)} |",
         "",
     ]
     for level in (1, 2, 3):
-        lines.extend([f"## L{level} requirements", "", "| ID | Parent | Methods | Test links | Trace state |", "| --- | --- | --- | --- | --- |"])
+        lines.extend([f"## L{level} requirements", "", "| ID | Parent | IMG criterion | Methods | Test links | Trace state |", "| --- | --- | --- | --- | --- | --- |"])
         for identifier, item in sorted(requirements.items()):
             if not identifier.startswith(f"L{level}-"):
                 continue
             parent = f"`{item.parent}`" if item.parent else "—"
             methods = ", ".join(item.methods)
+            criterion_id = item.criterion
+            if not criterion_id and level == 3 and item.parent:
+                criterion_id = requirements[item.parent].criterion
+            criterion = f"`{criterion_id}`" if criterion_id else "—"
             test_links = "<br>".join(f"`{link}`" for link in sorted(links[identifier])) or "—"
             state = "decomposed" if children[identifier] else ("test linked" if links[identifier] else ("missing test link" if "Test" in item.methods else "manual evidence pending"))
-            lines.append(f"| `{identifier}` | {parent} | {methods} | {test_links} | {state} |")
+            lines.append(f"| `{identifier}` | {parent} | {criterion} | {methods} | {test_links} | {state} |")
         lines.append("")
     return "\n".join(lines)
 

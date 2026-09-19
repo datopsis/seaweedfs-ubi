@@ -17,9 +17,11 @@ A test link is not a passing release-candidate result.
 
 ### L1-SUP-001
 
-**Statement.** Every SeaweedFS binary and UBI base used by the image SHALL be
-admitted against reviewed, immutable input identities before network-free
-assembly; the evidence SHALL distinguish byte integrity from publisher identity.
+**Statement.** Every SeaweedFS binary, UBI base, and other build input SHALL
+be admitted against reviewed, immutable identities before network-free
+assembly. Source and build inputs SHALL undergo reviewed refresh and pre-build
+security checks; the evidence SHALL distinguish byte integrity from publisher
+identity.
 
 **Verification.** Test, Analysis.
 
@@ -27,9 +29,11 @@ assembly; the evidence SHALL distinguish byte integrity from publisher identity.
 
 ### L1-RUN-001
 
-**Statement.** Every admitted role SHALL remain non-root, operate with a
-read-only root filesystem and no Linux capabilities, and refuse unsupported
-role or listener expansion by default.
+**Statement.** The image SHALL contain only declared runtime contents and
+behavior. Every admitted role SHALL remain non-root, operate with a read-only
+root filesystem and no Linux capabilities, and refuse unsupported role or
+listener expansion by default; platform compatibility SHALL be claimed only
+where measured.
 
 **Verification.** Test.
 
@@ -39,7 +43,9 @@ role or listener expansion by default.
 
 **Statement.** The image SHALL refuse a missing S3 identity source, implicit or
 temporary durable-data directory, and unsafe default listener configuration,
-unless the exact documented operator opt-out is selected.
+unless the exact documented operator opt-out is selected. Runtime secrets
+SHALL be operator-controlled and their supported delivery modes SHALL be
+assessed before a hardening claim.
 
 **Verification.** Test.
 
@@ -92,8 +98,9 @@ output, and be qualified for each supported role and platform.
 
 **Statement.** Every security and support claim SHALL cite evidence matching
 its image digest, architecture, role, topology, configuration, platform, tool
-inputs, and evidence level; an inventory SHALL NOT be described as a passing
-vulnerability gate or a tailored scan as certification.
+inputs, and evidence level. Candidate vulnerability and malware gates and
+expiring exceptions SHALL be separately dispositioned; an inventory SHALL NOT
+be described as a passing gate or a tailored scan as certification.
 
 **Verification.** Test, Inspection.
 

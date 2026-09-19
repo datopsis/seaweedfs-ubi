@@ -25,7 +25,7 @@ def check(standard: Path, repository: Path = ROOT) -> list[str]:
     baseline = json.loads((standard / "artifacts" / "control-baseline.json").read_text(encoding="utf-8"))
     register = json.loads((standard / "artifacts" / "sources.json").read_text(encoding="utf-8"))
     criteria_doc = (repository / "docs" / "HARDENING-CRITERIA.md").read_text(encoding="utf-8")
-    requirements_doc = (repository / "requirements.md").read_text(encoding="utf-8")
+    requirements_doc = (repository / "docs" / "L2-REQ.md").read_text(encoding="utf-8")
     controls_doc = (repository / "docs" / "CYBER-CONTROLS.md").read_text(encoding="utf-8")
     normalized_controls = re.sub(r"\s+", " ", controls_doc)
     problems: list[str] = []
@@ -39,17 +39,16 @@ def check(standard: Path, repository: Path = ROOT) -> list[str]:
                         f"missing {sorted(required - set(rows))}, extra {sorted(set(rows) - required)}")
 
     requirements = re.findall(
-        r"^### (SWD-\d{3})\s*\n(.*?)(?=^### SWD-\d{3}\s*$|\Z)",
+        r"^### (L2-[A-Z]{3}-\d{3})\s*\n(.*?)(?=^### L2-[A-Z]{3}-\d{3}\s*$|\Z)",
         requirements_doc, re.M | re.S,
     )
-    ids = [identifier for identifier, _ in requirements]
-    mapped = [re.findall(r"^- Criterion: (IMG-\d{2})$", body, re.M)
+    mapped = [re.findall(r"^\*\*Criterion\.\*\* (IMG-\d{2})$", body, re.M)
               for _, body in requirements]
-    if len(ids) != len(set(ids)) or any(len(criteria) != 1 for criteria in mapped):
-        problems.append("image requirement IDs must be unique with exactly one IMG criterion each")
+    if any(len(criteria) > 1 for criteria in mapped):
+        problems.append("an L2 image requirement maps more than one IMG criterion")
     mapped_ids = [criteria[0] for criteria in mapped if len(criteria) == 1]
     if len(mapped_ids) != len(set(mapped_ids)) or set(mapped_ids) != required:
-        problems.append("image requirements differ from the current required criteria: "
+        problems.append("L2 image requirements differ from the current required criteria: "
                         f"missing {sorted(required - set(mapped_ids))}, "
                         f"extra {sorted(set(mapped_ids) - required)}")
 
