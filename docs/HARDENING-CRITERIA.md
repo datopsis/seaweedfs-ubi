@@ -7,6 +7,11 @@ the shared revision is not yet approved or pinned, criterion-specific evidence
 has not been emitted, and release-candidate assessment does not exist. A linked
 development test can establish only its own assertion and scope.
 
+The companion [image-specific requirement statements](../requirements.md)
+provide a stable `SWD-001` through `SWD-034` verification pointer for each
+criterion, as the 0.2.0 adoption process expects. These are draft obligations,
+not passing evidence or an approved component definition.
+
 “Requirement area” points to the existing L1 requirement tree. A final
 component definition needs appropriate L2/L3 obligations and exact verification
 pointers for *every* image-owned control, not merely these broad parent links.

@@ -23,6 +23,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Drafted 34 SeaweedFS-specific IMG requirement statements and verification
+  pointers from the container-hardening 0.2.0 adoption process, with a drift
+  check that detects missing or duplicated criterion mappings. No criterion is
+  yet assessed as met.
+
 - Recorded upstream's merged gRPC advisory fix and the remaining post-4.47
   release, binary-measurement, and both-architecture scan gates on the roadmap.
 
