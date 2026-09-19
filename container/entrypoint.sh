@@ -111,6 +111,30 @@ refuse_filer_embedded_services() {
 	done
 }
 
+# A later duplicate true flag must not re-enable a service after an earlier
+# false. Accept only explicit false, in either Go flag spelling.
+refuse_mini_unsupported_services() {
+	local previous="" argument flag
+	for argument in "$@"; do
+		if [ -n "$previous" ]; then
+			[ "$argument" = false ] ||
+				refuse "mini cannot enable ${previous}: that service is outside this image's supported boundary."
+			previous=""
+			continue
+		fi
+		for flag in -webdav --webdav -admin.ui --admin.ui; do
+			case "$argument" in
+			"$flag") previous="$flag" ;;
+			"$flag"=*)
+				[ "${argument#*=}" = false ] ||
+					refuse "mini cannot enable ${flag}: that service is outside this image's supported boundary."
+				;;
+			esac
+		done
+	done
+	[ -z "$previous" ] || refuse "mini requires an explicit false value for ${previous}."
+}
+
 # Upstream defaults the master metadata directory and the volume data directory
 # to the process temporary directory. On this image that is a tmpfs, so a
 # forgotten flag produces a component that reports healthy and loses its state
@@ -328,8 +352,12 @@ main() {
 		[ "$allow_plaintext_beside_tls" = true ] ||
 			require_no_plaintext_beside_tls mini "s3." "$@"
 
-		# mini enables more than the object store by default. WebDAV and the
-		# Admin UI are outside the boundary, so they are off unless asked for.
+		# mini enables more than the object store by default. Neither WebDAV
+		# nor the Admin UI is in the supported standalone boundary. Explicit
+		# true flags cannot override that boundary. Disabling the UI removes
+		# its management routes, but mini still opens admin health/metrics HTTP
+		# and worker gRPC listeners, which must stay network-isolated.
+		refuse_mini_unsupported_services "$@"
 		has_flag -webdav "$@" || injected+=(-webdav=false)
 		has_flag -admin.ui "$@" || injected+=(-admin.ui=false)
 

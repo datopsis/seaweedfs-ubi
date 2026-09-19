@@ -47,11 +47,12 @@ than two overlapping ones.
 
 `mini` is more generous by default than this profile is. `-s3`, `-webdav`, and
 `-admin.ui` all default to `true`, and `-dir` defaults to `.` rather than to a
-volume. The standalone profile disables WebDAV and the Admin UI, because both are
-outside the first-release boundary and an unused listener is attack surface, and it
-requires an explicit data directory. Work package 3 owes a listener inventory of
-the profile as built, and a decision on `-s3.autoCreateBucket` and
-`-s3.allowDeleteBucketNotEmpty`, which upstream also defaults to `true`.
+volume. The standalone profile disables WebDAV and the Admin UI and refuses
+explicit enable flags, because both are outside the first-release boundary. It
+also requires an explicit data directory. Disabling the Admin UI removes its
+management routes, **not** mini's admin health/metrics HTTP listener (23646) or
+worker gRPC listener (33646). Both require isolation on the development network;
+they are not evidence that the admin and worker roles have been qualified.
 
 ### What the standalone profile cannot provide
 

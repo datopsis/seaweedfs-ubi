@@ -132,10 +132,24 @@ expect_refusal() {
 
 listening_ports() {
 	runtime exec "$CONTAINER" cat /proc/net/tcp /proc/net/tcp6 2>/dev/null |
-		"$PYTHON" "${REPO_ROOT}/tests/lib/listening_ports.py"
+		"$PYTHON" "${REPO_ROOT}/tests/lib/listening_ports.py" | tr -d '\r'
 }
 
-# Requirements: L3-RUN-001 L3-RUN-002 L3-CFG-001 L3-CFG-002
+admin_http_status() {
+	local path="$1"
+	# Query from inside the container: the admin port must never be published
+	# merely to make this assertion. Bash is already the image's entrypoint.
+	# The quoted script expands $1 in the container, not on the host.
+	# shellcheck disable=SC2016
+	runtime exec "$CONTAINER" bash -c '
+		exec 3<>/dev/tcp/127.0.0.1/23646 || exit 1
+		printf "GET %s HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" "$1" >&3
+		IFS= read -r status <&3
+		printf "%s\n" "$status"
+	' bash "$path" 2>/dev/null | tr -d '\r'
+}
+
+# Requirements: L2-CFG-003 L3-RUN-001 L3-RUN-002 L3-CFG-001 L3-CFG-002
 main() {
 	PYTHON="$(resolve_python)" || {
 		printf 'REFUSED: a Python 3 interpreter is required\n' >&2
@@ -223,6 +237,12 @@ main() {
 
 	# ---- the standalone gate -------------------------------------------------
 	expect_refusal "mini without the standalone opt-in is refused" "not enabled" -- mini -dir=/data
+	expect_refusal "mini cannot enable the Admin UI" "outside this image's supported boundary" \
+		-e SEAWEEDFS_UBI_STANDALONE=true -e AWS_ACCESS_KEY_ID=smoke-key \
+		-e AWS_SECRET_ACCESS_KEY=smoke-secret -- mini -dir=/data -admin.ui=true
+	expect_refusal "mini cannot enable WebDAV using a later duplicate flag" "outside this image's supported boundary" \
+		-e SEAWEEDFS_UBI_STANDALONE=true -e AWS_ACCESS_KEY_ID=smoke-key \
+		-e AWS_SECRET_ACCESS_KEY=smoke-secret -- mini -dir=/data -webdav=false --webdav=true
 
 	# ---- toggles fail closed --------------------------------------------------
 	expect_refusal "an unrecognised boolean is refused, not ignored" "not true or false" \
@@ -287,6 +307,12 @@ main() {
 			"PID 1 is: ${cmdline}"
 		;;
 	esac
+	if [[ " $cmdline " == *" -webdav=false "* && " $cmdline " == *" -admin.ui=false "* ]]; then
+		ok "standalone disables WebDAV and the Admin UI by default"
+	else
+		bad "standalone disables WebDAV and the Admin UI by default" \
+			"expected explicit disable flags in PID 1: $cmdline"
+	fi
 
 	local identity
 	identity="$(runtime exec "$CONTAINER" cat /proc/1/status 2>/dev/null |
@@ -308,7 +334,28 @@ main() {
 			"CapEff=${effective_capabilities:-unknown}, ReadonlyRootfs=${readonly_root:-unknown}"
 	fi
 
-	# The regression this suite exists for.
+	# Pin the actual mini listener set. The Admin UI is off, but upstream still
+	# opens admin health/metrics HTTP and worker gRPC listeners.
+	local actual_ports expected_ports
+	actual_ports="$(listening_ports | tr '\n' ' ' | sed 's/ $//')"
+	expected_ports="8333 8888 9333 9340 18333 18888 19333 19340 23646 33646"
+	if [ "$actual_ports" = "$expected_ports" ]; then
+		ok "standalone opens exactly its documented listeners"
+	else
+		bad "standalone opens exactly its documented listeners" \
+			"expected: $expected_ports; actual: $actual_ports"
+	fi
+	local health_status api_status
+	health_status="$(admin_http_status /health || true)"
+	api_status="$(admin_http_status /api/cluster/topology || true)"
+	if [[ "$health_status" == *" 200 "* && "$api_status" == *" 404 "* ]]; then
+		ok "mini admin health remains live but management API routes are absent"
+	else
+		bad "mini admin health remains live but management API routes are absent" \
+			"health: ${health_status:-no response}; API: ${api_status:-no response}"
+	fi
+
+	# Keep focused diagnostics for the two previously exposed services.
 	local open_extra=""
 	for port in 8181 9101; do
 		if listening_ports | grep -qx "$port"; then

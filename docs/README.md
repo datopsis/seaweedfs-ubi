@@ -407,11 +407,17 @@ weakness is documented rather than obscured.
       because `mini` names those flags differently from `s3`; the measured listener
       assertion below is what found it.
 - [x] Harden the standalone profile's own defaults and decide the two bucket
-      behaviours. `-webdav` and `-admin.ui` are off, an explicit data directory is
+      behaviours. `-webdav` and `-admin.ui` are off and cannot be re-enabled, an explicit data directory is
       required, and `autoCreateBucket` and `allowDeleteBucketNotEmpty` are off for
       **both** the `s3` role and `mini` — the latter matters because upstream's
       default turns a `DeleteBucket` that the S3 API refuses into a silent deletion
       of every object in the bucket.
+- [ ] Assess the unavoidable `mini` admin health/metrics HTTP (23646) and worker
+      gRPC (33646) listeners. The UI-off flag removes management routes but does
+      not shut these servers down. Establish worker gRPC authentication/authorization
+      and reachability from an untrusted peer; keep standalone on an isolated
+      development network until that evidence exists. Recheck on each upstream
+      bump for a way to disable or independently bind these listeners.
 - [x] Account for the binary's size in the image contract. Measured in
       [architecture](ARCHITECTURE.md#size-measured): 232.5 MiB assembled, of which
       the binary is 209.8 MiB and the base 22.6 MiB, so everything this project adds
