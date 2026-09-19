@@ -1,9 +1,9 @@
 # Release qualification evidence
 
-No release candidate has been qualified, and no image has been built. This file
-defines the evidence record that every candidate and supported release must
-complete. Placeholder text, development CI, or an omitted field is not passing
-evidence.
+No release candidate has been qualified. Native CI development images have been
+built and tested, but they are not release-candidate evidence. This file defines
+the evidence record that every candidate and supported release must complete.
+Placeholder text, development CI, or an omitted field is not passing evidence.
 
 ## Evidence levels
 
