@@ -7,14 +7,21 @@ human. It is forward looking: completed work moves to `CHANGELOG.md` and Git
 history and is removed from here, except where a completed step has to stay
 listed to make the ordering legible.
 
-Nothing in this repository has been released, and no image has been built from
-it yet. Treat every capability described below as planned until its package is
-checked off and its evidence exists.
+Nothing in this repository has been released. Native CI development images are
+built and tested, but they are not release-candidate images and do not establish
+support for a platform or topology. Treat an unchecked capability as unqualified
+until its matching evidence exists.
+
+**First-release rule:** all applicable gates in packages 1 through 8, including
+the design and cyber-review gates below, must close before publication. A
+deferred feature needs a documented exclusion and support classification; an
+unresolved security requirement, failed gate, or missing release-candidate
+evidence cannot be converted into a release claim by calling it deferred.
 
 ## Where to resume
 
-**Next task: continue work package 4**, then implement the package 5 automation
-specified below.
+**Next task: continue work package 4 and the remaining package 5 automation**,
+then complete the requirement/design and cyber-review package before release.
 
 The hardened image, separated-role topology, authenticated S3 path, multipart
 uploads, component-security measurements, client TLS, state survival across
@@ -58,7 +65,7 @@ without reading all of them.
 | 3 | **Build the actual image** | A `Containerfile` and entrypoint that run each role non-root on a read-only root filesystem, refuse unsupported roles, refuse an unauthenticated S3 gateway, and refuse an implicit temporary data directory — with a smoke suite proving each refusal | ~3–4 increments | Nothing; the role set is decided |
 | 4 | **Prove it works** | S3 exercised by a real client, TLS, mTLS and JWTs between components, data surviving restart and replacement, backup and restore, and the Iceberg path exercised end to end against `lakekeeper-ubi` | ~6–8 increments | Decide which filer backends and which durability claim |
 | 5 | **Automate it** | CI on both architectures, SBOMs, Trivy and Grype gates, provenance, signing, and a release workflow that cannot publish without matching evidence | ~3–4 increments | Nothing |
-| 6 | **The compliance package** | Threat model, OSCAL component definition, control matrix, SCAP profile, cryptographic boundary, and FIPS analysis — the artifacts a security reviewer consumes | ~4–6 increments, all writing | Two-person review of every control classification, per this project's own policy |
+| 6 | **Requirements, design, and cyber review** | Traceable product requirements, accepted decisions, threat model, OSCAL component definition, control matrix, SCAP profile, cryptographic boundary, and FIPS analysis | Substantial; estimate after the catalogue and baseline decision | Independent review of requirements, applicability, and every control classification |
 | 7 | **Prove it on real hosts** | Qualification on an exact RHEL 9, Podman, SELinux, and cgroup matrix, Docker compatibility, and an OpenShift restricted-SCC preview | ~3–4 increments | Real hosts; CI is not a substitute |
 | 8 | **Ship it** | Inputs frozen, evidence regenerated against the candidate digest, findings dispositioned, publication rehearsed, then a signed immutable release verified from a clean environment | ~1–2 increments | Release approval; the cadence decision binds here |
 
@@ -67,18 +74,18 @@ Three things are worth knowing about that shape:
 - **Package 3 is where this becomes useful.** At the end of it there is a working
   hardened image you can run, even though nothing is released or qualified.
 - **Packages 4 and 6 are most of the remaining effort**, and they are different
-  kinds of work: 4 is testing, 6 is analysis and writing. Neither can be
-  shortened by doing the other.
+  kinds of work: 4 is testing, 6 is requirements, analysis, writing, and
+  traceability checks. Neither can be shortened by doing the other.
 - **Package 7 cannot be completed from CI.** It exists precisely to produce
   evidence from hosts that are not this project's build environment.
 
 ### Chosen order
 
 Packages **2 → 3 → 4 → 5** proceed first, producing a working, tested, and
-automatically built image. Packages 6, 7, and 8 are then reassessed against what
-the image has become and who is asking for it. This ordering is deliberate: the
-compliance package in 6 describes a boundary, and describing a boundary that is
-still moving wastes the work.
+automatically built image. Packages 6, 7, and 8 then close the design/cyber,
+platform, and release gates against the image actually built; they are not
+optional. This ordering keeps the security assessment tied to a measured
+boundary rather than an imagined one.
 
 ## Documentation index
 
@@ -110,8 +117,12 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Present | 5 |
 | `docs/GO-VULNERABILITY-TRIAGE.md` — binary findings and alias policy | Present | 5 |
+| `docs/L1-REQ.md`, `docs/L2-REQ.md`, `docs/L3-REQ.md` — stable product requirements and explicit non-requirements | Planned | 6 |
+| `docs/TRACE-MATRIX.md` — generated requirement-to-verification view | Planned | 6 |
+| `docs/adr/` — accepted, superseded, and proposed design decisions | Planned | 6 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
+| `docs/CONTROL-MODEL.md` — machine-checkable origination and assessment rules | Planned | 6 |
 | `docs/CONTROL-IMPLEMENTATION.md` — per-control justification | Planned | 6 |
 | `docs/CRYPTOGRAPHIC-BOUNDARY.md` — where cryptography lives | Planned | 6 |
 | `docs/FIPS.md` — why a FIPS claim is or is not possible | Planned | 6 |
@@ -135,6 +146,10 @@ Evidence is only meaningful when it is bound to exactly what was assessed.
 - A claim may cite only evidence of matching scope. A passing single-node smoke
   test is not replication evidence; a passing scan on AMD64 is not ARM64
   evidence; a tailored SCAP pass is not a certification.
+- Changing upstream or UBI inputs, image contents, default configuration,
+  supported topology, assessment procedure, scanner database, or SCAP tailoring
+  invalidates the affected candidate evidence. Retain historical evidence for
+  comparison; never silently reuse it for a changed candidate.
 
 ## First-release boundary
 
@@ -199,9 +214,9 @@ before the packages it depends on.
 7. Deployment and platform qualification.
 8. Signed first release.
 
-Packages 1 through 5 are committed. Packages 6, 7, and 8 are reassessed once the
-image exists, for the reason given under
-[chosen order](#chosen-order).
+Packages 1 through 8 gate the first release. The scope and applicable control
+baseline for package 6 require a recorded cyber-review decision; neither that
+decision nor the package's work may be omitted because the image already runs.
 
 ## Package 1: repository contract, scope, and evidence ownership
 
@@ -731,26 +746,88 @@ classification — and every configuration it does not support is named.
 inventoried, scanned, attested, and signed by automation that a reviewer can
 read, with evidence retained to the lifecycle above.
 
-## Package 6: security engineering and cyber-review package
+## Package 6: requirements, design, and cyber-review package
 
+The sibling [`nginx-ubi` assurance model](https://github.com/datopsis/nginx-ubi/tree/main/docs)
+is a design reference, not evidence for this image. Reuse its traceability,
+control-origination, decision-record, and evidence-lifecycle methods only after
+applying them to SeaweedFS's storage and distributed-system boundary. Complete
+this package before the first release, not as post-release documentation.
+
+### Product requirements and decisions
+
+- [ ] Reconstruct a stable L1/L2/L3 product requirement tree covering the image,
+      upstream acquisition, each supported role, S3 authentication, filer
+      metadata, persistent data, gRPC mTLS and volume JWTs, TLS, logging,
+      backup/restore, replication, updates, controlled networks, operations,
+      and evidence claims. Record explicit non-requirements and retired IDs;
+      do not soften a requirement merely because implementation or evidence is
+      missing.
+- [ ] Generate a deterministic trace matrix from requirement IDs and markers in
+      tests and other verification artifacts. Check identifier uniqueness,
+      parent/child links, stale markers, uncovered testable requirements, and
+      generated-file drift in CI. Record analysis, inspection, demonstration,
+      and interview evidence separately from executable-test coverage; a green
+      matrix is not proof that external-platform procedures were performed.
+- [ ] Establish reviewable architecture decision records for decisions expensive
+      to reverse or easy to misread: accepted variant and acquisition path,
+      supported-role and standalone boundary, fail-closed S3 behavior,
+      storage/replication and filer-backend choices, trust and TLS boundaries,
+      upstream update policy, and release/assurance policy. Link each enforced
+      decision to a test or gate and mark superseded decisions explicitly.
+
+### Authoritative controls and assessment
+
+- [ ] Decide and record the control catalogue revision, baseline and overlays,
+      intended assessor/consumer, scope (image, deployment, host, organization),
+      source-redistribution limits, and whether base controls and enhancements
+      are both in the first-release gate. Do not inherit `nginx-ubi`'s High
+      baseline by implication; obtain the responsible cyber reviewer's decision
+      and record any unavailable source or unresolved applicability as a gap.
 - [ ] Establish the authoritative requirement-source register with publisher,
-      title, version, release date, URL, retrieval date, and digest for each
-      source.
+      title, version, release date, URL, retrieval date, digest, license or
+      redistribution status, and applicability for each source. Reconcile any
+      shared DISA source with its pinned owner rather than trusting a copied
+      identifier or a successful URL response as proof of currency.
 - [ ] Compare applicable NIST SP 800-53 Rev. 5 controls and the applicable DISA
       Container Platform, Application Server, and general-purpose operating
       system requirements against this image's behavior. Record the storage and
       object-store specific requirements that no existing STIG covers directly.
-- [ ] Classify each requirement as image-owned, deployment-supported,
-      inherited, or not applicable, with a justification and a two-person review
-      for every adoption and exclusion.
+- [ ] Review the actual content and revision of each proposed DISA cross-reference,
+      including GPOS and the Application Server SRG, before deciding applicability.
+      Record a pinned, reviewable rationale for both inclusion and exclusion;
+      distinguish container-platform and host obligations from image controls.
+- [ ] Classify each source requirement as adopted by the image, supported through
+      deployment, inherited, not applicable, unsupported, or research-required,
+      with a justification and independent review of every adoption and exclusion.
+- [ ] Define and mechanically validate one machine-readable origination value
+      and responsible role for every mapped control: image-owned,
+      deployment-configured, host-inherited, organization-inherited,
+      not-applicable, or research-required. A non-image-owned row must name the
+      handoff; an image-owned claim must cite an existing product requirement
+      and scope-matching verification evidence. Unresolved applicability is a
+      release finding, not a satisfied control.
 - [ ] Publish a schema-validated NIST OSCAL component definition and
-      deterministically generate the control matrix views a cyber team imports.
+      deterministically generate CSV and human-readable control matrix views
+      from the same source. Check complete coverage of the chosen baseline,
+      including enhancements if selected, source-digest references, requirement
+      links, owner/origination, and generated-file agreement. A component
+      definition is input to an SSP, not an SSP or an authorization.
 - [ ] Give every supported control an examine, test, or interview assessment
       method, and link it to the automated test or evidence artifact that
-      satisfies it.
+      satisfies it. Include defaults, configuration and restart behavior,
+      dependencies, operational impact, loss of function, limitations,
+      residual risk, evidence owner, reviewer, and validity/retention period.
+
+### Security architecture and operations
+
 - [ ] Publish `docs/THREAT-MODEL.md` covering build inputs, CI, the registry,
       image contents, the runtime identity, every inter-component path, the S3
-      client boundary, durable state, and the operator.
+      client boundary, durable state, and the operator. Include compromised
+      artifact/signing identity, direct volume access bypassing S3 identities,
+      malicious or unavailable filer metadata, replication/failure domains,
+      credential and JWT-key rotation, logging leakage, denial of service,
+      evidence integrity, and residual risks with owners.
 - [ ] Publish `docs/CRYPTOGRAPHIC-BOUNDARY.md` identifying every place this
       image performs cryptography — S3 listener TLS, gRPC mTLS, JWT signing,
       and any at-rest feature — the implementation behind each, and who owns it.
@@ -760,11 +837,19 @@ read, with evidence retained to the lifecycle above.
 - [ ] Perform SCAP discovery with pinned OpenSCAP and content versions on both
       architectures, select only image-owned rules, document every inclusion and
       exclusion, and keep results report-only until the tailored profile is
-      reviewed.
+      reviewed. Preserve numeric ownership when exporting the image filesystem,
+      distinguish scanner failure from a finding, and never treat host rules or
+      a tailored pass as image certification.
 - [ ] Publish architecture, assurance-pipeline, data-flow, and trust-boundary
-      diagrams as repository-native sources.
+      diagrams as repository-native sources, including S3-to-filer-to-volume
+      flows, control ownership, credential and JWT trust, replication/failure
+      domains, and controlled-network artifact transfer. Give each diagram a
+      text description and check links and rendering in CI.
 - [ ] Document vulnerability triage, exception handling with expiry, and
-      incident response.
+      incident response. Cover detection/patch targets, advisory and scanner
+      freshness, exception approval and expiration, supported-release response,
+      compromised-signing/registry containment, operator notification, and
+      revocation or supersession without deleting historical evidence.
 
 **Exit criteria.** A consuming security team can take this repository's
 artifacts as a usable component definition and assessment package, and every
@@ -777,20 +862,40 @@ statement in them cites evidence of matching scope.
       kernel, Podman and OCI runtime versions, SELinux mode, cgroup version,
       storage driver, and architecture.
 - [ ] Qualify the rootless single-node profile on an exact supported host, with
-      systemd integration, restart behavior, and log persistence.
+      Quadlet/systemd integration, boot and logout/lingering behavior, restart
+      throttling, health/readiness, graceful stop, updates and rollback, and
+      journal persistence. Record SELinux enforcing, subordinate IDs, cgroup v2,
+      seccomp, storage driver, and all runtime versions.
 - [ ] Qualify the separated-role deployment across hosts, including the network
-      policy each listener requires.
+      policy each listener requires. Test loss and recovery of master, volume,
+      filer and S3 roles; partition and reconnect behavior; certificate and JWT
+      rotation; replication and acknowledged-write survival against the exact
+      first-release durability claim. A one-host fixture cannot close this gate.
 - [ ] Qualify Docker compatibility independently, and record every behavioral
       difference from Podman rather than assuming equivalence.
 - [ ] Produce an OpenShift restricted-SCC preview with arbitrary-UID evidence,
       and decide the first-release support boundary from the actual result.
 - [ ] Qualify the controlled-network path: acquisition on a connected host,
-      assembly and deployment on a disconnected one.
+      assembly and deployment on a disconnected one. Define a transfer manifest
+      and independently conveyed digest, custody and malware-inspection record,
+      receiver-side verification of the exact Git revision, lock and base-image
+      digests before execution, internal mirror trust, offline advisory-data
+      maximum age, and failure/quarantine/rollback procedure. Do not treat a
+      successful offline build as proof of current vulnerability intelligence.
 - [ ] Test every supported configuration with positive, negative, restricted,
       and failure cases on a real host rather than only in CI.
+- [ ] Qualify logging and operational controls on the selected host: event
+      schema and secret exclusions; journald/collector access, forwarding,
+      interruption, pressure, time synchronization, retention and disposal;
+      resource limits, capacity and full-disk/inode alerts; backup/restore,
+      credential rotation, incident response, and decommissioning. Separate
+      image behavior from deployment and organization responsibilities.
 - [ ] Define go-live evidence tied to an exact image digest, lock digest, and
-      configuration, and complete `docs/DEPLOYMENT.md` and
-      `docs/PRODUCTION.md`.
+      configuration, including contacts, limits, alerting, exceptions,
+      procedures and rollback result, and complete `docs/DEPLOYMENT.md` and
+      `docs/PRODUCTION.md`. Execute every published operational procedure
+      against the image and topology it describes; unexecuted prose is not
+      qualification evidence.
 
 **Exit criteria.** Every platform this project names is either qualified with
 host evidence or explicitly classified as unqualified, with nothing in between.
@@ -804,9 +909,18 @@ host evidence or explicitly classified as unqualified, with nothing in between.
       candidate digest.
 - [ ] Disposition every outstanding vulnerability and licensing finding, with an
       owner and an expiry for each accepted one.
+- [ ] Complete the requirement traceability, chosen control baseline and
+      enhancement scope, OSCAL validation, source-applicability reviews,
+      threat-model residual risks, tailored SCAP review, and independent cyber
+      assessment before approving release. Record remaining system-owned
+      obligations as handoffs, not component passes; a component definition is
+      not system authorization.
 - [ ] Complete independent security and release review against
       `docs/QUALIFICATION.md`.
-- [ ] Rehearse publication end to end without publishing, then publish the
+- [ ] Rehearse publication end to end without publishing, including denied or
+      failed candidates, stale evidence, wrong architecture, missing signature,
+      tag reuse, and rollback to the last approved digest; never advance a
+      mutable tag or erase failed-candidate evidence. Then publish the
       signed immutable GHCR digest, the annotated tag, the matching GitHub
       Release, and the retained evidence.
 - [ ] Verify the published artifact from a clean environment: signature,
@@ -819,6 +933,22 @@ host evidence or explicitly classified as unqualified, with nothing in between.
 **Exit criteria.** A consumer can pin a digest, verify its signature and
 provenance independently, read exactly what is supported, and find the evidence
 behind every claim.
+
+## Assurance completeness gate
+
+Before first release, independently compare the evidence package with the
+complete model above and record every omission with a SeaweedFS-specific
+rationale and owner. The review must cover: product requirements and traceability;
+accepted decisions and non-requirements; the support boundary and update period;
+upstream identity and input provenance; component and license inventory;
+architecture, data flow and control ownership; threat model and residual risk;
+S3 and inter-component authentication; TLS/JWT/key lifecycle; persistent state,
+filer metadata, replication, backup and restore; vulnerability intelligence and
+exceptions; OSCAL/source mapping and tailored SCAP; rootless and multi-host
+platform qualification; controlled-network transfer; logging, monitoring and
+incident response; release rehearsal, signing and clean-room verification;
+failed-candidate handling, rollback, decommissioning, and evidence retention.
+An NGINX-only control or test is not SeaweedFS evidence.
 
 ## Decisions taken
 
@@ -866,6 +996,10 @@ their reasoning when they are made.
    role in this organization.
 6. **What durability the first release is willing to claim**, and therefore what
    replication topology has to be qualified before it can be published.
+7. **Which cyber catalogue, baseline, overlays, and assessor audience govern the
+   first release.** The NGINX sibling selected NIST 800-53 High for its own
+   external-assessor package; SeaweedFS must record its own decision with the
+   responsible cyber reviewers before control mapping can be called complete.
 
 ## Standing obligations at every upstream version bump
 
