@@ -97,7 +97,10 @@ resolve_python() {
 }
 
 http_code() {
-	curl -s -o /dev/null --max-time 5 -w '%{http_code}' "$1" 2>/dev/null || printf '000'
+	local code
+	code="$(curl -s -o /dev/null --max-time 5 -w '%{http_code}' "$1" 2>/dev/null)" ||
+		code=000
+	printf '%s' "$code"
 }
 
 wait_http_code() {
@@ -162,6 +165,31 @@ wait_volume_ready() {
 		waited=$((waited + 2))
 	done
 	return 1
+}
+
+bad_volume_readiness() {
+	local description="$1" local_code topology volume_state master_state
+	local_code="$(http_code "http://127.0.0.1:${VOLUME_HOST_PORT}/readyz")"
+	volume_state="$(runtime inspect "$VOLUME_ROLE" \
+		--format 'status={{.State.Status}} exit={{.State.ExitCode}}' 2>/dev/null ||
+		printf 'unavailable')"
+	master_state="$(runtime inspect "$MASTER" \
+		--format 'status={{.State.Status}} exit={{.State.ExitCode}}' 2>/dev/null ||
+		printf 'unavailable')"
+	if ! topology="$(curl -fsS --max-time 5 \
+		"http://127.0.0.1:${MASTER_HOST_PORT}/dir/status" 2>&1)"; then
+		topology="unavailable: ${topology}"
+	fi
+	topology="${topology//$'\r'/ }"
+	topology="${topology//$'\n'/ }"
+	if [ "${#topology}" -gt 1500 ]; then
+		topology="${topology:0:1500}..."
+	fi
+	bad "$description" \
+		"volume /readyz HTTP: ${local_code}" \
+		"volume container: ${volume_state}" \
+		"master container: ${master_state}" \
+		"master topology: ${topology}"
 }
 
 listening_ports() {
@@ -394,7 +422,8 @@ main() {
 	if wait_volume_ready; then
 		ok "volume readiness combines local health with registration in the master topology"
 	else
-		bad "volume readiness combines local health with registration in the master topology"
+		bad_volume_readiness \
+			"volume readiness combines local health with registration in the master topology"
 	fi
 	if [ "$(http_code "http://127.0.0.1:${FILER_HOST_PORT}/readyz")" = 200 ]; then
 		ok "filer readiness confirms its metadata store can answer"
@@ -439,7 +468,8 @@ main() {
 		wait_volume_ready; then
 		ok "master and volume readiness recover after the dependency returns"
 	else
-		bad "master and volume readiness recover after the dependency returns"
+		bad_volume_readiness \
+			"master and volume readiness recover after the dependency returns"
 	fi
 
 	if [ "$KEEP" = true ]; then

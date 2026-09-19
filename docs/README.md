@@ -563,6 +563,9 @@ proves it in an automated suite.
       volume `/readyz` stays green without its master. Qualified readiness uses
       an authenticated S3 operation and volume registration in master topology,
       respectively; the complete role matrix is in `docs/CONFIGURATION.md`.
+      A failed bounded volume check records the local HTTP status, both
+      container states, and a bounded master-topology snapshot, without
+      changing the 40-second limit or treating native `/readyz` alone as proof.
 - [x] Write `docs/USE-CASES.md`, `docs/STORAGE.md`, `docs/TLS.md`, and
       `docs/LOGGING.md` from the qualified results, and update `SECURITY.md`
       with the deployment-critical upstream behavior each one exposes.
