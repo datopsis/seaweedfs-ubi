@@ -77,6 +77,7 @@ expect_refusal() {
 	passed=$((passed + 1))
 }
 
+# Requirements: L3-SUP-001
 main() {
 	PYTHON="$(resolve_python)" || {
 		printf 'REFUSED: a Python 3 interpreter is required\n' >&2

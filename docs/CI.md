@@ -75,6 +75,13 @@ CI pulls digest-pinned UBI bases in a separate networked step, then invokes
 disables Podman's build network. The development image is not published by
 these jobs.
 
+Immediately after the native build, CI exports that architecture's complete
+filesystem and checks for package-manager executables, DNF/YUM configuration,
+RPM signing keys, setuid/setgid files, and undeclared world-writable paths.
+The scanner reads tar headers without extracting files; a malformed or empty
+export fails. This is development image-content evidence for IMG-06 and IMG-09,
+not release-candidate evidence or proof for the other architecture.
+
 Before assembly, each native job also re-verifies its locked `weed` binary and
 runs `govulncheck` v1.8.0 in symbol-level binary mode using a pinned Go 1.27.1
 toolchain. It retains the raw streaming JSON under

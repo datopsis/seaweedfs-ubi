@@ -39,10 +39,10 @@ or validate conformance.
 | IMG-03 Hermetic assembly | `L1-SUP-001` | No-pull, network-disabled native build and negative assembly tests | Retain candidate build invocation and static no-fetch/no-installer check; verify no external layer cache. |
 | IMG-04 Reviewed input refresh | `L1-SUP-001` | Lock updates require review | Add read-only scheduled drift detection and evidence that it cannot change locks or merge unreviewed. |
 | IMG-05 No build secrets | `L1-SUP-001`, `L1-EVD-001` | Build uses reviewed inputs | Test build args, layers, history and labels for secret-shaped values on the candidate. |
-| IMG-06 No package manager | `L1-RUN-001` | UBI Micro design and native smoke | Inventory every forbidden binary, repository file, and signing key in both candidate architectures. |
+| IMG-06 No package manager | `L1-RUN-001` | Native development image-export gate removes and scans inherited DNF/YUM configuration and RPM keys | Repeat the full-image check on both exact candidate children; audit forbidden tool coverage. |
 | IMG-07 Only functional contents | `L1-RUN-001` | Supported-role allowlist and minimized image | Compare actual features, modules, compilers and retrieval tools with a committed per-role declaration. |
 | IMG-08 Embedded package inventory | `L1-SUP-001`, `L1-EVD-001` | External SPDX development inventory exists | Define inventory for UBI packages *and* the upstream Go binary, embed read-only inventory, compare it with reviewed lock and SBOM. |
-| IMG-09 No privilege-raising files | `L1-RUN-001` | Rootless runtime tests | Scan full candidate filesystem for setuid/setgid and undeclared world-writable paths. |
+| IMG-09 No privilege-raising files | `L1-RUN-001` | Native development image-export scan for setuid/setgid and world-writable paths | Repeat against both exact candidate children and review allowed writable paths. |
 | IMG-10 Immutable software/configuration | `L1-RUN-001` | Read-only-root runtime tests | Prove every role cannot alter executable/config paths and list only explicit writable mounts. |
 | IMG-11 No root or privilege transition | `L1-RUN-001` | Entrypoint and native role tests | Record per-process UIDs for every supported role on each candidate architecture. |
 | IMG-12 Arbitrary UID | `L1-RUN-001` | OpenShift-compatible ownership design | Qualify arbitrary UID with actual writable mounts and both architectures; separate local compatibility from OpenShift admission. |

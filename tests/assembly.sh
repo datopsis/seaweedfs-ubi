@@ -9,6 +9,7 @@ REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 BUNDLE_DIR="${BUNDLE_DIR:-${REPO_ROOT}/.artifact-bundle}"
 LOCK_FILE="${LOCK_FILE:-${REPO_ROOT}/artifacts/seaweedfs.lock.json}"
 WORK=""
+PYTHON=""
 passed=0
 failed=0
 
@@ -23,6 +24,18 @@ host_arch() {
 	aarch64 | arm64) printf 'arm64' ;;
 	*) printf 'unsupported host architecture: %s\n' "$(uname -m)" >&2; return 1 ;;
 	esac
+}
+
+resolve_python() {
+	local candidate
+	for candidate in python3 python; do
+		if command -v "$candidate" >/dev/null 2>&1 &&
+			"$candidate" -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1; then
+			printf '%s' "$candidate"
+			return 0
+		fi
+	done
+	return 1
 }
 
 ok() { printf 'ok    %s\n' "$1"; passed=$((passed + 1)); }
@@ -47,7 +60,12 @@ expect_refusal() {
 	fi
 }
 
+# Requirements: L3-SUP-002
 main() {
+	PYTHON="$(resolve_python)" || {
+		printf 'REFUSED: a Python 3 interpreter is required\n' >&2
+		exit 2
+	}
 	arch="$(host_arch)" || exit 2
 	local source="${BUNDLE_DIR}/${arch}/weed"
 	[ -f "$source" ] || {
@@ -76,7 +94,7 @@ SHIM
 	[ ! -s "$WORK/calls" ] || bad "a missing bundle avoids runtime access" "runtime was called"
 
 	cp -- "$source" "$WORK/tampered/$arch/weed"
-	python3 - "$WORK/tampered/$arch/weed" <<'PYTHON'
+	"$PYTHON" - "$WORK/tampered/$arch/weed" <<'PYTHON'
 import sys
 with open(sys.argv[1], "r+b") as handle:
     handle.seek(1024 * 1024)
@@ -88,7 +106,7 @@ PYTHON
 		"bundle does not match the lock" "$WORK/tampered" "$LOCK_FILE" false
 	[ ! -s "$WORK/calls" ] || bad "a changed bundle avoids runtime access" "runtime was called"
 
-	python3 - "$LOCK_FILE" "$WORK/changed-lock.json" "$arch" <<'PYTHON'
+	"$PYTHON" - "$LOCK_FILE" "$WORK/changed-lock.json" "$arch" <<'PYTHON'
 import json
 import sys
 with open(sys.argv[1], encoding="utf-8") as handle:

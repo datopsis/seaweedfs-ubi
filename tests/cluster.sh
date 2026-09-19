@@ -194,7 +194,7 @@ bad_volume_readiness() {
 
 listening_ports() {
 	runtime exec "$1" cat /proc/net/tcp /proc/net/tcp6 2>/dev/null |
-		"$PYTHON" "${REPO_ROOT}/tests/lib/listening_ports.py"
+		"$PYTHON" "${REPO_ROOT}/tests/lib/listening_ports.py" | tr -d '\r'
 }
 
 wait_for_port() {
@@ -232,6 +232,7 @@ assert_listeners() {
 	fi
 }
 
+# Requirements: L3-RUN-009 L3-RUN-010
 main() {
 	PYTHON="$(resolve_python)" || {
 		printf 'REFUSED: a Python 3 interpreter is required\n' >&2
@@ -393,6 +394,22 @@ main() {
 		}
 	done
 	[ "$all_ok" = true ] && ok "every role runs as a non-root uid"
+
+	local process_status cap_eff no_new_privs seccomp
+	all_ok=true
+	for role in "$MASTER" "$VOLUME_ROLE" "$FILER" "$S3"; do
+		process_status="$(runtime exec "$role" cat /proc/1/status 2>/dev/null || true)"
+		cap_eff="$(printf '%s\n' "$process_status" | awk '/^CapEff:/ {print $2}')"
+		no_new_privs="$(printf '%s\n' "$process_status" | awk '/^NoNewPrivs:/ {print $2}')"
+		seccomp="$(printf '%s\n' "$process_status" | awk '/^Seccomp:/ {print $2}')"
+		if [ "$cap_eff" != 0000000000000000 ] || [ "$no_new_privs" != 1 ] || [ "$seccomp" != 2 ]; then
+			bad "every role has zero effective capabilities, no-new-privileges, and seccomp" \
+				"${role}: CapEff=${cap_eff:-unknown}, NoNewPrivs=${no_new_privs:-unknown}, Seccomp=${seccomp:-unknown}"
+			all_ok=false
+			break
+		fi
+	done
+	[ "$all_ok" = true ] && ok "every role has zero effective capabilities, no-new-privileges, and seccomp"
 
 	all_ok=true
 	for role in "$MASTER" "$VOLUME_ROLE" "$FILER" "$S3"; do

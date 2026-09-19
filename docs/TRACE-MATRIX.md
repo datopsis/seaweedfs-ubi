@@ -23,8 +23,8 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | --- | ---: |
 | L1 / L2 / L3 requirements | 9 / 51 / 48 |
 | IMG criteria with an L2 requirement | 34 |
-| Leaf requirements linked to a test | 8 |
-| Testable leaves missing a test link | 40 |
+| Leaf requirements linked to a test | 18 |
+| Testable leaves missing a test link | 30 |
 | Leaves awaiting manual evidence | 5 |
 
 ## L1 requirements
@@ -102,8 +102,8 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | ID | Parent | IMG criterion | Methods | Test links | Trace state |
 | --- | --- | --- | --- | --- | --- |
 | `L3-API-001` | `L2-API-001` | — | Test | `tests/s3.sh:130 (main suite)` | test linked |
-| `L3-CFG-001` | `L2-CFG-001` | — | Test | — | missing test link |
-| `L3-CFG-002` | `L2-CFG-002` | — | Test | — | missing test link |
+| `L3-CFG-001` | `L2-CFG-001` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
+| `L3-CFG-002` | `L2-CFG-002` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
 | `L3-CFG-003` | `L2-CFG-004` | `IMG-16` | Test, Analysis | — | missing test link |
 | `L3-CFG-004` | `L2-CFG-005` | `IMG-18` | Test | — | missing test link |
 | `L3-DAT-001` | `L2-DAT-001` | — | Test | `tests/test_backup_validation.py:52 (test_refuses_parent_traversal)`<br>`tests/test_backup_validation.py:57 (test_refuses_an_absolute_path)`<br>`tests/test_backup_validation.py:62 (test_refuses_a_symbolic_link)` | test linked |
@@ -124,23 +124,23 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | `L3-REL-003` | `L2-REL-004` | `IMG-23` | Test | — | missing test link |
 | `L3-REL-004` | `L2-REL-005` | `IMG-24` | Test, Demonstration | — | missing test link |
 | `L3-REL-005` | `L2-REL-006` | `IMG-33` | Test, Inspection | — | missing test link |
-| `L3-RUN-001` | `L2-RUN-001` | — | Test | — | missing test link |
-| `L3-RUN-002` | `L2-RUN-002` | — | Test | — | missing test link |
-| `L3-RUN-003` | `L2-RUN-003` | `IMG-06` | Test | — | missing test link |
+| `L3-RUN-001` | `L2-RUN-001` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
+| `L3-RUN-002` | `L2-RUN-002` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
+| `L3-RUN-003` | `L2-RUN-003` | `IMG-06` | Test | `tests/image-filesystem.sh:33 (main suite)` | test linked |
 | `L3-RUN-004` | `L2-RUN-004` | `IMG-07` | Test, Inspection | — | missing test link |
-| `L3-RUN-005` | `L2-RUN-005` | `IMG-09` | Test | — | missing test link |
+| `L3-RUN-005` | `L2-RUN-005` | `IMG-09` | Test | `tests/image-filesystem.sh:33 (main suite)` | test linked |
 | `L3-RUN-006` | `L2-RUN-006` | `IMG-10` | Test | — | missing test link |
 | `L3-RUN-007` | `L2-RUN-007` | `IMG-11` | Test | — | missing test link |
 | `L3-RUN-008` | `L2-RUN-008` | `IMG-12` | Test | — | missing test link |
-| `L3-RUN-009` | `L2-RUN-009` | `IMG-13` | Test | — | missing test link |
-| `L3-RUN-010` | `L2-RUN-010` | `IMG-14` | Test | — | missing test link |
+| `L3-RUN-009` | `L2-RUN-009` | `IMG-13` | Test | `tests/cluster.sh:235 (main suite)` | test linked |
+| `L3-RUN-010` | `L2-RUN-010` | `IMG-14` | Test | `tests/cluster.sh:235 (main suite)` | test linked |
 | `L3-RUN-011` | `L2-RUN-011` | `IMG-15` | Test | — | missing test link |
 | `L3-RUN-012` | `L2-RUN-012` | `IMG-27` | Test, Inspection | — | missing test link |
 | `L3-RUN-013` | `L2-RUN-013` | `IMG-30` | Test | — | missing test link |
 | `L3-RUN-014` | `L2-RUN-014` | `IMG-31` | Demonstration | — | manual evidence pending |
 | `L3-RUN-015` | `L2-RUN-015` | `IMG-32` | Demonstration | — | manual evidence pending |
-| `L3-SUP-001` | `L2-SUP-001` | — | Test | — | missing test link |
-| `L3-SUP-002` | `L2-SUP-002` | — | Test | — | missing test link |
+| `L3-SUP-001` | `L2-SUP-001` | — | Test | `tests/lock.sh:80 (main suite)` | test linked |
+| `L3-SUP-002` | `L2-SUP-002` | — | Test | `tests/assembly.sh:63 (main suite)` | test linked |
 | `L3-SUP-003` | `L2-SUP-003` | `IMG-01` | Test | — | missing test link |
 | `L3-SUP-004` | `L2-SUP-004` | `IMG-02` | Test, Analysis | — | missing test link |
 | `L3-SUP-005` | `L2-SUP-005` | `IMG-03` | Test | — | missing test link |
