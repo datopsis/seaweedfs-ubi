@@ -700,9 +700,11 @@ classification — and every configuration it does not support is named.
       The package is absent from the exact source graph and both binary symbol
       inventories, so there is no application package to replace today. Keep
       the module-level result visible and repeat the review on every bump.
-- [ ] Verify that Trivy code-scanning alert identity remains stable across
-      successive `main` analyses. Its SARIF lacks supplied fingerprints; add
-      stable image-finding fingerprints if GitHub creates duplicate alerts.
+- [x] Verify Trivy code-scanning identity across five successive paired `main`
+      analyses. The original 18 alert numbers advanced without duplicates for
+      the unchanged 11-result-per-architecture set. Its SARIF lacks supplied
+      fingerprints, but adding synthetic ones without an observed identity
+      defect would churn established alerts; reassess if duplicates appear.
 - [ ] Produce BuildKit provenance and SBOM attestations, and digest-bound
       keyless Cosign signatures.
 - [ ] Add a release workflow with strict tag validation that refuses to publish
