@@ -189,6 +189,9 @@ jobs:
           test "$(podman image inspect --format '{{.Architecture}}' "${IMAGE}")"
           = "${EXPECTED_ARCHITECTURE}"
 
+      - name: Inspect native image filesystem for package managers and unsafe modes
+        run: bash tests/image-filesystem.sh
+
       - name: Download pinned Syft
         id: syft
         uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2

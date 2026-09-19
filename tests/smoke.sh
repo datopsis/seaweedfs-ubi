@@ -135,6 +135,7 @@ listening_ports() {
 		"$PYTHON" "${REPO_ROOT}/tests/lib/listening_ports.py"
 }
 
+# Requirements: L3-RUN-001 L3-RUN-002 L3-CFG-001 L3-CFG-002
 main() {
 	PYTHON="$(resolve_python)" || {
 		printf 'REFUSED: a Python 3 interpreter is required\n' >&2
@@ -206,6 +207,9 @@ main() {
 	expect_refusal "s3 without an identity source is refused" "no S3 identity source" -- s3
 	expect_refusal "s3 with a missing config file is refused" "does not exist" \
 		-- s3 -config=/nonexistent/s3.json
+	expect_refusal "mini with standalone enabled but no S3 identity is refused" \
+		"no S3 identity source" -e SEAWEEDFS_UBI_STANDALONE=true \
+		-- mini -dir=/data
 
 	# ---- the plaintext-beside-TLS guard -------------------------------------
 	expect_refusal "s3 refuses a plaintext listener beside TLS" "serving plaintext" \
@@ -291,6 +295,17 @@ main() {
 		ok "the server process runs as a non-root uid (${identity})"
 	else
 		bad "the server process runs as a non-root uid" "uid is ${identity:-unknown}"
+	fi
+
+	local effective_capabilities readonly_root
+	effective_capabilities="$(runtime exec "$CONTAINER" cat /proc/1/status 2>/dev/null |
+		awk '/^CapEff:/ {print $2}')"
+	readonly_root="$(runtime inspect "$CONTAINER" --format '{{.HostConfig.ReadonlyRootfs}}' 2>/dev/null || true)"
+	if [ "$effective_capabilities" = "0000000000000000" ] && [ "$readonly_root" = true ]; then
+		ok "the running process has zero effective capabilities under a read-only root"
+	else
+		bad "the running process has zero effective capabilities under a read-only root" \
+			"CapEff=${effective_capabilities:-unknown}, ReadonlyRootfs=${readonly_root:-unknown}"
 	fi
 
 	# The regression this suite exists for.

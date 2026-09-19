@@ -24,6 +24,11 @@ FROM ${UBI_MINIMAL} AS trust
 
 FROM ${UBI_MICRO}
 
+# UBI Micro has no package-manager executable, but still carries DNF/YUM
+# configuration and RPM signing keys. None are needed at runtime. /var/tmp is
+# inherited as world-writable; this image declares /data and /tmp for writes.
+RUN rm -rf -- /etc/dnf /etc/yum.repos.d /etc/pki/rpm-gpg && chmod 0755 /var/tmp
+
 ARG SEAWEEDFS_VERSION
 ARG SEAWEEDFS_VARIANT
 ARG SEAWEEDFS_COMMIT

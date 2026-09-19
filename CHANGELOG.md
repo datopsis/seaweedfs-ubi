@@ -27,6 +27,15 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Traced existing lock, assembly, and runtime guard suites to matching L3
+  requirements; added standalone S3-auth refusal and per-process capability,
+  no-new-privileges, seccomp, and read-only-root observations. Candidate-level
+  and multi-node evidence remains open.
+
+- Removed inherited DNF/YUM configuration and RPM signing keys from the runtime
+  image, tightened `/var/tmp`, and added a native per-architecture image-export
+  gate with negative tests for package-manager residue and unsafe file modes.
+
 - Drafted 34 SeaweedFS-specific IMG requirement statements and verification
   pointers from the container-hardening 0.2.0 adoption process, with a drift
   check that detects missing or duplicated criterion mappings. No criterion is
