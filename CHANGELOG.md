@@ -23,6 +23,10 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Started the SeaweedFS-specific L1/L2/L3 requirement tree and generated trace
+  matrix, with fail-closed structural and Python test-link checks. The tree is
+  incomplete, and a test link is not release-candidate evidence.
+
 - Added pinned Trivy image scans of both native CI development images, with
   validated OS and language-package coverage and 14-day retained full JSON
   inventories. These report-only scans do not yet enforce the planned fixed

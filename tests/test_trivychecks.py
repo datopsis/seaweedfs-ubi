@@ -38,6 +38,7 @@ class TrivyValidationTests(unittest.TestCase):
             ],
         }
 
+    # Requirements: L3-EVD-002
     def test_accepts_image_os_and_language_coverage(self) -> None:
         self.assertEqual(validate_trivy(self.document()), (2, 2, 1))
 
@@ -59,12 +60,14 @@ class TrivyValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(TrivyValidationError, "image digest"):
             validate_trivy(document)
 
+    # Requirements: L3-EVD-002
     def test_refuses_missing_os(self) -> None:
         document = self.document()
         document["Metadata"]["OS"] = {}  # type: ignore[index]
         with self.assertRaisesRegex(TrivyValidationError, "OS identification"):
             validate_trivy(document)
 
+    # Requirements: L3-EVD-002
     def test_refuses_missing_language_coverage(self) -> None:
         document = self.document()
         document["Results"] = [document["Results"][0]]  # type: ignore[index]

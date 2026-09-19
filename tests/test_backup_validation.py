@@ -49,14 +49,17 @@ class BackupArchiveValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(BackupValidationError, "has no files"):
             validate_archive(path)
 
+    # Requirements: L3-DAT-001
     def test_refuses_parent_traversal(self) -> None:
         with self.assertRaisesRegex(BackupValidationError, "unsafe path"):
             validate_archive(self.archive_with("../outside"))
 
+    # Requirements: L3-DAT-001
     def test_refuses_an_absolute_path(self) -> None:
         with self.assertRaisesRegex(BackupValidationError, "unsafe path"):
             validate_archive(self.archive_with("/outside"))
 
+    # Requirements: L3-DAT-001
     def test_refuses_a_symbolic_link(self) -> None:
         path = self.directory / "backup.tar"
         with tarfile.open(path, "w") as archive:

@@ -31,6 +31,7 @@ class GovulncheckEvidenceTests(unittest.TestCase):
         report = stream({"config": CONFIG}, {"SBOM": SBOM}, {"finding": {"osv": "GO-2026-6354"}})
         self.assertEqual(validate(report, "v1.8.0"), (1, 1))
 
+    # Requirements: L3-EVD-003
     def test_accepts_clean_scan_without_turning_inventory_into_gate(self):
         report = stream({"config": CONFIG}, {"SBOM": SBOM})
         self.assertEqual(validate(report, "v1.8.0"), (1, 0))
@@ -40,6 +41,7 @@ class GovulncheckEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "binary symbol-level"):
             validate(stream({"config": config}, {"SBOM": SBOM}), "v1.8.0")
 
+    # Requirements: L3-EVD-003
     def test_rejects_missing_database_timestamp(self):
         config = dict(CONFIG)
         del config["db_last_modified"]
@@ -50,6 +52,7 @@ class GovulncheckEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SBOM"):
             validate(stream({"config": CONFIG}), "v1.8.0")
 
+    # Requirements: L3-EVD-003
     def test_rejects_wrong_tool_version(self):
         with self.assertRaisesRegex(ValueError, "version"):
             validate(stream({"config": CONFIG}, {"SBOM": SBOM}), "v1.9.0")
