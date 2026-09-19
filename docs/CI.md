@@ -142,6 +142,39 @@ their aliases `GO-2026-6354` and `GO-2026-6355` High
 `x/crypto` issues as fixed upstream. The severity disagreement and alias mapping
 need explicit triage; neither scanner's lower rating is a waiver of the other.
 
+### Trivy code-scanning identity review
+
+On 2026-09-18, the repository's code-scanning API showed five successive pairs
+of Trivy analyses on `main`, from commits `c59b4bba`, `cd3365a8`, `e4518ac9`,
+`7f42176a`, and `e8786871`. Every AMD64 and ARM64 analysis reported the same 11
+results and nine rules. The original 18 Trivy alert numbers, 79 through 96,
+were created by the first pair and their most recent instances advanced through
+the fifth pair; later analyses did not create duplicates for the unchanged
+finding set.
+
+The count is 18 rather than 22 because GitHub currently coalesces the four Go
+findings, whose rule IDs and image-internal `usr/local/bin/weed` location match
+across architectures. The seven OS-package results remain distinct for each
+architecture. This is dashboard presentation behavior, not evidence that one
+architecture was unscanned or that the shared finding exists in only one
+binary. The per-architecture JSON and SARIF artifacts remain authoritative for
+what each native job observed.
+
+Trivy's generated SARIF does not currently supply `partialFingerprints`, but
+GitHub's fallback identity was stable across these five unchanged analysis
+pairs. Adding repository-generated fingerprints now would change established
+alert identities without correcting an observed defect, so the workflow stays
+unchanged. Reopen this decision if unchanged findings begin receiving new alert
+numbers, if a Trivy conversion update changes locations or rule IDs, or if the
+architecture categories stop preserving the expected per-architecture view.
+Never dismiss duplicate alerts merely to repair presentation; retain the raw
+inventories and correct the identity generation first.
+
+The review used the read-only `code-scanning/analyses` and
+`code-scanning/alerts` API endpoints. It did not update, dismiss, or resolve an
+alert. The live [code-scanning dashboard](https://github.com/datopsis/seaweedfs-ubi/security/code-scanning)
+is a triage view and will naturally change as advisories and images change.
+
 The [Go vulnerability triage record](GO-VULNERABILITY-TRIAGE.md) groups aliases,
 records the current 4.46 findings and preliminary 4.47 source-manifest check,
 and defines how the future gate must treat severity disagreements. It does not
