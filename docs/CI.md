@@ -259,6 +259,12 @@ repository-owned command.
 
 ## Work still required
 
+The tag-triggered `release.yml` currently performs strict ref admission and
+then fails intentionally. It has no publication or OIDC permission. The
+digest-only signing primitive and remaining candidate, gate, and promotion
+requirements are described in [`RELEASE.md`](RELEASE.md); no release evidence
+location or retention period exists yet.
+
 CI still needs release-image SBOM generation, Trivy and Grype image gates,
 release evidence retention,
 provenance, signing, and release automation. The lock's publisher-signature

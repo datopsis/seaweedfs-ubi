@@ -131,7 +131,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/SCAP.md` — tailored profile, selections, exclusions | Planned | 6 |
 | `docs/DEPLOYMENT.md` — qualified deployment procedures | Planned | 7 |
 | `docs/PRODUCTION.md` — go-live evidence and operations | Planned | 7 |
-| `docs/RELEASE.md` — release rehearsal and publication | Planned | 8 |
+| `docs/RELEASE.md` — release admission, signing design, and remaining publication gates | Admission-only; publication blocked | 5, 8 |
 
 ## Evidence lifecycle
 
@@ -734,6 +734,10 @@ classification — and every configuration it does not support is named.
       keyless Cosign signatures.
 - [ ] Add a release workflow with strict tag validation that refuses to publish
       without matching candidate evidence.
+- [x] Add an admission-only tag workflow that verifies an annotated tag on the
+      exact fetched `main` tip and then refuses publication; add a digest-only,
+      workflow-identity-bound Cosign signing primitive for a future gated job.
+      This does not complete the publication workflow or create a release.
 - [x] Implement and negatively test the deterministic release-tag admission
       checks: exact syntax, real current UTC date, artifact-lock version,
       digest-pinned Containerfile UBI major, immutable reuse refusal, and the
