@@ -70,12 +70,13 @@ from the artifact lock, a UBI major that differs from either Containerfile base,
 or a base that is not digest-pinned. It emits the admitted fields as JSON for a
 later workflow step. It deliberately performs no network lookup.
 
-This validator is necessary but not sufficient release admission. The future
-tag workflow must obtain a complete tag snapshot, prove the tagged commit is the
-protected `main` release commit, require matching candidate evidence and all
-release gates, and only then build or publish. Until that workflow exists and is
-qualified, running the validator does not create a release candidate or grant
-publication authority.
+The admission-only tag workflow now obtains a complete local tag snapshot and
+requires an annotated tag on the exact fetched `main` tip and checked-out
+commit. It then fails deliberately. These source/ref checks do not establish
+protected-branch enforcement, candidate evidence, or any release gate. See
+[`RELEASE.md`](RELEASE.md) for the required digest-bound candidate and
+promotion sequence. No tag may publish until that sequence is implemented and
+qualified.
 
 ## Upstream makes no compatibility promise
 

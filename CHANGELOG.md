@@ -23,6 +23,10 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added an admission-only release-tag workflow and a digest-bound keyless Cosign
+  signing primitive. Publication remains intentionally disabled until candidate
+  evidence, vulnerability gates, approval, and rehearsal are implemented.
+
 - Added a local development Iceberg/PyIceberg fixture against `lakekeeper-ubi`
   and this image's guarded standalone profile. It verifies real rows and
   objects across a catalog restart while leaving multi-host and release

@@ -1,0 +1,50 @@
+name: Release admission
+
+# This is intentionally admission-only until candidate evidence, fixed-finding
+# vulnerability gates, and publication rehearsal are implemented. A tag cannot
+# publish an image or obtain a signing identity through this workflow today.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  admission:
+    name: release admission
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the tagged revision and complete tag history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Fetch the current protected main tip and all tags
+        run: |
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+          git fetch --tags origin
+
+      - name: Require an annotated, current, contract-valid release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python scripts/lib/admit_release_ref.py "${RELEASE_TAG}" \
+            --expected-date "$(date -u +%F)"
+
+      - name: Refuse publication until candidate-bound gates exist
+        run: |
+          echo '::error::Release publication remains disabled: candidate-digest evidence, fixed High/Critical vulnerability gates, independent cyber approval, and a rehearsed promotion path are not implemented.' >&2
+          exit 1
