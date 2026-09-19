@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Record and reconcile native CI results without making release claims."""
 
 from __future__ import annotations
