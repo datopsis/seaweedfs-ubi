@@ -105,6 +105,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/BUILD-VARIANTS.md` — which upstream build is admitted, and why | Present | 1, 2 |
 | `docs/SUPPORT.md` — support classifications and lifecycle | Present | 1 |
 | `docs/QUALIFICATION.md` — evidence ledger schema | Present | 1 |
+| `docs/ICEBERG.md` — standalone development Iceberg round trip and remaining qualification work | Present; development only | 4 |
 | `docs/FUNCTIONAL-TEST-PLAN.md` — staged functional cases and optional AWS qualification design | Plan only | 4, 7 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
@@ -484,7 +485,10 @@ proves it in an automated suite.
       fixture that project uses today. Pin the engine toolchain so the result is
       reproducible. Use the case inventory in
       [`docs/FUNCTIONAL-TEST-PLAN.md`](FUNCTIONAL-TEST-PLAN.md); this plan does
-      not itself qualify the path.
+      not itself qualify the path. `tests/iceberg.sh` now performs a local
+      standalone development round trip, documented in [`docs/ICEBERG.md`](ICEBERG.md).
+      The gate remains open until native CI, transitive engine-wheel locking,
+      separated-role coverage and candidate-bound evidence are complete.
 - [x] Test identity isolation: two bucket-scoped identities, proving one cannot
       read, write, or list the other's bucket, alongside an anonymous caller and a
       valid key with the wrong secret being refused.

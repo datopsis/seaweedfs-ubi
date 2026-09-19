@@ -248,6 +248,11 @@ After acquiring an admitted binary with `scripts/fetch-artifacts.sh`, run
 uses a runtime shim and does not build an image; the native CI jobs also run
 the real Podman assembly.
 
+After building this image and a verified local `lakekeeper-ubi` development
+image, `bash tests/iceberg.sh` exercises a development-only standalone Iceberg
+round trip. It is not yet a CI job or release-candidate evidence. See
+[`docs/ICEBERG.md`](ICEBERG.md) for the exact scope and remaining pins.
+
 Trivy and zizmor are pinned CI Actions in this increment; local invocations are
 not documented as equivalent until their installation and version pins have a
 repository-owned command.

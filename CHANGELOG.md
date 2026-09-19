@@ -23,6 +23,11 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a local development Iceberg/PyIceberg fixture against `lakekeeper-ubi`
+  and this image's guarded standalone profile. It verifies real rows and
+  objects across a catalog restart while leaving multi-host and release
+  qualification open.
+
 - Planned a staged functional qualification suite, including release-critical
   real-host tests and an optional, approval-gated AWS multi-AZ environment;
   no infrastructure has been provisioned.
