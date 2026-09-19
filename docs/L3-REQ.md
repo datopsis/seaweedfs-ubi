@@ -71,8 +71,10 @@ delete, and multipart operations while an anonymous client is refused.
 
 **Parent.** L2-INT-001
 
-**Statement.** The separated-role fixture SHALL refuse direct volume access
-without the configured JWT and gRPC access without a trusted client certificate.
+**Statement.** The separated-role fixture SHALL refuse a direct volume write
+without the configured JWT and gRPC access without a trusted client certificate,
+and SHALL record the unauthenticated direct read paths that still require
+deployment network isolation.
 
 **Verification.** Test.
 

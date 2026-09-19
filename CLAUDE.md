@@ -92,13 +92,15 @@ one at every version bump.
   healthy. Treat an unset or temporary data directory as a startup failure, not
   a default.
 - **Nothing between the components is authenticated or encrypted by default.**
-  gRPC mTLS, volume read and write JWTs, and HTTPS on the master, volume, and
+  gRPC mTLS, volume write JWTs, and HTTPS on the master, volume, and
   filer listeners are all configured through a `security.toml` that does not
   exist unless the operator provides one. Absent that file, any client that can
   reach a volume server can read and write it, and IP allow-listing
   (`-whiteList`) is empty by default. Inter-component security is therefore a
   documented deployment responsibility with tested examples, never an assumed
-  property.
+  property. In the filer-backed S3 topology, read JWTs are unavailable;
+  `security.toml` does not close the direct filer and volume HTTP read paths.
+  Network isolation of those listeners is mandatory, not an optional defense.
 - **SeaweedFS is a distributed system, and the production profile keeps it one.**
   Upstream has two single-process commands. `server` runs a selectable set of
   roles, and `mini` is purpose-built for small and development use; upstream's own
@@ -117,7 +119,7 @@ one at every version bump.
 
   Four things cannot be exercised or claimed in the standalone profile at all,
   because they are properties of a topology it does not have: inter-component
-  security, since gRPC mTLS and volume read and write JWTs protect a network that
+  security, since gRPC mTLS and volume write JWTs protect a network that
   does not exist inside one process; replication and durability; component failure
   modes; and the discovery and addressing wiring between roles. Tests for those
   must use the separated-role fixture, and a standalone result must never stand in

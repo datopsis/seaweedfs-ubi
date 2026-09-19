@@ -145,8 +145,9 @@ At minimum, results must cover:
   directory;
 - the Iceberg REST Catalog and Lance Namespace listeners being absent by default;
 - identity isolation between two S3 identities with distinct buckets;
-- gRPC mTLS refusing a client without a valid certificate, and a direct volume
-  request without a JWT being refused;
+- gRPC mTLS refusing a client without a valid certificate, a direct volume
+  write without a JWT being refused, and direct filer/volume read paths being
+  blocked from client networks by the qualified deployment;
 - data written through the S3 API surviving container replacement, restart, and
   an unclean stop, with no acknowledged write lost on graceful shutdown;
 - the Iceberg storage path exercised end to end against a real catalog;

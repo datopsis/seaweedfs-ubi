@@ -19,8 +19,8 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | Measure | Count |
 | --- | ---: |
 | L1 / L2 / L3 requirements | 9 / 17 / 14 |
-| Leaf requirements linked to a test | 7 |
-| Testable leaves missing a test link | 9 |
+| Leaf requirements linked to a test | 8 |
+| Testable leaves missing a test link | 8 |
 | Leaves awaiting manual evidence | 3 |
 
 ## L1 requirements
@@ -70,7 +70,7 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | `L3-EVD-001` | `L2-EVD-001` | Test | `tests/test_spdxchecks.py:31 (test_accepts_seaweedfs_and_go_inventory)`<br>`tests/test_spdxchecks.py:43 (test_refuses_missing_go_inventory)`<br>`tests/test_spdxchecks.py:50 (test_refuses_missing_seaweedfs)`<br>`tests/test_spdxchecks.py:57 (test_refuses_main_module_without_dependencies)` | test linked |
 | `L3-EVD-002` | `L2-EVD-001` | Test | `tests/test_trivychecks.py:41 (test_accepts_image_os_and_language_coverage)`<br>`tests/test_trivychecks.py:63 (test_refuses_missing_os)`<br>`tests/test_trivychecks.py:70 (test_refuses_missing_language_coverage)` | test linked |
 | `L3-EVD-003` | `L2-EVD-001` | Test | `tests/test_govulnchecks.py:34 (test_accepts_clean_scan_without_turning_inventory_into_gate)`<br>`tests/test_govulnchecks.py:44 (test_rejects_missing_database_timestamp)`<br>`tests/test_govulnchecks.py:55 (test_rejects_wrong_tool_version)` | test linked |
-| `L3-INT-001` | `L2-INT-001` | Test | — | missing test link |
+| `L3-INT-001` | `L2-INT-001` | Test | `tests/inter-component.sh:287 (main suite)` | test linked |
 | `L3-OBS-001` | `L2-OBS-001` | Test | `tests/test_listening_ports.py:11 (test_decodes_ipv4_and_ipv6_listeners_and_sorts_them)`<br>`tests/test_listening_ports.py:22 (test_empty_and_non_listening_input_has_no_ports)` | test linked |
 | `L3-REL-001` | `L2-REL-001` | Test | `tests/test_release_tag_validation.py:108 (test_refuses_version_not_in_artifact_lock)`<br>`tests/test_release_tag_validation.py:117 (test_refuses_disagreeing_base_majors)`<br>`tests/test_release_tag_validation.py:135 (test_refuses_unpinned_base)`<br>`tests/test_release_tag_validation.py:141 (test_refuses_reused_immutable_tag)`<br>`tests/test_release_tag_validation.py:147 (test_refuses_skipped_or_filled_sequence)`<br>`tests/test_release_tag_validation.py:69 (test_refuses_malformed_tags)`<br>`tests/test_release_tag_validation.py:89 (test_refuses_backdated_or_future_date)` | test linked |
 | `L3-RUN-001` | `L2-RUN-001` | Test | — | missing test link |

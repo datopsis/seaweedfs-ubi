@@ -1,9 +1,9 @@
 # Support contract
 
-No supported container image has been released, and no image has been built from
-this repository yet. Everything currently here is development material unless an
-immutable release and its evidence are explicitly named by a published support
-statement.
+No supported container image has been released. Native AMD64 and ARM64
+development images are built and tested in CI, but everything currently here
+remains development material unless an immutable release and its evidence are
+explicitly named by a published support statement.
 
 ## Classification terms
 
@@ -60,7 +60,7 @@ process, and no amount of configuration changes them.
 
 | Limitation | Why |
 | --- | --- |
-| **Inter-component security is inert** | gRPC mTLS and volume read and write JWTs authenticate and encrypt the network between roles. Inside one process there is no such network. A `security.toml` here protects nothing. |
+| **Inter-component security is inert** | gRPC mTLS and volume write JWTs protect network paths between roles. Inside one process there is no such network. A `security.toml` here protects nothing. In the separated S3 topology, direct reads still require network isolation because read JWTs are unavailable. |
 | **No replication, so no durability** | One volume server cannot satisfy a replication setting. Loss of the disk is loss of the data. |
 | **No component failure modes** | You cannot stop the filer and observe S3 degrade, or lose a volume server and watch the master reassign. |
 | **Discovery and addressing are untested** | Roles find each other in-process, so the inter-role wiring, gRPC addressing, and name resolution never execute — which is the class of defect most likely to appear first on a real deployment. |
@@ -91,16 +91,16 @@ A standalone result may never be cited as evidence for a clustered claim.
 | Area | Current classification | Evidence or limitation |
 | --- | --- | --- |
 | Published images | Unsupported | No release has been published. |
-| Repository development image | Unsupported | No image exists yet; the first lands in work package 3. |
-| Native Linux AMD64 and ARM64 | Unsupported | No build, test, SBOM, or scan evidence exists. |
-| Rootless Podman | Unsupported | Intended primary workflow; nothing exercised. |
+| Repository development image | Preview/unqualified | Native CI builds local images; it does not publish or qualify a release. |
+| Native Linux AMD64 and ARM64 | Preview/unqualified | Both GitHub-hosted Ubuntu runner architectures build, run native suites, and retain development SBOM and vulnerability inventories. This is not RHEL or candidate evidence. |
+| Rootless Podman | Preview/unqualified | Exercised in native Ubuntu CI; the intended RHEL 9/SELinux host remains unqualified. |
 | Docker | Unsupported | To be qualified independently of Podman in work package 7. |
 | OpenShift arbitrary UID | Unsupported | Restricted-SCC behavior is a work package 7 preview target. |
-| `master`, `volume`, `filer`, `s3` roles | Unsupported | In the proposed first-release boundary; unimplemented. |
-| Single-container standalone profile | Unsupported for production, by design | Planned for local development and test fixtures behind an explicit `SEAWEEDFS_UBI_STANDALONE` opt-in. Inter-component mTLS and JWTs are inert inside one process, and replication, component failure modes, and inter-role discovery cannot be exercised. See [deployment profiles](#deployment-profiles). |
+| `master`, `volume`, `filer`, `s3` roles | Preview/unqualified | Built and exercised as separate containers in native one-host CI; no production release or multi-host result. |
+| Single-container standalone profile | Preview/unqualified for local use; unsupported for production by design | Native CI exercises the explicit `SEAWEEDFS_UBI_STANDALONE` opt-in. Inter-component mTLS and JWTs are inert inside one process, and replication, component failure modes, and inter-role discovery cannot be exercised. See [deployment profiles](#deployment-profiles). |
 | S3 API compatibility | Unsupported | No conformance claim will be made without recorded per-operation results. |
-| Client-facing TLS on the S3 listener | Unsupported | Planned in work package 4. |
-| gRPC mTLS and volume JWTs between components | Unsupported | Planned in work package 4; upstream requires an operator-supplied `security.toml`. |
+| Client-facing TLS on the S3 listener | Preview/unqualified | Exercised with negative trust cases in development CI; deployment certificate lifecycle and release evidence remain open. |
+| gRPC mTLS and volume write JWTs between components | Preview/unqualified | One-host CI measures mTLS and direct-write denial with operator-supplied `security.toml`; direct HTTP reads remain open and require deployment network isolation. |
 | Durability, replication, and failure behavior | Unsupported | A one-host separated-role test measures two `010` replicas and volume-process loss, but does not establish host, node, disk, backend, or zone-loss durability. The supported statement and real-host topology remain undecided. |
 | Resource-exhaustion behavior | Unsupported | A bounded `tmpfs` and the volume-count limit fail visibly in one-host tests. Inode exhaustion and real storage backends remain unqualified. |
 | Backup and restore | Unsupported | A cold Podman named-volume procedure is tested for master, volume, and embedded filer state. Live backup, Docker, external filer databases, and real-host disaster recovery remain unqualified. |
@@ -113,9 +113,9 @@ A standalone result may never be cited as evidence for a clustered claim.
 | FIPS validation or approved mode | Unsupported | No cryptographic module or operational boundary has been validated. |
 | STIG certification or system compliance | Unsupported | Tailored SCAP evidence will be report-only and bounded to selected image-filesystem checks. |
 
-Every row is `Unsupported` today because no image exists. Rows move to
-preview/unqualified, compatible, or supported only when their work package lands
-evidence of matching scope.
+No row is `Supported` today. Development evidence moves a row only to the
+limited classification stated; a supported row requires an exact released
+digest and evidence matching its full scope.
 
 ## Upstream maintenance constrains what this project can promise
 
@@ -218,8 +218,8 @@ The first release would qualify:
 - S3 object storage with configured static identities and anonymous access
   refused;
 - an operator-mounted TLS profile on the S3 listener;
-- gRPC mTLS and volume read and write JWTs between components, with tested
-  examples;
+- gRPC mTLS and volume write JWTs between components, with tested examples,
+  and deployment isolation of direct filer and volume read paths;
 - explicitly declared writable volumes for master metadata, volume data, and
   filer store data, on a read-only root filesystem;
 - the Apache Iceberg storage path exercised end to end against

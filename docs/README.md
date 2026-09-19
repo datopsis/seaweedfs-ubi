@@ -122,7 +122,9 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/L1-REQ.md`, `docs/L2-REQ.md`, `docs/L3-REQ.md` — stable product requirements and explicit non-requirements | Initial incomplete draft | 6 |
 | `docs/TRACE-MATRIX.md` — generated requirement-to-verification view | Initial Python and selected shell-suite links; other shell and manual evidence pending | 6 |
 | `docs/adr/` — accepted, superseded, and proposed design decisions | Planned | 6 |
-| `docs/THREAT-MODEL.md` — trust boundaries and risks | Planned | 6 |
+| `docs/THREAT-MODEL.md` — trust boundaries and risks | Draft for independent cyber review | 6 |
+| `docs/CYBER-CONTROLS.md` — provisional SRG and control triage | Draft; no approved applicability or control claims | 6 |
+| `docs/HARDENING-CRITERIA.md` — provisional IMG criterion inventory | All 34 required IDs inventoried; none assessed as met | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
 | `docs/CONTROL-MODEL.md` — machine-checkable origination and assessment rules | Planned | 6 |
 | `docs/CONTROL-IMPLEMENTATION.md` — per-control justification | Planned | 6 |
@@ -794,8 +796,10 @@ this package before the first release, not as post-release documentation.
 ### Datopsis container-hardening adoption
 
 Adopt [`datopsis/container-hardening`](https://github.com/datopsis/container-hardening)
-as a version-pinned assessment process. Its reusable workflow has not yet been
-proven by a caller. A successful invocation is an audit result, not release
+as a version-pinned assessment process once the shared process changes settle.
+Threat, source, and control research can proceed against the current working
+standard without pretending its revision has been approved. Its reusable
+workflow has not yet been proven by a caller. A successful invocation is an audit result, not release
 authorization, a STIG result, or evidence for an untested architecture, role,
 topology, or platform. Do not weaken this repository's first-release gates to
 obtain a conformance score.
@@ -808,6 +812,16 @@ obtain a conformance score.
 - [ ] Select and pin a full reviewed `container-hardening` commit; maintain one
       explicit revision across the profile, validation tools, and reusable
       workflow. Verify that the called workflow itself runs at that revision.
+      Defer this pin while the shared repo incorporates first-adopter changes;
+      do not defer the SeaweedFS threat or control research below.
+- [x] Draft the SeaweedFS-specific threat model and provisional GPOS, Container
+      Platform, Application Server, and Web Server SRG applicability review in
+      [`THREAT-MODEL.md`](THREAT-MODEL.md) and
+      [`CYBER-CONTROLS.md`](CYBER-CONTROLS.md). These are analysis inputs, not
+      approved applicability, OSCAL, conformance, or release evidence.
+- [ ] Obtain independent cyber review of those drafts, including the direct
+      filer/volume read bypass, the applicable SRG rule set, all 57 currently
+      research-required controls, and organization/host/deployment handoffs.
 - [ ] Perform source applicability and baseline decisions with an accountable
       cyber reviewer. Add a complete `hardening-profile.json` with honest,
       time-bounded deviations; do not invent reviewer approval or waive the
@@ -815,7 +829,10 @@ obtain a conformance score.
 - [ ] Map every required IMG criterion to SeaweedFS L1/L2/L3 requirements and
       scope-matching tests. Preserve the existing alphanumeric requirement IDs;
       identify gaps rather than reusing a web-server requirement or claiming
-      that one passing suite establishes an entire criterion.
+      that one passing suite establishes an entire criterion. The provisional
+      [`HARDENING-CRITERIA.md`](HARDENING-CRITERIA.md) now inventories all 34
+      required criteria with L1 areas and next proof; L2/L3 completion and
+      criterion-specific evidence remain open.
 - [ ] Extend native CI to emit validated criterion evidence per architecture,
       role, topology, and configuration. Aggregate it without overwriting files;
       fail on malformed, duplicate, stale, or cross-run results. Keep standalone
@@ -837,7 +854,7 @@ obtain a conformance score.
 
 - [ ] Reconstruct a stable L1/L2/L3 product requirement tree covering the image,
       upstream acquisition, each supported role, S3 authentication, filer
-      metadata, persistent data, gRPC mTLS and volume JWTs, TLS, logging,
+      metadata, persistent data, gRPC mTLS and volume write JWTs, TLS, logging,
       backup/restore, replication, updates, controlled networks, operations,
       and evidence claims. Record explicit non-requirements and retired IDs;
       do not soften a requirement merely because implementation or evidence is
@@ -910,7 +927,9 @@ obtain a conformance score.
       artifact/signing identity, direct volume access bypassing S3 identities,
       malicious or unavailable filer metadata, replication/failure domains,
       credential and JWT-key rotation, logging leakage, denial of service,
-      evidence integrity, and residual risks with owners.
+      evidence integrity, and residual risks with owners. A working draft now
+      names those paths; approve the boundary and residual-risk dispositions
+      before closing this item.
 - [ ] Publish `docs/CRYPTOGRAPHIC-BOUNDARY.md` identifying every place this
       image performs cryptography — S3 listener TLS, gRPC mTLS, JWT signing,
       and any at-rest feature — the implementation behind each, and who owns it.

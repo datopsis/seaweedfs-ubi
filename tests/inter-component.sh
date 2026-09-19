@@ -4,8 +4,8 @@
 #
 # SECURITY.md tells operators that without a security.toml anyone who reaches a
 # volume server can read and write stored bytes directly, bypassing the S3
-# identity model. That claim has never been tested, and neither has the
-# mitigation. This does both: it runs the cluster twice, once without the file
+# identity model. This suite tests that claim and the partial mitigation: it
+# runs the cluster twice, once without the file
 # and once with it, and probes the volume server directly each time.
 #
 # The second run is the one that matters, and not because it is reassuring.
@@ -284,6 +284,7 @@ run_phase() {
 	return 0
 }
 
+# Requirements: L3-INT-001
 main() {
 	PYTHON="$(resolve_python)" || {
 		printf 'REFUSED: a Python 3 interpreter is required\n' >&2

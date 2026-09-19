@@ -301,10 +301,9 @@ same boundary described in [`USE-CASES.md`](USE-CASES.md).
 
 ## What is not configured here
 
-TLS on the S3 listener, gRPC mTLS between components, volume read and write
+TLS on the S3 listener, gRPC mTLS between components, volume write
 JWTs, and the filer's metadata store are all upstream configuration, supplied by
 the operator through flags, `security.toml`, and `filer.toml`. They are
-deployment responsibilities, and tested examples for them are owed by work
-package 4. Until those exist, treat inter-component security as unqualified here
-and read
-[the security policy](../SECURITY.md#known-deployment-critical-behavior).
+deployment responsibilities. The tested one-host security example and its
+direct-read limitation are in [TLS.md](TLS.md); real deployment isolation,
+certificate rotation, and the selected filer backend are not yet qualified.
