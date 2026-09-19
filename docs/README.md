@@ -684,6 +684,10 @@ classification — and every configuration it does not support is named.
       and bind each release SBOM to the published image digest.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical
       findings, and retain the complete inventory including unfixed findings.
+- [x] Implement and negatively test a fail-closed decision primitive for the
+      paired Grype/Trivy inventories. It refuses the current AMD64 development
+      scan's three known fixed High advisory groups; CI and release publication
+      are not yet gated by it.
 - [ ] Triage the first Grype development-image inventory's three fixed High
       findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
       reviewed SeaweedFS update or other upstream resolution, then enable the

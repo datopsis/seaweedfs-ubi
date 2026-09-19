@@ -39,7 +39,9 @@ and [verification guide](https://docs.sigstore.dev/cosign/verifying/verify/).
    and release-digest-bound SPDX SBOMs, and resolve or formally disposition
    findings under the existing policy. The current development-image scans
    are report-only and have known fixed High findings; they cannot be reused
-   as a passing release gate.
+   as a passing release gate. The paired-inventory evaluator in
+   `tests/lib/vulnerability_gate.py` is available but is not yet connected to
+   candidate admission.
 3. Run both-architecture, real-host, security, and topology qualification
    against the candidate digest. Complete requirements/control mapping,
    independent cyber review, and the SCAP evidence boundary. A single-container
