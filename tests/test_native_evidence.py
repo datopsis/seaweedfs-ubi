@@ -8,13 +8,23 @@ import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "scripts" / "lib"))
-from native_evidence import make_record, reconcile  # noqa: E402
+from native_evidence import SUITES, make_record, reconcile  # noqa: E402
 
 COMMIT = "a" * 40
 IMAGE = "sha256:" + "b" * 64
 
 
 class NativeEvidenceTests(unittest.TestCase):
+    def test_recorded_suites_are_run_before_evidence_is_written(self):
+        workflow = (pathlib.Path(__file__).resolve().parents[1] /
+                    ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        record_step = workflow.index("- name: Record scoped native development evidence")
+        for suite in SUITES:
+            with self.subTest(suite=suite):
+                command = f"run: bash tests/{suite}.sh"
+                self.assertEqual(workflow.count(command), 1)
+                self.assertLess(workflow.index(command), record_step)
+
     def records(self):
         return [make_record(arch, COMMIT, "12", "2", IMAGE)
                 for arch in ("amd64", "arm64")]
