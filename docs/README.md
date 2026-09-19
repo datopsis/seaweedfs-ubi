@@ -119,13 +119,12 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Present | 5 |
 | `docs/GO-VULNERABILITY-TRIAGE.md` — binary findings and alias policy | Present | 5 |
-| `docs/L1-REQ.md`, `docs/L2-REQ.md`, `docs/L3-REQ.md` — stable product requirements and explicit non-requirements | Initial incomplete draft | 6 |
+| `docs/L1-REQ.md`, `docs/L2-REQ.md`, `docs/L3-REQ.md` — product requirements and explicit non-requirements | Draft L2 and L3 breakdown of all 34 IMG criteria; test evidence incomplete and none assessed as met | 6 |
 | `docs/TRACE-MATRIX.md` — generated requirement-to-verification view | Initial Python and selected shell-suite links; other shell and manual evidence pending | 6 |
 | `docs/adr/` — accepted, superseded, and proposed design decisions | Planned | 6 |
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Draft for independent cyber review | 6 |
 | `docs/CYBER-CONTROLS.md` — provisional SRG and control triage | Draft; no approved applicability or control claims | 6 |
 | `docs/HARDENING-CRITERIA.md` — provisional IMG criterion inventory | All 34 required IDs inventoried; none assessed as met | 6 |
-| `requirements.md` — image-specific IMG requirement statements | Draft one-to-one mapping; verification pointers incomplete and no criterion assessed as met | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
 | `docs/CONTROL-MODEL.md` — machine-checkable origination and assessment rules | Planned | 6 |
 | `docs/CONTROL-IMPLEMENTATION.md` — per-control justification | Planned | 6 |
@@ -833,9 +832,12 @@ obtain a conformance score.
       that one passing suite establishes an entire criterion. The provisional
       [`HARDENING-CRITERIA.md`](HARDENING-CRITERIA.md) now inventories all 34
       required criteria with L1 areas and next proof. Draft
-      [`requirements.md`](../requirements.md) gives each criterion a stable
-      image-specific verification pointer as the 0.2.0 adoption guide expects;
-      L2/L3 completion and criterion-specific evidence remain open.
+      [`L2-REQ.md`](L2-REQ.md#img-criterion-obligations-draft) gives each
+      criterion a stable image-specific requirement within the existing L1/L2/L3
+      tree, and the generated [`TRACE-MATRIX.md`](TRACE-MATRIX.md) shows its
+      parent and missing verification links. Each IMG-mapped L2 requirement now
+      has an initial L3 verification obligation; detailed test links and
+      criterion-specific evidence remain open.
 - [ ] Reconcile the 0.2.0 process's profile, requirements, component definition,
       behavior declaration, and strict evidence schema before the first workflow
       call. Review per-role and per-topology evidence dimensions against the
@@ -855,7 +857,9 @@ obtain a conformance score.
 - [ ] Call the pinned reusable conformance workflow from a pull request after
       its profile, component, requirements, and evidence inputs are real; test
       negative cases and record any first-caller defects for correction in the
-      shared repository. Require the resulting check only after its semantics
+      shared repository. Pass `docs/L1-REQ.md docs/L2-REQ.md docs/L3-REQ.md`
+      as its requirement sources, not a detached flat requirement file.
+      Require the resulting check only after its semantics
       and cross-repository permissions have been exercised successfully.
 - [ ] Bind a final conformance assessment to the exact multi-architecture
       candidate index and child digests, with release-candidate evidence for

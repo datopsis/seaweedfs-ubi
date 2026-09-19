@@ -12,6 +12,10 @@ only to published container images; repository-only changes remain under
 
 ### Fixed
 
+- Integrated draft IMG requirements into the L1/L2/L3 product tree and Python-
+  generated trace matrix, replacing the detached requirement list without
+  claiming criterion-level evidence.
+
 - Bound the generated secret to the backup-archive validator's option even
   when the secret begins with a hyphen, preserving the archive exclusion check.
 

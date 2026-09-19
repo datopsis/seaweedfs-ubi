@@ -64,6 +64,18 @@ class StandardDraftTests(unittest.TestCase):
         self.write()
         self.assertIn("control count", " ".join(check(self.standard)))
 
+    def test_missing_l2_criterion_mapping_is_visible(self):
+        repository = pathlib.Path(self.temporary.name) / "image"
+        docs = repository / "docs"
+        docs.mkdir(parents=True)
+        for name in ("HARDENING-CRITERIA.md", "CYBER-CONTROLS.md", "L2-REQ.md"):
+            (docs / name).write_text((ROOT / "docs" / name).read_text(encoding="utf-8"),
+                                     encoding="utf-8")
+        l2 = docs / "L2-REQ.md"
+        l2.write_text(l2.read_text(encoding="utf-8").replace("**Criterion.** IMG-01", ""),
+                      encoding="utf-8")
+        self.assertIn("L2 image requirements differ", " ".join(check(self.standard, repository)))
+
 
 if __name__ == "__main__":
     unittest.main()

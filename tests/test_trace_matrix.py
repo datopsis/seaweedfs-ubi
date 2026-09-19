@@ -53,8 +53,33 @@ class TraceMatrixTests(unittest.TestCase):
     def test_unlinked_test_is_visible_not_reported_as_covered(self) -> None:
         matrix = trace.render(self.root)
         self.assertIn("| Testable leaves missing a test link | 1 |", matrix)
-        self.assertIn("| `L3-SUP-001` | `L2-SUP-001` | Test | — | missing test link |", matrix)
-        self.assertIn("| `L1-SUP-001` | — | Test | — | decomposed |", matrix)
+        self.assertIn("| `L3-SUP-001` | `L2-SUP-001` | — | Test | — | missing test link |", matrix)
+        self.assertIn("| `L1-SUP-001` | — | — | Test | — | decomposed |", matrix)
+
+    def test_l2_criterion_is_visible_but_not_evidence(self) -> None:
+        path = self.root / "docs/L2-REQ.md"
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "**Parent.** L1-SUP-001", "**Parent.** L1-SUP-001\n\n**Criterion.** IMG-01"
+        ), encoding="utf-8")
+        matrix = trace.render(self.root)
+        self.assertIn("| IMG criteria with an L2 requirement | 1 |", matrix)
+        self.assertIn("| `L2-SUP-001` | `L1-SUP-001` | `IMG-01` | Test | — | decomposed |", matrix)
+        self.assertIn("| `L3-SUP-001` | `L2-SUP-001` | `IMG-01` | Test | — | missing test link |", matrix)
+        self.assertIn("not a score or", matrix)
+
+    def test_duplicate_and_misplaced_criterion_are_refused(self) -> None:
+        path = self.root / "docs/L2-REQ.md"
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "**Parent.** L1-SUP-001", "**Parent.** L1-SUP-001\n\n**Criterion.** IMG-01"
+        ) + """\n### L2-SUP-002\n\n**Parent.** L1-SUP-001\n\n**Criterion.** IMG-01\n\n**Statement.** Another input SHALL be checked.\n\n**Verification.** Test.\n""", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "mapped by both"):
+            trace.render(self.root)
+        path = self.root / "docs/L1-REQ.md"
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "**Statement.**", "**Criterion.** IMG-01\n\n**Statement.**"
+        ), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "criterion must be an IMG ID on L2"):
+            trace.render(self.root)
 
     def test_exact_test_comment_is_linked_without_claiming_a_pass(self) -> None:
         self.write("tests/test_sample.py", """import unittest
