@@ -23,6 +23,10 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a fail-closed paired Grype/Trivy vulnerability decision evaluator with
+  negative tests. It rejects the current fixed High findings but is not yet a
+  release-candidate gate.
+
 - Added an admission-only release-tag workflow and a digest-bound keyless Cosign
   signing primitive. Publication remains intentionally disabled until candidate
   evidence, vulnerability gates, approval, and rehearsal are implemented.

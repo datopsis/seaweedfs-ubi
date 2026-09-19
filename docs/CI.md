@@ -184,6 +184,18 @@ records the current 4.46 findings and preliminary 4.47 source-manifest check,
 and defines how the future gate must treat severity disagreements. It does not
 approve an exception or qualify a new image.
 
+`tests/lib/vulnerability_gate.py GRYPE_JSON TRIVY_JSON` now evaluates both
+unfiltered inventories together and exits nonzero for any fixed High or
+Critical record from either scanner, an invalid Grype database, or incomplete
+Trivy OS/language coverage. Its JSON decision retains scanner-specific IDs;
+it does not add aliases into a misleading cross-scanner count. On the AMD64
+development-image inventories from [PR #47's CI run](https://github.com/datopsis/seaweedfs-ubi/actions/runs/35421754243),
+it correctly refuses the three known fixed High advisory groups. This is a
+locally verified decision primitive, not a CI release gate: current native
+jobs still retain and publish scanner inventories without failing on these
+findings. Wire it only to an exact candidate digest after the reviewed binary
+update or separately approved exception process.
+
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.
 
