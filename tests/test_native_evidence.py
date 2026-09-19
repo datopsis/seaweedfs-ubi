@@ -35,6 +35,10 @@ class NativeEvidenceTests(unittest.TestCase):
         self.assertFalse(result["release_eligible"])
         self.assertEqual(result["standard_conformance"], "not assessed")
 
+    def test_normalizes_podman_bare_image_id(self):
+        record = make_record("amd64", COMMIT, "12", "2", "b" * 64)
+        self.assertEqual(record["local_image_id"], IMAGE)
+
     def test_rejects_duplicate_architecture(self):
         records = self.records()
         records[1]["architecture"] = "amd64"

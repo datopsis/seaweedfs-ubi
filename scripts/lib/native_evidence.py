@@ -14,7 +14,8 @@ SUITES = (
     "resource-exhaustion", "backup-restore",
 )
 SHA = re.compile(r"^[0-9a-f]{40}$")
-IMAGE_ID = re.compile(r"^sha256:[0-9a-f]{64}$")
+IMAGE_ID = re.compile(r"^(?:sha256:)?[0-9a-f]{64}$")
+CANONICAL_IMAGE_ID = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def make_record(architecture: str, commit: str, run_id: str,
@@ -29,6 +30,8 @@ def make_record(architecture: str, commit: str, run_id: str,
         raise ValueError("run attempt must be positive")
     if not IMAGE_ID.fullmatch(image_id):
         raise ValueError("local image ID must be a SHA-256 digest")
+    if not image_id.startswith("sha256:"):
+        image_id = "sha256:" + image_id
     return {
         "schema_version": 1,
         "evidence_level": "development",
@@ -64,7 +67,7 @@ def reconcile(records: list[dict], commit: str, run_id: str,
         if architecture not in ARCHITECTURES or architecture in seen:
             raise ValueError("missing, duplicate, or unsupported architecture")
         seen.add(architecture)
-        if not IMAGE_ID.fullmatch(str(record.get("local_image_id", ""))):
+        if not CANONICAL_IMAGE_ID.fullmatch(str(record.get("local_image_id", ""))):
             raise ValueError("invalid local image ID")
         if not isinstance(record.get("limitations"), list) or not record["limitations"]:
             raise ValueError("scope limitations are required")
