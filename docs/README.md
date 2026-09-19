@@ -125,6 +125,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/THREAT-MODEL.md` — trust boundaries and risks | Draft for independent cyber review | 6 |
 | `docs/CYBER-CONTROLS.md` — provisional SRG and control triage | Draft; no approved applicability or control claims | 6 |
 | `docs/HARDENING-CRITERIA.md` — provisional IMG criterion inventory | All 34 required IDs inventoried; none assessed as met | 6 |
+| `requirements.md` — image-specific IMG requirement statements | Draft one-to-one mapping; verification pointers incomplete and no criterion assessed as met | 6 |
 | `docs/SECURITY-CONTROLS.md` — requirement sources and mapping | Planned | 6 |
 | `docs/CONTROL-MODEL.md` — machine-checkable origination and assessment rules | Planned | 6 |
 | `docs/CONTROL-IMPLEMENTATION.md` — per-control justification | Planned | 6 |
@@ -831,8 +832,19 @@ obtain a conformance score.
       identify gaps rather than reusing a web-server requirement or claiming
       that one passing suite establishes an entire criterion. The provisional
       [`HARDENING-CRITERIA.md`](HARDENING-CRITERIA.md) now inventories all 34
-      required criteria with L1 areas and next proof; L2/L3 completion and
-      criterion-specific evidence remain open.
+      required criteria with L1 areas and next proof. Draft
+      [`requirements.md`](../requirements.md) gives each criterion a stable
+      image-specific verification pointer as the 0.2.0 adoption guide expects;
+      L2/L3 completion and criterion-specific evidence remain open.
+- [ ] Reconcile the 0.2.0 process's profile, requirements, component definition,
+      behavior declaration, and strict evidence schema before the first workflow
+      call. Review per-role and per-topology evidence dimensions against the
+      separated-role production and standalone development profiles, not the
+      reference web server's single-role shape. Treat a passing workflow as
+      progress only; release admission requires its separate `release-eligible`
+      output plus this repository's independent cyber, vulnerability, and
+      signed-release gates. Do not publish a conformance badge without its
+      architecture, revision, date, and evidence scope.
 - [ ] Extend native CI to emit validated criterion evidence per architecture,
       role, topology, and configuration. Aggregate it without overwriting files;
       fail on malformed, duplicate, stale, or cross-run results. Keep standalone

@@ -10,6 +10,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class CyberDocumentationTests(unittest.TestCase):
+    def test_image_requirements_cover_each_required_criterion_once(self):
+        text = (ROOT / "requirements.md").read_text(encoding="utf-8")
+        blocks = re.findall(
+            r"^### (SWD-\d{3})\s*\n(.*?)(?=^### SWD-\d{3}\s*$|\Z)",
+            text, re.M | re.S,
+        )
+        self.assertEqual([identifier for identifier, _ in blocks],
+                         [f"SWD-{number:03d}" for number in range(1, 35)])
+        for number, (_, body) in enumerate(blocks, 1):
+            self.assertEqual(re.findall(r"^- Criterion: (IMG-\d{2})$", body, re.M),
+                             [f"IMG-{number:02d}"])
+            self.assertRegex(body, r"(?m)^- (Existing development check|Needed check): ")
+
     def test_all_required_criterion_rows_are_present_once(self):
         text = (ROOT / "docs" / "HARDENING-CRITERIA.md").read_text(encoding="utf-8")
         rows = re.findall(r"^\| (IMG-\d{2}) ", text, re.M)
