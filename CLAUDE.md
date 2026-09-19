@@ -113,9 +113,11 @@ one at every version bump.
   `-admin.ui` are all `true`, `-s3.autoCreateBucket` and
   `-s3.allowDeleteBucketNotEmpty` are `true`, and `-dir` defaults to `.` rather
   than a volume. The standalone profile therefore sets `-webdav=false` and
-  `-admin.ui=false`, because WebDAV and the Admin UI are outside the boundary and
-  an unused listener is attack surface, and it requires an explicit `-dir` for the
-  same reason the separated roles do.
+  `-admin.ui=false`, and refuses attempts to re-enable them, because WebDAV and
+  the Admin UI are outside the boundary. Disabling the UI removes its management
+  routes but not mini's admin health/metrics HTTP listener (23646) or worker
+  gRPC listener (33646); both need network isolation. The profile also requires
+  an explicit `-dir` for the same reason the separated roles do.
 
   Four things cannot be exercised or claimed in the standalone profile at all,
   because they are properties of a topology it does not have: inter-component

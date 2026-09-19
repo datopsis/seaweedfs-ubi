@@ -137,7 +137,7 @@ already set them, so an explicit choice always wins.
 | --- | --- | --- |
 | `s3` | `-port.iceberg=0`, `-port.lance=0` | Both listeners are on by default upstream and are outside this image's boundary. |
 | `mini` | `-s3.port.iceberg=0`, `-s3.port.lance=0` | Same, under `mini`'s differently named flags. |
-| `mini` | `-webdav=false`, `-admin.ui=false` | Both default to `true` in `mini` and are outside the boundary. |
+| `mini` | `-webdav=false`, `-admin.ui=false` | Both default to `true` in `mini` and are outside the boundary; explicit enable flags are refused. Disabling the UI does **not** stop mini's admin health/metrics HTTP or worker gRPC listeners. |
 | `s3`, `mini` | `-allowDeleteBucketNotEmpty=false` | Upstream defaults it to `true`, which makes `DeleteBucket` on a bucket that still holds objects delete all of them. The S3 API answers `BucketNotEmpty`. |
 | `s3`, `mini` | `-autoCreateBucket=false` | Upstream defaults it to `true`, which creates a bucket on upload if it does not exist. The S3 API answers `NoSuchBucket`. |
 
@@ -201,11 +201,21 @@ upstream's flags:
 | 8888 / 18888 | filer and its gRPC companion |
 | 9333 / 19333 | master and its gRPC companion |
 | 9340 / 19340 | volume and its gRPC companion — note `mini` uses 9340, not the volume role's 8080 |
+| 23646 / 33646 | admin health/metrics HTTP and worker gRPC; `-admin.ui=false` removes the management routes, **not** these listeners |
 
 Ports 8181 and 9101 are **absent**, which the smoke suite asserts. They were
 present once: the entrypoint disabled them for the `s3` role and missed `mini`'s
 differently named flags, and only reading the open ports out of a running
 container caught it.
+
+The `mini` profile cannot be described as having no admin server. Its admin
+HTTP port still serves health and metrics, and its worker gRPC listener remains
+active. The entrypoint refuses attempts to enable the Admin UI or WebDAV, but
+cannot turn off those two upstream listeners. Keep **all** non-S3 ports
+unpublished and the container network isolated to the local development
+fixture. Do not use `--network host` or connect untrusted containers to that
+network. The worker gRPC security boundary needs an upstream/source-level
+assessment before any broader deployment claim.
 
 What the profile cannot provide, and why, is in
 [the support contract](SUPPORT.md#deployment-profiles).

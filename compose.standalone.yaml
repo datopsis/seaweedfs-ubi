@@ -32,8 +32,9 @@ services:
     volumes:
       - standalone-data:/data
     ports:
-      # Only the S3 API. The master, volume, and filer listeners this profile
-      # also opens stay inside the container, where they belong.
+      # Only the S3 API is published. Master, volume, filer, admin health/
+      # metrics, and worker gRPC remain reachable on this development network;
+      # do not attach untrusted peers or use host networking.
       - "127.0.0.1:8333:8333"
     restart: unless-stopped
 

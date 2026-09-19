@@ -23,8 +23,8 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | --- | ---: |
 | L1 / L2 / L3 requirements | 9 / 51 / 48 |
 | IMG criteria with an L2 requirement | 34 |
-| Leaf requirements linked to a test | 18 |
-| Testable leaves missing a test link | 30 |
+| Leaf requirements linked to a test | 19 |
+| Testable leaves missing a test link | 29 |
 | Leaves awaiting manual evidence | 5 |
 
 ## L1 requirements
@@ -48,7 +48,7 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | `L2-API-001` | `L1-API-001` | — | Test, Analysis | — | decomposed |
 | `L2-CFG-001` | `L1-CFG-001` | — | Test | — | decomposed |
 | `L2-CFG-002` | `L1-CFG-001` | — | Test | — | decomposed |
-| `L2-CFG-003` | `L1-CFG-001` | — | Test | — | missing test link |
+| `L2-CFG-003` | `L1-CFG-001` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
 | `L2-CFG-004` | `L1-CFG-001` | `IMG-16` | Test, Analysis | — | decomposed |
 | `L2-CFG-005` | `L1-CFG-001` | `IMG-18` | Test | — | decomposed |
 | `L2-DAT-001` | `L1-DAT-001` | — | Test | — | decomposed |
@@ -102,8 +102,8 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | ID | Parent | IMG criterion | Methods | Test links | Trace state |
 | --- | --- | --- | --- | --- | --- |
 | `L3-API-001` | `L2-API-001` | — | Test | `tests/s3.sh:130 (main suite)` | test linked |
-| `L3-CFG-001` | `L2-CFG-001` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
-| `L3-CFG-002` | `L2-CFG-002` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
+| `L3-CFG-001` | `L2-CFG-001` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
+| `L3-CFG-002` | `L2-CFG-002` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
 | `L3-CFG-003` | `L2-CFG-004` | `IMG-16` | Test, Analysis | — | missing test link |
 | `L3-CFG-004` | `L2-CFG-005` | `IMG-18` | Test | — | missing test link |
 | `L3-DAT-001` | `L2-DAT-001` | — | Test | `tests/test_backup_validation.py:52 (test_refuses_parent_traversal)`<br>`tests/test_backup_validation.py:57 (test_refuses_an_absolute_path)`<br>`tests/test_backup_validation.py:62 (test_refuses_a_symbolic_link)` | test linked |
@@ -124,8 +124,8 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | `L3-REL-003` | `L2-REL-004` | `IMG-23` | Test | — | missing test link |
 | `L3-REL-004` | `L2-REL-005` | `IMG-24` | Test, Demonstration | — | missing test link |
 | `L3-REL-005` | `L2-REL-006` | `IMG-33` | Test, Inspection | — | missing test link |
-| `L3-RUN-001` | `L2-RUN-001` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
-| `L3-RUN-002` | `L2-RUN-002` | — | Test | `tests/smoke.sh:138 (main suite)` | test linked |
+| `L3-RUN-001` | `L2-RUN-001` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
+| `L3-RUN-002` | `L2-RUN-002` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
 | `L3-RUN-003` | `L2-RUN-003` | `IMG-06` | Test | `tests/image-filesystem.sh:33 (main suite)` | test linked |
 | `L3-RUN-004` | `L2-RUN-004` | `IMG-07` | Test, Inspection | — | missing test link |
 | `L3-RUN-005` | `L2-RUN-005` | `IMG-09` | Test | `tests/image-filesystem.sh:33 (main suite)` | test linked |
