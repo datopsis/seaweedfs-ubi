@@ -709,6 +709,11 @@ classification — and every configuration it does not support is named.
       keyless Cosign signatures.
 - [ ] Add a release workflow with strict tag validation that refuses to publish
       without matching candidate evidence.
+- [x] Implement and negatively test the deterministic release-tag admission
+      checks: exact syntax, real current UTC date, artifact-lock version,
+      digest-pinned Containerfile UBI major, immutable reuse refusal, and the
+      next repository-wide daily sequence. Protected-main ancestry, complete
+      tag enumeration, candidate evidence, and publication remain workflow work.
 - [ ] Prove release assembly cannot pull an image, reach a package network, or
       resolve a version at build time.
 - [ ] Add monitored update proposals for the SeaweedFS release and the UBI base
