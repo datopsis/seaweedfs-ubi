@@ -91,6 +91,14 @@ re-verified at every version bump.
   logs are JSON by default, but entrypoint messages remain plain text; collectors
   must accept both and logs must still be handled as sensitive operational data.
   See [logging and metrics](docs/LOGGING.md).
+- **Upstream 4.46 can write S3 access-key IDs to logs.** The `mini` environment
+  bootstrap logs the configured ID at startup, and the S3 authentication path
+  logs an attempted ID when an unknown or removed credential is rejected. The
+  standalone Compose example now uses a mounted `s3.json` to avoid the startup
+  path, but that does not fix rejected-request logging. The strict lifecycle
+  check fails on this finding; restrict log access and do not claim key-ID log
+  safety until an upstream or reviewed source-build fix is qualified. See
+  [logging and metrics](docs/LOGGING.md) and the [work plan](docs/README.md).
 
 The upstream `-whiteList` option does not change that boundary. In the locked
 4.46 source it permits everyone when empty, applies only to selected handlers,

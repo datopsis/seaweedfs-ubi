@@ -260,6 +260,7 @@ tests/s3.sh                           # the S3 API, with real credentials
 tests/inter-component.sh              # what a security.toml does and does not close
 tests/s3-tls.sh                       # TLS on the client-facing S3 listener
 tests/state-survival.sh                # state across restart, replacement and stops
+tests/mini-persistence.sh              # standalone lifecycle; currently fails a strict log-safety check
 tests/replication.sh                  # two replicas across logical racks on one host
 tests/resource-exhaustion.sh          # bounded storage and volume-count failures
 tests/backup-restore.sh               # cold state archives into replacement volumes
@@ -344,10 +345,12 @@ Details, including what the verification does and does not prove, are in
 
 Two Compose stacks are provided for local work, matching the two profiles:
 `compose.yaml` for the separated roles and `compose.standalone.yaml` for a single
-container. Neither carries a default credential, both read from a local `.env`
-that Git ignores, and both publish only the S3 API and only on loopback. Neither
-has been exercised in CI yet, so treat them as unverified; the suites above are
-the verified path.
+container. Neither carries a default credential; the separated-role stack reads
+an ignored `.env`, while the [standalone guide](docs/STANDALONE.md) uses an
+ignored, read-only-mounted `s3.json`. Both publish only the S3 API and only on
+loopback. A disposable standalone Compose round trip and volume-retaining
+replacement passed locally, but neither Compose profile has been exercised in
+CI. A strict access-key log check remains open, so this is not qualification.
 
 Until the first signed release is published, this repository should be treated
 as development material rather than a supported production image.

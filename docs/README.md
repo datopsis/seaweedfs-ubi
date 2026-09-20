@@ -106,6 +106,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/SUPPORT.md` — support classifications and lifecycle | Present | 1 |
 | `docs/QUALIFICATION.md` — evidence ledger schema | Present | 1 |
 | `docs/ICEBERG.md` — standalone development Iceberg round trip and remaining qualification work | Present; development only | 4 |
+| `docs/STANDALONE.md` — local `mini` setup and management with an open log-safety finding | Draft; not qualified | 4 |
 | `docs/FUNCTIONAL-TEST-PLAN.md` — staged functional cases and optional AWS qualification design | Plan only | 4, 7 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
@@ -546,6 +547,10 @@ proves it in an automated suite.
       volume cleanup against operator data. This is local-development
       persistence evidence only, not replication, backup, or node-loss evidence;
       add the case to the functional inventory before claiming it.
+      `tests/mini-persistence.sh` now reaches all functional assertions locally,
+      including credential replacement and a fresh-volume negative case, but
+      fails its strict access-key-ID log check on the rejected old identity.
+      Do not add it as passing native CI evidence or close this item yet.
 - [ ] Qualify a replicated volume topology sufficient to make a durability
       statement, and state plainly which durability properties the first release
       does **not** claim. The first bounded result is now measured:
@@ -621,16 +626,27 @@ proves it in an automated suite.
 - [x] Write `docs/USE-CASES.md`, `docs/STORAGE.md`, `docs/TLS.md`, and
       `docs/LOGGING.md` from the qualified results, and update `SECURITY.md`
       with the deployment-critical upstream behavior each one exposes.
+- [ ] Resolve upstream 4.46 access-key-ID disclosure in container logs before
+      claiming log-safety or closing standalone qualification. The `AWS_*`
+      bootstrap path logs the configured ID at startup; a request signed with
+      an unknown or removed ID logs that attempted ID. Static mounted
+      `s3.json` avoids the startup leak but not the rejection path. Track an
+      upstream fix or an independently reviewed source-build change, then rerun
+      strict positive and negative log checks on both native architectures and
+      the exact release candidate. Do not lower the check to a warning or hide
+      the logs; restrict log access while this remains open.
 - [ ] Write and execute a standalone usage guide against the tested Compose
       profile: supply secrets outside the image, start with a persistent named
       `/data` volume, perform an authenticated S3 round trip, use `weed shell`
-      through `podman compose exec` for supported administration, change
+      through container exec for supported administration, change
       configuration and restart safely, inspect health/logs, and shut down
       without deleting data. Explain that `down` retains the named volume while
       `down -v` deletes it; show any destructive cleanup only against a
       disposable example. State which shell changes are ephemeral versus
       durable based on the new test, how credentials are restored, and that
       `mini` has no qualified backup, replication, or production posture.
+      `docs/STANDALONE.md` is a draft based on local Compose and direct-exec
+      checks, but the strict log check above blocks qualification.
 
 **Exit criteria.** Every configuration this project intends to support has a
 positive test, a negative test, an example, operational guidance, and a support

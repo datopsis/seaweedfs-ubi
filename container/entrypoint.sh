@@ -387,7 +387,7 @@ main() {
 		;;
 	*)
 		refuse "'${role}' is not a role this image supports." \
-			"Supported: master, volume, filer, s3, and the informational version and shell." \
+			"Supported: master, volume, filer, s3, the informational version, and the administrative shell." \
 			"The standalone role mini requires SEAWEEDFS_UBI_STANDALONE=true." \
 			"Everything else, including server, webdav, iam, mount and the message" \
 			"broker, is outside this image's qualified boundary and is refused rather" \

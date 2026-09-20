@@ -49,6 +49,9 @@ release gate. Existing obligations do not become optional during that review.
 Existing `tests/s3.sh` and `tests/lib/s3client.py` cover a subset of S3-API.
 `tests/replication.sh` covers logical racks on one host, not host or AZ loss.
 `tests/state-survival.sh` covers container lifecycle with intact storage.
+`tests/mini-persistence.sh` reaches the DEV functional cases locally but its
+strict access-key-ID log assertion fails after a removed identity is denied;
+it is not passing qualification evidence or a native CI case yet.
 Inventory actual assertions before adding cases. Select at least two
 independent S3 clients for a compatibility claim and record their versions.
 Define expectations from the chosen SeaweedFS version and supported subset,

@@ -9,10 +9,9 @@
 # nothing separates the S3 API from stored bytes. Use compose.yaml for anything
 # resembling a deployment.
 #
-# No credential has a default. Create a local .env first:
-#
-#   printf 'AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n' \
-#     "$(openssl rand -hex 16)" "$(openssl rand -base64 32)" > .env
+# No credential has a default. Create an operator-owned, ignored s3.json with
+# a strong identity before starting; see docs/STANDALONE.md. Do not use the
+# AWS_* environment bootstrap here: upstream logs its access-key ID at startup.
 #
 #   podman compose -f compose.standalone.yaml up -d
 #   podman compose -f compose.standalone.yaml down
@@ -21,17 +20,21 @@
 services:
   seaweedfs:
     image: ${SEAWEEDFS_UBI_IMAGE:-localhost/seaweedfs-ubi:development}
-    command: ["mini", "-dir=/data", "-ip.bind=0.0.0.0"]
+    command: ["mini", "-dir=/data", "-ip.bind=0.0.0.0", "-s3.config=/etc/seaweedfs/s3.json"]
     read_only: true
     cap_drop: ["ALL"]
     security_opt: ["no-new-privileges:true"]
     environment:
       # Without this the entrypoint refuses to start the role at all.
       SEAWEEDFS_UBI_STANDALONE: "true"
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?set AWS_ACCESS_KEY_ID in .env}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?set AWS_SECRET_ACCESS_KEY in .env}
     volumes:
       - standalone-data:/data
+      - type: bind
+        source: ./s3.json
+        target: /etc/seaweedfs/s3.json
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       # Only the S3 API is published. Master, volume, filer, admin health/
       # metrics, and worker gRPC remain reachable on this development network;
