@@ -1,4 +1,4 @@
-# Rust volume and worker adoption plan
+# Go-core and Rust worker adoption plan
 
 Status: plan and preliminary research, 2026-09-19. No Rust binary has been
 admitted, no Rust role is enabled, and no Rust behavior or security property is
@@ -7,31 +7,30 @@ existing gate in the [work plan](README.md).
 
 ## Decision and scope
 
-The requested direction is to bring the two upstream Rust executables into a
-development image and characterize them. Treat **packaged**, **launchable for
-development**, and **supported for production** as three separate decisions.
-The existing `weed volume` remains the default and the qualification baseline.
-`weed-volume` is an alternative *volume server*, not a companion process to the
-Go volume server. `weed-worker` is an alternative maintenance/plugin worker,
-not another volume server. Upstream's `volume-rust` and `worker-rust` names are
-entrypoint selectors for those executables, not flags to `weed`.
+The direction after the initial plan is **keep the core production image Go-only**.
+Continue to use `weed volume`; do not package or enable `weed-volume` in that
+image. Rust volume substitution is deferred research, not a first-release
+candidate. Explore `weed-worker` in a **separate, worker-only UBI image**. The
+worker image does not need the `weed` executable; the Go admin scheduler it
+depends on runs in a different container. Treat **packaged**, **launchable for
+development**, and **supported for production** as separate decisions. This
+direction supersedes the earlier same-image/two-Rust-binary proposal.
 
 The current first-release S3 topology is `master` + Go `volume` + `filer` +
-`s3`. Adding a Rust volume is a possible substitution in that topology. A Rust
-worker requires a separately designed admin/plugin scheduler, privileges to
-act on data, and possibly table-catalog services. It **does not** become part
-of the production profile simply because its binary is packaged. Keep the
-worker role refused until that trust boundary is approved and tested. Decide
-before release whether carrying an unreachable ~large worker binary and its
-vulnerabilities in the default image is acceptable, or whether a separate
-digest-pinned development/worker flavor is warranted. Do not describe a flavor
-split as the same-image/two-profile contract without revising that contract.
+`s3`. A Rust worker requires a separately designed Go admin/plugin scheduler,
+SeaweedFS Lance Namespace endpoint, access to table objects, and privileges to
+change durable table data. Our Go image currently refuses the admin role and
+disables its embedded Lance listener; Lakekeeper's Iceberg catalog is not an
+assumed replacement for the worker's Lance Namespace API. The worker does
+**not** become part of the production profile because a worker image is built.
+Keep admin, Lance, and worker operation outside the support boundary until
+their trust boundaries are approved and tested. The separate worker image has
+its own digest, SBOM, scans, attestations, signature, and support statement.
 
-`mini` stays the Go implementation in one process. Adding `weed-volume` does
-not replace mini's embedded Go volume server, and adding `weed-worker` does not
-turn mini's existing worker gRPC listener into an external worker. Do not
-launch either Rust executable implicitly, re-enable WebDAV/Admin UI, or treat
-mini evidence as volume-replacement, worker, replication, or multi-node evidence.
+`mini` stays the Go implementation in one process. Its existing worker gRPC
+listener is not a qualified production admin deployment. Do not launch a Rust
+executable implicitly, re-enable WebDAV/Admin UI, or treat mini evidence as
+worker, replication, or multi-node evidence.
 Investigate mini's 23646/33646 admin/worker listener boundary separately.
 
 ## Preliminary upstream signals to track, not claims of completeness
@@ -58,47 +57,34 @@ are the starting point for exact binary and invocation analysis.
 
 ## Ordered increments and gates
 
-1. **Scope and acquisition design.** Record an ADR for same-image versus
-   separate-flavor packaging and worker/admin boundary, without changing
-   defaults. Inventory the signed upstream 4.46 image per native AMD64/ARM64
-   manifest: `weed`, `weed-volume`, `weed-worker`, their SHA-256, sizes,
-   versions/embedded commit markers, ELF interpreter and shared libraries,
-   licenses, and large-disk behavior. Check that Rust binaries actually run on
-   UBI Micro; Alpine execution is not UBI compatibility evidence. Inspect the
-   source-to-prebuilt-to-image chain for each Rust binary. Extend the reviewed
-   artifact lock and negative admission tests so an absent, zero-byte,
-   wrong-architecture, mismatched, or substituted binary fails closed. Keep
-   digest + cosign identity verification before extraction, and preserve the
-   documented limitation that tarball MD5 and locally recorded hashes are not
-   publisher verification. Exit: reviewed trust record and native runtime
-   proof for each binary, without broadening the role allowlist.
-2. **Package without silent activation.** Update the hermetic build context,
-   Containerfile, filesystem manifest, notices, and SBOM assertions for the
-   selected image shape. Preserve non-root, read-only root, no capability,
-   explicit writable data, and package-manager-free final runtime. Measure
-   per-architecture uncompressed and compressed image size, per-binary growth,
-   cold start and memory; compare the *same* executable/role scope with the
-   official image. Fail if unexpected ELF dependencies or extra files appear.
-   Exit: development image contains only approved binaries and all old roles
-   behave exactly as before.
-3. **Rust volume characterization.** Add a distinct, explicit `volume-rust`
-   development selector only after mapping Rust CLI flags and startup defaults
-   to our guards; refuse missing/temporary data directories and insecure
-   configuration just as for Go. Run identical Go/Rust suites on both native
-   architectures: PID 1/UID/capabilities/read-only root; listener inventory;
-   TLS/mTLS and invalid-trust negatives; volume write JWT and direct-read
-   boundary; gRPC admin authorization/SSRF negatives; S3 byte-exact CRUD,
-   multipart and Iceberg path; state across restart/replacement; graceful
-   shutdown/fsync/crash/disk-full/index-flush; backup/restore; upgrade and
-   rollback. Compare Go-created volumes read and written by Rust, then reverse,
-   on disposable copies only; test large-disk format and refuse mixed-version
-   or destructive migration assumptions. Run replication, volume loss, network
-   partition and EC cases with the required topology, explicitly separating
-   one-host development results from multi-host durability evidence. Record
-   behavioral differences and supported/non-supported flags. Exit: rust-volume
-   support decision with evidence per architecture/topology; default stays Go
-   until specifically approved.
-4. **Rust worker characterization.** First map actual 4.46 jobs and all admin,
+1. **Scope and acquisition design.** Record the Go-only core/worker-only image
+   split and admin/Lance trust boundary in an ADR. Inventory `weed-worker` from
+   the signed upstream image for native AMD64/ARM64: SHA-256, size, embedded
+   version/commit, ELF interpreter, shared libraries, licenses, and exact
+   source-to-prebuilt-to-image chain. Check it actually runs on UBI Micro;
+   Alpine execution is not UBI compatibility evidence. Add a separate reviewed
+   worker lock and fail-closed admission tests for absent, zero-byte,
+   wrong-architecture, mismatched, or substituted input. Keep digest + cosign
+   identity verification before extraction; tarball MD5 and locally recorded
+   hashes are not publisher verification. Exit: verified worker input without
+   changing the Go core image or its role allowlist.
+2. **Build a separate worker image.** Use only admitted `weed-worker`, required
+   runtime libraries and CA trust, and a narrowly scoped entrypoint; do not copy
+   `weed` or `weed-volume`. Preserve non-root, read-only-root compatibility,
+   explicit writable paths, no capabilities, and package-manager-free final
+   runtime. Verify the worker runs as PID 1, has no unintended listeners, and
+   fails closed on missing admin/namespace/security configuration. Measure
+   compressed and unpacked size on both architectures. Give this distinct image
+   its own SBOM, scan, attestation, signature and release admission.
+3. **Go admin and Lance integration.** Design and separately qualify the Go
+   admin role, its persistent state and restricted HTTP/gRPC listeners; do not
+   use mini's admin listener as production evidence. Decide how the Go S3
+   process exposes Lance Namespace without weakening S3 authentication or
+   accidentally enabling the embedded Iceberg catalog. Verify the worker's
+   exact Lance Namespace API and credential-vending assumptions; do not assume
+   Lakekeeper is drop-in compatible. Update network policy, TLS/mTLS, identity,
+   authorization, secret rotation, logging and fail-closed startup guards.
+4. **Rust worker characterization.** Map actual 4.46 jobs and all admin,
    filer, S3, catalog, credential, and filesystem dependencies. Design a
    separated admin/worker network and identity boundary; the existing mini
    listener is not a qualified admin deployment. Prove authentication and
@@ -115,26 +101,31 @@ are the starting point for exact binary and invocation analysis.
    production claim until the admin path and job-specific test matrix pass.
 5. **Cyber and vulnerability assurance.** Update threat model, L1/L2/L3
    requirements, applicable SRGs/control ownership, and generated trace matrix
-   for both Rust paths. Add Rust dependency inventory from the *exact* upstream
+   for the worker/admin/Lance paths. Add Rust dependency inventory from the *exact* upstream
    commit/Cargo.lock alongside binary/image SBOMs; evaluate RustSec, GitHub
    advisories, OSV and current image scanners, recording where binary scanners
    cannot see crates. Track each potential advisory with component, affected
    version, reachability, fix status, mitigation, owner, expiry and dashboard
-   link; do not suppress unresolved findings to pass a gate. Compare Go TLS/JWT
-   behavior with Rust TLS/JWT, crypto modules and FIPS boundary; **make no FIPS
-   claim** for either. Review HTTP/gRPC authorization, SSRF, path traversal,
-   secret leakage, config reload, volume-file parsing, worker supply-chain and
-   destructive maintenance privileges. Re-run SCAP only for image-owned
+   link; do not suppress unresolved findings to pass a gate. Assess Go admin
+   and Rust worker TLS, crypto modules and FIPS boundary; **make no FIPS
+   claim**. Review HTTP/gRPC authorization, SSRF, path traversal,
+   secret leakage, worker supply chain, catalog access and destructive
+   maintenance privileges. Re-run SCAP only for image-owned
    checks; do not mistake an image scan for deployment certification.
 6. **Documentation, diagrams and release decision.** Complete the file review
    below with an explicit changed/not-applicable rationale in the PR. Create
-   repository-native SVGs (none currently exist) for image/artifact provenance,
-   Go-versus-Rust volume substitution and its data/trust boundaries, and the
-   optional admin/worker control and data flow. Include text equivalents and
+   repository-native SVGs for image/artifact provenance and the admin/worker
+   control and data flow. The [proposed host diagram](diagrams/proposed-production-lance.md)
+   is a starting point, not qualification. Include text equivalents and
    link/render checks. Update release candidate admission, native/platform
    matrix, signature/SBOM/attestation binding, rollback and support statements
-   to name exactly which binary/role combination was assessed. No release
-   claim may rely on merely packaging Rust binaries.
+   to name exactly which image and role combination was assessed. No release
+   claim may rely on merely packaging the Rust worker.
+
+**Deferred Rust volume track.** Preserve the preliminary `weed-volume` issue
+research below as watch items. Do not add it to either planned image or first
+release. Reopen its acquisition, parity, failure, security, and data-format
+qualification only after a deliberate new scope decision.
 
 ## Document-by-document review ledger
 
@@ -147,37 +138,37 @@ with `scripts/build-trace-matrix.py`; never hand-edit the generated matrix.
 | --- | --- |
 | `AGENTS.md` | Preserve all non-negotiable acquisition, role, runtime and evidence guardrails. |
 | `CLAUDE.md` | Update one-binary, role, architecture and verification descriptions if bytes/roles change. |
-| `README.md` | Explain new image contents, explicit selectors, default Go behavior, size and support status. |
+| `README.md` | Distinguish Go core and worker-only image contents, size and support status. |
 | `SECURITY.md` | Add Rust/worker attack surfaces, reporting and active findings. |
 | `CONTRIBUTING.md` | Add Rust-specific build, tests, issue triage and review expectations. |
 | `CHANGELOG.md` | Record each completed increment only; no unsupported capability claim. |
 | `THIRD_PARTY_NOTICES.md` | Assess Rust crates, licenses, attribution and redistribution. |
 | `docs/README.md` | Track increments, gates, decisions and changes to first-release boundary. |
-| `docs/ARCHITECTURE.md` | Replace one-binary manifest/size; show alternative volume and worker topology. |
-| `docs/ARTIFACT-ACQUISITION.md` | Record exact provenance and trust limits of both Rust binaries. |
-| `docs/BACKUP-RESTORE.md` | Check cross-implementation data/metadata restore and worker state. |
+| `docs/ARCHITECTURE.md` | Keep the Go core manifest/size; show separate worker image and admin/Lance topology. |
+| `docs/ARTIFACT-ACQUISITION.md` | Record exact provenance and trust limits of the worker binary. |
+| `docs/BACKUP-RESTORE.md` | Check admin/worker state and maintained table data. |
 | `docs/BADGING.md` | Confirm badges do not imply Rust qualification; add only evidence-backed status. |
-| `docs/BUILD-VARIANTS.md` | Verify Rust large-disk offset/format and architecture selection. |
+| `docs/BUILD-VARIANTS.md` | Confirm the Go large-disk decision is unaffected; record worker architecture availability. |
 | `docs/CI.md` | Add per-role native test, scan, SBOM and fail-closed gate descriptions. |
 | `docs/CONFIGURATION.md` | Map Rust flags, data path, security file, role allowlist and defaults. |
 | `docs/CYBER-CONTROLS.md` | Reassess SRG applicability/control ownership for new processes. |
-| `docs/FUNCTIONAL-TEST-PLAN.md` | Add Go/Rust differential, worker, topology and fault cases. |
+| `docs/FUNCTIONAL-TEST-PLAN.md` | Add admin/Lance/worker, topology and fault cases without treating mini as production. |
 | `docs/GO-VULNERABILITY-TRIAGE.md` | Keep Go scope precise; cross-link separate Rust crate/advisory triage. |
-| `docs/HARDENING-CRITERIA.md` | Assess each criterion against both binaries and new worker boundary. |
-| `docs/HERMETIC-BUILD.md` | Describe multi-binary verified input and no-network assembly. |
+| `docs/HARDENING-CRITERIA.md` | Assess each criterion against the separate worker image and admin boundary. |
+| `docs/HERMETIC-BUILD.md` | Describe separate verified worker input and no-network assembly. |
 | `docs/ICEBERG.md` | Distinguish Lakekeeper path from optional worker/catalog jobs. |
 | `docs/L1-REQ.md` | Add or revise top-level requirements only where scope warrants. |
-| `docs/L2-REQ.md` | Decompose Rust volume and worker security/behavior requirements. |
+| `docs/L2-REQ.md` | Decompose worker/admin/Lance security and behavior requirements. |
 | `docs/L3-REQ.md` | Add testable binary, runtime, protocol and negative assertions. |
 | `docs/LOGGING.md` | Assess Rust log format, IDs, secrets, audit and worker telemetry. |
 | `docs/QUALIFICATION.md` | Bind evidence to executable, mode, version, architecture and topology. |
 | `docs/RELEASE.md` | Require exact per-arch binary inventory, scans and signed candidate evidence. |
 | `docs/SCORECARD.md` | Check whether new source/dependency process affects existing findings. |
 | `docs/STANDALONE.md` | State mini remains Go and worker is not enabled by its listener. |
-| `docs/STORAGE.md` | Cover Go/Rust format interoperability, fsync, replication and migrations. |
-| `docs/SUPPORT.md` | Classify packaged versus qualified Rust volume/worker separately. |
-| `docs/THREAT-MODEL.md` | Add Rust volume and admin/worker assets, threats and residual risks. |
-| `docs/TLS.md` | Compare Rust/Go crypto and negative mTLS/JWT behaviors. |
+| `docs/STORAGE.md` | Review maintained Lance table versions, cleanup and rollback; keep Go volume claims unchanged. |
+| `docs/SUPPORT.md` | Keep Rust volume deferred and classify the worker image separately. |
+| `docs/THREAT-MODEL.md` | Add admin/worker/Lance assets, threats and residual risks. |
+| `docs/TLS.md` | Assess worker-admin mTLS and namespace/S3 TLS negatives. |
 | `docs/TRACE-MATRIX.md` | Regenerate and check trace links after requirements change. |
 | `docs/USE-CASES.md` | State which use cases need or exclude Rust implementations. |
 | `docs/VERSION.md` | Decide whether a Rust binary change is a new image revision/candidate. |
@@ -190,13 +181,14 @@ interfaces change; they are not exempt because they are not Markdown guides.
 
 ## Release gate
 
-Before a Rust mode is claimed as supported: provenance/admission and native
+Before the worker image is claimed as supported: provenance/admission and native
 runtime proof exist for both architectures; vulnerability and cyber findings
 are dispositioned under the established policy; all required negative tests
 pass; the applicable real-host topology is qualified; documentation and SVGs
 match measured behavior; and the immutable candidate's per-architecture SBOM,
-scan, attestation and signature bind to the published digest. A worker/admin
-scope expansion needs an explicit support and cyber-review decision. If those
-gates cannot close before the first release, retain the Go profile and classify
-Rust as development-only or keep its binaries out of the release candidate,
-with the exact choice recorded before publication.
+scan, attestation and signature bind to the worker's published digest. The
+admin/Lance/worker scope expansion needs an explicit support and cyber-review
+decision. If those gates cannot close alongside the first Go core release,
+keep the separate worker image unpublished or development-only, leave admin
+and Lance excluded, and make no Lance-maintenance support claim. Do not put
+Rust binaries in the Go core candidate to bypass this boundary.

@@ -23,11 +23,14 @@ evidence cannot be converted into a release claim by calling it deferred.
 **Next task: continue work package 4 and the remaining package 5 automation**,
 then complete the requirement/design and cyber-review package before release.
 
-The proposed Rust volume and worker additions have a separate
-[adoption and validation plan](RUST-ALTERNATIVES-PLAN.md). Its acquisition,
-runtime, cyber, documentation, and release gates apply before either alternative
-can be claimed as supported; packaging alone does not change the default Go
-volume role or enable a worker/admin production topology.
+The Go core stays Go-only. The [separate worker adoption and validation
+plan](RUST-ALTERNATIVES-PLAN.md) records the proposed `weed-worker`-only UBI
+image, required Go admin and Lance Namespace integration, cyber review, and
+release gates. Rust volume substitution is deferred. The
+[host diagram](diagrams/proposed-production-lance.md) is illustrative, not
+qualification evidence. Next worker-track increment: lock and verify the
+upstream `weed-worker` binary on native AMD64/ARM64, then prove UBI runtime
+compatibility without changing the Go core image.
 
 The hardened image, separated-role topology, authenticated S3 path, multipart
 uploads, component-security measurements, client TLS, state survival across
@@ -114,7 +117,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/ICEBERG.md` — standalone development Iceberg round trip and remaining qualification work | Present; development only | 4 |
 | `docs/STANDALONE.md` — local `mini` setup and management with an open log-safety finding | Draft; not qualified | 4 |
 | `docs/FUNCTIONAL-TEST-PLAN.md` — staged functional cases and optional AWS qualification design | Plan only | 4, 7 |
-| `docs/RUST-ALTERNATIVES-PLAN.md` — Rust volume/worker adoption, cyber and document-review gates | Plan only; no Rust binary admitted | 2–8 |
+| `docs/RUST-ALTERNATIVES-PLAN.md` — separate worker-image, admin/Lance, cyber and document-review gates; Rust volume deferred | Plan only; no Rust binary admitted | 2–8 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
@@ -201,9 +204,9 @@ omission as an oversight.
   default. Same reasoning, no current use case. The image disables it.
 - **WebDAV, the message broker and queue roles, and the admin and worker
   roles.** No first-release use case, and each adds listeners and privileges to
-  qualify. The [Rust alternatives plan](RUST-ALTERNATIVES-PLAN.md) investigates
-  a worker and possible Rust volume substitution; it does not remove this
-  exclusion or authorize a production worker by itself.
+  qualify. The [worker plan](RUST-ALTERNATIVES-PLAN.md) investigates a
+  separate Rust worker image and Go admin/Lance integration; it does not
+  remove this exclusion or authorize a production worker by itself.
 - **The advanced IAM and STS configuration**, including credential vending.
   Static identities cover the first-release use case; a token-vending trust
   model is a wider boundary that deserves its own qualification.
@@ -1146,6 +1149,7 @@ reopening one is a deliberate act rather than a drift.
 | 2026-09-12 | **Acquire the binary from the cosign-verified official container image** (Path B), pinned by digest, with the tarball retained as a documented fallback and a source build left open | The tarball has no publisher signal at all, while the image is signed with keyless cosign bound to an organization-repository workflow identity and built from the exact released commit. Because the images live in a personal namespace, verification is the reason to take that path rather than an enhancement to it. Building from source would be stronger still, but it turns this project from a packager of upstream releases into a builder of them. Recorded in [external artifact acquisition](ARTIFACT-ACQUISITION.md). |
 | 2026-09-12 | **First-release consumer: the Datopsis analytical stack's S3 backend**, built so nothing precludes general use | The difference between the two is what gets *qualified*, not what the image can *do*; see [the support contract](SUPPORT.md#who-this-image-is-for). |
 | 2026-09-15 | **Refuse a plaintext S3 listener beside TLS by default, with an explicit migration opt-out** | Upstream's `-port.https` adds TLS without removing plaintext from the original port. Failing closed matches the authentication and data-directory guards, while `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true` preserves the legitimate dual-listener migration shape. |
+| 2026-09-19 | **Keep the production storage image Go-only; investigate `weed-worker` in a separate worker-only image; defer `weed-volume`** | The Go volume remains the qualified baseline. Lance maintenance needs a Rust worker, but that executable can run without `weed` in its own container. A separate Go admin role and Lance Namespace are still unqualified dependencies; adding the worker must not silently expand the existing production boundary. See the [worker plan](RUST-ALTERNATIVES-PLAN.md). |
 
 ## Decisions that need a human
 
