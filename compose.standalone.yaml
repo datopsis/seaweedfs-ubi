@@ -15,7 +15,8 @@
 #     "$(openssl rand -hex 16)" "$(openssl rand -base64 32)" > .env
 #
 #   podman compose -f compose.standalone.yaml up -d
-#   podman compose -f compose.standalone.yaml down -v
+#   podman compose -f compose.standalone.yaml down
+# Keep the named data volume for the next start; `down -v` deletes it.
 
 services:
   seaweedfs:

@@ -385,12 +385,12 @@ weakness is documented rather than obscured.
       no phase that changes user or group. The suite reads `/proc/1/cmdline` to
       confirm PID 1 is the server and not a shell.
 - [x] Enforce a supported-role allowlist: `master`, `volume`, `filer`, `s3` and
-      the informational `version` and `shell` paths unconditionally, `mini` only
+      `version` and the administrative `shell` path unconditionally, `mini` only
       when `SEAWEEDFS_UBI_STANDALONE` is set, everything else refused including
       `server`, `mount` and `webdav`.
-      any other subcommand is refused with a diagnostic naming the supported
-      set. Informational paths must keep working so a refused container stays
-      diagnosable.
+      Any other subcommand is refused with a diagnostic naming the supported
+      set. `version` remains available for diagnostics; `shell` requires an
+      operator-controlled execution and network boundary.
 - [x] Implement the fail-closed S3 authentication guard,
       `SEAWEEDFS_UBI_REQUIRE_S3_AUTH`. A config flag naming a file that does not
       exist is refused too, since upstream would fall back to allow-all. An
@@ -505,6 +505,13 @@ proves it in an automated suite.
       at the handshake, and a hostname the certificate does not cover is refused.
       Supplying a certificate without `-port.https` upgrades the listener and
       stops serving plaintext on it.
+- [ ] Investigate and make the S3 TLS suite's transient authenticated-PUT read
+      timeout diagnosable. One `main` run timed out after a successful TLS
+      handshake while later native runs passed. Preserve the certificate,
+      hostname, and authenticated round-trip assertions; collect bounded
+      server/client diagnostics and distinguish readiness from an in-flight
+      request before considering any retry. Recheck on both native CI
+      architectures. A passing rerun alone does not resolve the failure.
 - [x] Refuse `-cert.file` together with a nonzero `-port.https` by default for
       both supported profiles. That combination starts TLS on the new port and
       leaves the original one serving plaintext. A deliberate migration can set
@@ -524,6 +531,21 @@ proves it in an automated suite.
       graceful shutdown. `tests/state-survival.sh` exercises all four roles as
       separate containers, reuses only their declared named volumes, and keeps
       the result explicitly separate from replication or node-loss evidence.
+- [ ] Add a standalone `mini` persistence and management test using a disposable
+      named `/data` volume under the restricted runtime. Write and read exact
+      S3 object bytes with authenticated credentials, stop and replace the
+      container while retaining the volume and external identity source, then
+      read the same object again. Exercise `weed shell` via container exec for
+      a safe administrative operation and establish which changes, if any,
+      survive restart; do not treat dynamic shell configuration as persistent
+      until measured, especially given
+      [upstream's dynamic S3 identity report](https://github.com/seaweedfs/seaweedfs/issues/10391)
+      for earlier separated-role releases. Test secret/configuration replacement
+      separately, and
+      prove a fresh volume does not contain the old data. Never run destructive
+      volume cleanup against operator data. This is local-development
+      persistence evidence only, not replication, backup, or node-loss evidence;
+      add the case to the functional inventory before claiming it.
 - [ ] Qualify a replicated volume topology sufficient to make a durability
       statement, and state plainly which durability properties the first release
       does **not** claim. The first bounded result is now measured:
@@ -599,6 +621,16 @@ proves it in an automated suite.
 - [x] Write `docs/USE-CASES.md`, `docs/STORAGE.md`, `docs/TLS.md`, and
       `docs/LOGGING.md` from the qualified results, and update `SECURITY.md`
       with the deployment-critical upstream behavior each one exposes.
+- [ ] Write and execute a standalone usage guide against the tested Compose
+      profile: supply secrets outside the image, start with a persistent named
+      `/data` volume, perform an authenticated S3 round trip, use `weed shell`
+      through `podman compose exec` for supported administration, change
+      configuration and restart safely, inspect health/logs, and shut down
+      without deleting data. Explain that `down` retains the named volume while
+      `down -v` deletes it; show any destructive cleanup only against a
+      disposable example. State which shell changes are ephemeral versus
+      durable based on the new test, how credentials are restored, and that
+      `mini` has no qualified backup, replication, or production posture.
 
 **Exit criteria.** Every configuration this project intends to support has a
 positive test, a negative test, an example, operational guidance, and a support

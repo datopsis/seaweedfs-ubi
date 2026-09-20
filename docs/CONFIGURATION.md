@@ -20,7 +20,8 @@ image does not support is refused rather than started untested.
 | `filer` | File and bucket metadata | 8888, gRPC 18888 |
 | `s3` | The S3 API | 8333, gRPC 18333 |
 | `mini` | Every role in one process — local development only, opt-in | see [standalone profile](#the-standalone-profile) |
-| `version`, `shell` | Informational, no guards | none |
+| `version` | Informational | none |
+| `shell` | Interactive administrative client; use only within the intended network and credential boundary | none of its own; connects to configured SeaweedFS services |
 
 gRPC ports are the HTTP port plus 10000, which is upstream's convention when
 `-port.grpc` is left at `0`.

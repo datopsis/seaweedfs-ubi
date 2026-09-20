@@ -44,6 +44,7 @@ release gate. Existing obligations do not become optional during that review.
 | SEC | Non-root, zero capabilities, read-only root and explicit data mounts for every role; wrong secret, cross-tenant access, untrusted TLS/gRPC certificates, absent/invalid volume-write JWT, extra-listener absence, and key exclusion from logs/layers | Rotation under load, expired certificates, malformed requests, bounded protocol fuzzing |
 | DAT | Acknowledged writes through restart/replacement; cold backup/restore; chosen replica placement and read/write behavior after a host/volume loss; recovery limits | AZ failure, repeated partitions, disk/inode exhaustion, partial writes, restore on replacement hosts, soak |
 | OPS | Master/filer/S3 loss and reconnect, readiness, logging/metrics, bounded startup/shutdown, upgrade and rollback across the chosen version pair | Restart cycles, latency/throughput, capacity trends; no performance SLA without separate evidence |
+| DEV | In a disposable `mini` fixture, byte-exact authenticated object readback after container replacement with the same named `/data` volume and external identity source; safe `weed shell` administration and measured restart semantics | Configuration/credential rotation scenarios after the basic persistence case passes; standalone results remain development-only and never qualify replication or multi-node recovery |
 
 Existing `tests/s3.sh` and `tests/lib/s3client.py` cover a subset of S3-API.
 `tests/replication.sh` covers logical racks on one host, not host or AZ loss.
