@@ -120,6 +120,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
 | `docs/CONFIGURATION.md` — variables this image adds and its guards | Present | 3 |
 | `docs/ARCHITECTURE.md` — roles, listeners, data flow, trust boundaries | Present | 3 |
+| `docs/diagrams/proposed-production-lance.svg` and its text description — illustrative Go-core/Rust-worker host layout, not qualification | Proposed design only | 6, 7 |
 | `docs/USE-CASES.md` — supported profiles and listener exposure | Present | 4 |
 | `docs/STORAGE.md` — measured state survival and durability boundary | Present | 4 |
 | `docs/BACKUP-RESTORE.md` — cold Podman state backup and restore | Present | 4 |
