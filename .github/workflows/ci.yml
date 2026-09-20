@@ -51,7 +51,7 @@ jobs:
         run: bash tests/lock.sh
 
       - name: Audit GitHub Actions security
-        uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99 # v0.6.3
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
         with:
           advanced-security: false
           annotations: true
@@ -385,13 +385,13 @@ jobs:
           persist-credentials: false
 
       - name: Download AMD64 evidence
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: development-native-evidence-amd64
           path: ${{ runner.temp }}/native-evidence
 
       - name: Download ARM64 evidence
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: development-native-evidence-arm64
           path: ${{ runner.temp }}/native-evidence
@@ -457,7 +457,7 @@ jobs:
           persist-credentials: false
 
       - name: Download native image Grype SARIF
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: development-image-${{ matrix.architecture }}-grype-sarif
           path: ${{ runner.temp }}/grype-sarif
@@ -469,7 +469,7 @@ jobs:
           category: grype-development-image-${{ matrix.architecture }}
 
       - name: Download native image Trivy SARIF
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: development-image-${{ matrix.architecture }}-trivy-sarif
           path: ${{ runner.temp }}/trivy-sarif
