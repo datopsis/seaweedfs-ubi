@@ -23,6 +23,12 @@ evidence cannot be converted into a release claim by calling it deferred.
 **Next task: continue work package 4 and the remaining package 5 automation**,
 then complete the requirement/design and cyber-review package before release.
 
+The proposed Rust volume and worker additions have a separate
+[adoption and validation plan](RUST-ALTERNATIVES-PLAN.md). Its acquisition,
+runtime, cyber, documentation, and release gates apply before either alternative
+can be claimed as supported; packaging alone does not change the default Go
+volume role or enable a worker/admin production topology.
+
 The hardened image, separated-role topology, authenticated S3 path, multipart
 uploads, component-security measurements, client TLS, state survival across
 container lifecycle events, negative mTLS behavior, and operational profiles are
@@ -108,6 +114,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/ICEBERG.md` — standalone development Iceberg round trip and remaining qualification work | Present; development only | 4 |
 | `docs/STANDALONE.md` — local `mini` setup and management with an open log-safety finding | Draft; not qualified | 4 |
 | `docs/FUNCTIONAL-TEST-PLAN.md` — staged functional cases and optional AWS qualification design | Plan only | 4, 7 |
+| `docs/RUST-ALTERNATIVES-PLAN.md` — Rust volume/worker adoption, cyber and document-review gates | Plan only; no Rust binary admitted | 2–8 |
 | `docs/BADGING.md` — permitted public claims | Present | 1 |
 | `docs/ARTIFACT-ACQUISITION.md` — lock, verification, trust limits | Present | 2 |
 | `docs/HERMETIC-BUILD.md` — network-free assembly contract | Present | 2, 3 |
@@ -193,7 +200,9 @@ omission as an oversight.
   default. Same reasoning, no current use case. The image disables it.
 - **WebDAV, the message broker and queue roles, and the admin and worker
   roles.** No first-release use case, and each adds listeners and privileges to
-  qualify.
+  qualify. The [Rust alternatives plan](RUST-ALTERNATIVES-PLAN.md) investigates
+  a worker and possible Rust volume substitution; it does not remove this
+  exclusion or authorize a production worker by itself.
 - **The advanced IAM and STS configuration**, including credential vending.
   Static identities cover the first-release use case; a token-vending trust
   model is a wider boundary that deserves its own qualification.
