@@ -3,6 +3,12 @@
 What is in the image, what runs when it starts, how the roles reach each other,
 and where the trust boundaries fall.
 
+For the proposed, **unqualified** multi-host topology that adds a separate
+Rust Lance maintenance worker while retaining Go storage roles, see the
+[SVG deployment diagram](diagrams/proposed-production-lance.svg) and its
+[text description](diagrams/proposed-production-lance.md). It is not the
+current production profile or release evidence.
+
 ## The image
 
 There is no compilation stage. The upstream binary is statically linked, so the

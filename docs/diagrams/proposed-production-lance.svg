@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1080" role="img" aria-labelledby="title description">
+  <title id="title">Proposed multi-host SeaweedFS production topology with a separate Rust Lance maintenance worker</title>
+  <desc id="description">Application clients reach a Go SeaweedFS S3 gateway and a separate Lakekeeper Iceberg catalog. The Go gateway would also host a planned Lance Namespace listener. Go filer, master, and three Go volume servers form the storage core. A separate operations host runs a proposed Go admin scheduler. A dedicated worker host runs only Rust weed-worker, with no weed executable. The worker connects to admin, the Lance Namespace, and S3 object data. The filer metadata backend and replication policy are not yet chosen. This is a design concept, not a qualified deployment.</desc>
+  <defs>
+    <style>
+      .canvas { fill: #f8fafc; }
+      .title { font: 700 29px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 16px Arial, sans-serif; fill: #475569; }
+      .host { fill: #ffffff; stroke: #64748b; stroke-width: 2; rx: 18; }
+      .host-name { font: 700 19px Arial, sans-serif; fill: #1e293b; }
+      .host-note { font: 14px Arial, sans-serif; fill: #475569; }
+      .go { fill: #dbeafe; stroke: #2563eb; stroke-width: 2; rx: 12; }
+      .planned-go { fill: #fff7ed; stroke: #d97706; stroke-width: 2; stroke-dasharray: 7 5; rx: 12; }
+      .rust { fill: #f3e8ff; stroke: #9333ea; stroke-width: 2; stroke-dasharray: 7 5; rx: 12; }
+      .external { fill: #f1f5f9; stroke: #64748b; stroke-width: 2; rx: 12; }
+      .name { font: 700 19px Arial, sans-serif; fill: #0f172a; }
+      .detail { font: 15px Arial, sans-serif; fill: #334155; }
+      .small { font: 13px Arial, sans-serif; fill: #475569; }
+      .flow { fill: none; stroke: #334155; stroke-width: 2.5; marker-end: url(#arrow); }
+      .planned-flow { fill: none; stroke: #9333ea; stroke-width: 2.5; stroke-dasharray: 7 5; marker-end: url(#arrow-purple); }
+      .replication { fill: none; stroke: #2563eb; stroke-width: 2.5; stroke-dasharray: 7 5; marker-end: url(#arrow-blue); }
+      .flow-label { font: 14px Arial, sans-serif; fill: #334155; paint-order: stroke; stroke: #f8fafc; stroke-width: 5; }
+      .planned-label { font: 14px Arial, sans-serif; fill: #6b21a8; paint-order: stroke; stroke: #f8fafc; stroke-width: 5; }
+      .footer { font: 14px Arial, sans-serif; fill: #334155; }
+      .warning { font: 700 15px Arial, sans-serif; fill: #92400e; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1 1 L9 5 L1 9 Z" fill="#334155"/></marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1 1 L9 5 L1 9 Z" fill="#9333ea"/></marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M1 1 L9 5 L1 9 Z" fill="#2563eb"/></marker>
+  </defs>
+
+  <rect class="canvas" x="0" y="0" width="1600" height="1080"/>
+  <text class="title" x="40" y="48">SeaweedFS + Lance: proposed production deployment</text>
+  <text class="subtitle" x="40" y="77">Each large box is a separate server host or managed service; inner boxes are separate containers unless noted.</text>
+  <rect class="go" x="40" y="95" width="24" height="18"/><text class="small" x="72" y="109">Go core (current development image)</text>
+  <rect class="planned-go" x="330" y="95" width="24" height="18"/><text class="small" x="362" y="109">proposed Go role/listener</text>
+  <rect class="rust" x="590" y="95" width="24" height="18"/><text class="small" x="622" y="109">proposed Rust worker-only image</text>
+
+  <rect class="host" x="40" y="155" width="250" height="158"/>
+  <text class="host-name" x="60" y="188">Application host(s)</text>
+  <rect class="external" x="58" y="210" width="214" height="80"/>
+  <text class="name" x="74" y="240">S3 / Lance clients</text>
+  <text class="detail" x="74" y="265">Query engines, applications</text>
+
+  <rect class="host" x="40" y="357" width="250" height="158"/>
+  <text class="host-name" x="60" y="390">Catalog host</text>
+  <rect class="external" x="58" y="412" width="214" height="80"/>
+  <text class="name" x="74" y="442">Lakekeeper</text>
+  <text class="detail" x="74" y="467">Iceberg REST catalog</text>
+
+  <rect class="host" x="340" y="155" width="350" height="405"/>
+  <text class="host-name" x="360" y="188">API host</text>
+  <text class="host-note" x="360" y="210">Go-only seaweedfs-ubi image</text>
+  <rect class="go" x="360" y="232" width="310" height="133"/>
+  <text class="name" x="378" y="260">Go weed s3</text>
+  <text class="detail" x="378" y="286">S3 API :8333</text>
+  <text class="detail" x="378" y="311">Lance Namespace :9101</text>
+  <text class="small" x="378" y="337">Same process; Lance listener is off today</text>
+  <rect class="go" x="360" y="406" width="310" height="105"/>
+  <text class="name" x="378" y="435">Go weed filer</text>
+  <text class="detail" x="378" y="460">Metadata and object-path mapping</text>
+  <text class="small" x="378" y="487">Separate container; private network</text>
+
+  <rect class="host" x="730" y="155" width="350" height="405"/>
+  <text class="host-name" x="750" y="188">Control / operations host</text>
+  <text class="host-note" x="750" y="210">Separate Go role containers</text>
+  <rect class="go" x="750" y="232" width="310" height="108"/>
+  <text class="name" x="768" y="261">Go weed master</text>
+  <text class="detail" x="768" y="287">Topology and volume assignment</text>
+  <text class="small" x="768" y="314">HA peers and placement still TBD</text>
+  <rect class="planned-go" x="750" y="381" width="310" height="130"/>
+  <text class="name" x="768" y="410">Go weed admin</text>
+  <text class="detail" x="768" y="437">Plugin scheduler / worker control</text>
+  <text class="small" x="768" y="462">gRPC :33646; HTTP :23646</text>
+  <text class="small" x="768" y="487">Private, authenticated boundary</text>
+
+  <rect class="host" x="1120" y="155" width="440" height="405"/>
+  <text class="host-name" x="1140" y="188">Lance maintenance host</text>
+  <text class="host-note" x="1140" y="210">Separate, proposed worker-only UBI image</text>
+  <rect class="rust" x="1140" y="232" width="400" height="232"/>
+  <text class="name" x="1160" y="261">Rust weed-worker</text>
+  <text class="detail" x="1160" y="288">No weed executable in this container</text>
+  <text class="detail" x="1160" y="315">Lance fragment compaction</text>
+  <text class="detail" x="1160" y="339">Index optimization</text>
+  <text class="detail" x="1160" y="363">Old-version cleanup</text>
+  <text class="small" x="1160" y="392">Needs admin, Lance Namespace, S3 access</text>
+  <text class="small" x="1160" y="420">Jobs disabled until approved and tested</text>
+  <text class="small" x="1140" y="500">Runtime credentials and mTLS supplied by operator</text>
+
+  <rect class="host" x="40" y="658" width="250" height="240"/>
+  <text class="host-name" x="60" y="691">Metadata host/service</text>
+  <rect class="external" x="58" y="716" width="214" height="75"/>
+  <text class="name" x="74" y="744">Filer metadata store</text>
+  <text class="small" x="74" y="768">Backend not selected</text>
+  <rect class="external" x="58" y="805" width="214" height="74"/>
+  <text class="name" x="74" y="833">Lakekeeper DB</text>
+  <text class="small" x="74" y="857">Separate logical database</text>
+
+  <rect class="host" x="340" y="658" width="350" height="240"/>
+  <text class="host-name" x="360" y="691">Storage host A</text>
+  <rect class="go" x="360" y="719" width="310" height="118"/>
+  <text class="name" x="378" y="749">Go weed volume</text>
+  <text class="detail" x="378" y="775">Persistent /data; local disk</text>
+  <text class="small" x="378" y="805">Separate container, Go implementation</text>
+
+  <rect class="host" x="730" y="658" width="350" height="240"/>
+  <text class="host-name" x="750" y="691">Storage host B</text>
+  <rect class="go" x="750" y="719" width="310" height="118"/>
+  <text class="name" x="768" y="749">Go weed volume</text>
+  <text class="detail" x="768" y="775">Persistent /data; local disk</text>
+  <text class="small" x="768" y="805">Separate failure domain</text>
+
+  <rect class="host" x="1120" y="658" width="440" height="240"/>
+  <text class="host-name" x="1140" y="691">Storage host C</text>
+  <rect class="go" x="1140" y="719" width="400" height="118"/>
+  <text class="name" x="1158" y="749">Go weed volume</text>
+  <text class="detail" x="1158" y="775">Persistent /data; local disk</text>
+  <text class="small" x="1158" y="805">Separate failure domain</text>
+
+  <path class="flow" d="M290 260 H356"/><text class="flow-label" x="291" y="246">S3</text>
+  <path class="flow" d="M80 290 H25 V452 H54"/><text class="flow-label" x="28" y="343">Iceberg REST</text>
+  <path class="flow" d="M290 451 H315 V345 H356"/><text class="flow-label" x="294" y="394">S3 object data</text>
+  <path class="flow" d="M515 365 V401"/><text class="flow-label" x="527" y="392">object path</text>
+  <path class="flow" d="M670 457 H704 V285 H745"/><text class="flow-label" x="685" y="374">topology</text>
+  <path class="flow" d="M360 476 H315 V753 H278"/><text class="flow-label" x="291" y="620">metadata</text>
+  <path class="flow" d="M165 515 H25 V842 H54"/><text class="flow-label" x="28" y="608">catalog state</text>
+  <path class="flow" d="M515 511 V636 H515 V714"/>
+  <path class="flow" d="M515 636 H905 V714"/>
+  <path class="flow" d="M905 636 H1340 V714"/>
+  <text class="flow-label" x="565" y="629">volume reads / writes across private network</text>
+  <path class="flow" d="M1060 286 H1090 V620 H905 V714"/>
+
+  <path class="planned-flow" d="M1140 405 H1065"/>
+  <text class="planned-label" x="1064" y="365" text-anchor="end">control stream, mTLS</text>
+  <path class="planned-flow" d="M1140 281 H1097 V136 H610 V226"/>
+  <text class="planned-label" x="855" y="132">Lance Namespace HTTP (proposed)</text>
+  <path class="planned-flow" d="M1140 447 H1100 V584 H325 V345 H356"/>
+  <text class="planned-label" x="970" y="608">table bytes via S3</text>
+
+  <path class="replication" d="M680 858 H744"/>
+  <path class="replication" d="M1070 858 H1134"/>
+  <text class="small" x="410" y="918">Possible replication across hosts; placement and durability claim remain undecided.</text>
+
+  <rect x="40" y="930" width="1520" height="126" rx="15" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+  <text class="warning" x="60" y="958">Concept only — not a released or qualified deployment.</text>
+  <text class="footer" x="60" y="985">The current image is Go-only; admin and Lance Namespace are refused/disabled in its production boundary.</text>
+  <text class="footer" x="60" y="1010">The Rust worker image and admin/Lance integration need artifact admission, threat review, credentials, tests, and release evidence.</text>
+  <text class="footer" x="60" y="1035">Host counts, replica placement, metadata backend, endpoint exposure, and TLS policy are illustrative until qualified.</text>
+</svg>
