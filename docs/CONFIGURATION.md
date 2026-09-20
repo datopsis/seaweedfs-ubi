@@ -245,15 +245,17 @@ attempting a write and expecting it to fail.
 
 ## Development stacks
 
-Two Compose files, matching the two profiles. Neither carries a default
-credential; both read from a local `.env` that Git ignores.
+Two Compose files match the two profiles. Neither carries a default credential.
+The separated-role stack reads a local `.env`; the standalone stack mounts an
+operator-owned, Git-ignored `s3.json` read-only. See the
+[standalone guide](STANDALONE.md) before using `mini`.
 
 ```console
 printf 'AWS_ACCESS_KEY_ID=%s\nAWS_SECRET_ACCESS_KEY=%s\n' \
   "$(openssl rand -hex 16)" "$(openssl rand -base64 32)" > .env
 
 podman compose up -d                                  # separated roles
-podman compose -f compose.standalone.yaml up -d       # one container
+podman compose -f compose.standalone.yaml up -d       # after creating s3.json
 ```
 
 In both, only the S3 API is published, and only on the loopback address. The

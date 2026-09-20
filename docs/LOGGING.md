@@ -24,8 +24,18 @@ signing key, and a private-key fragment. They assert that those
 values do not appear in the measured role logs. The S3 qualification also
 asserts that a rejected request does not echo its access key, supplied secret,
 or configured secret in the error body. This is evidence for the exercised
-paths, not proof that every upstream error path can never disclose a value. The
-test proves JWT enforcement by denying direct writes without a valid token; the
+paths, not proof that every upstream error path can never disclose a value.
+
+The standalone persistence test found two upstream 4.46 log paths that disclose
+access-key **IDs**: environment-variable bootstrap logs the configured ID at
+startup, and a request signed with a removed ID logs that attempted ID when
+authentication fails. Its strict ID-log check therefore fails after credential
+replacement. A mounted static `s3.json` avoids the startup path, but does not
+fix the rejected-request path. No secret-key value was observed in those
+measured logs. This is an open release finding, not a log-safety claim; restrict
+log access and retention while it is unresolved.
+
+The test proves JWT enforcement by denying direct writes without a valid token; the
 successful S3 path proves the components can still obtain and use tokens
 internally, but the test does not capture or independently validate an issued
 JWT.
