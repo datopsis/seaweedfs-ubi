@@ -12,7 +12,9 @@ The supported boundary remains proposed in [SUPPORT.md](SUPPORT.md).
 The same image starts `master`, `volume`, `filer`, or `s3` as separate containers
 in the intended production profile. `mini` is an opt-in, single-container
 development profile; its result cannot evidence a distributed deployment.
-`weed shell` and `version` are informational commands, not network services.
+`version` is informational. `weed shell` is an interactive administrative
+client, not a listener; access to it and to the component network is an
+operator-controlled management boundary.
 Other upstream roles and embedded services are outside the allowed entrypoint
 boundary. See [ARCHITECTURE.md](ARCHITECTURE.md) and
 [CONFIGURATION.md](CONFIGURATION.md) for the measured listeners and guards.
