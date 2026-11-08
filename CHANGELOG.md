@@ -12,6 +12,9 @@ only to published container images; repository-only changes remain under
 
 ### Fixed
 
+- Regenerated the complete hash-pinned CI tooling requirements, adding
+  packaging and updating virtualenv to 21.14.13 while retaining filelock 3.x.
+
 - Integrated draft IMG requirements into the L1/L2/L3 product tree and Python-
   generated trace matrix, replacing the detached requirement list without
   claiming criterion-level evidence.
