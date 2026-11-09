@@ -314,6 +314,21 @@ and both use `context.Background()` for the upload retry. We confirmed the code
 path but did not reproduce the failure. Defaults and the upstream binary are
 unchanged; this is a known limitation, not an upgrade regression.
 
+## Master collection-listing limitation
+
+[Upstream #12493](https://github.com/seaweedfs/seaweedfs/issues/12493) reports
+a master deadlock when collection listing races with collection deletion:
+`Topology.ListCollections` and `ConcurrentReadMap.Items` acquire the same read
+lock twice, which can deadlock behind a waiting writer. Assign, lookup, and
+collection calls can then hang. Both functions have the same affected code in
+4.46 and 4.53. The issue is closed by
+[fix #12495](https://github.com/seaweedfs/seaweedfs/pull/12495), merged after
+4.53 and absent from its binary. The code path was confirmed, not reproduced
+here. This existing limitation does not change the upgrade selection; no
+upstream code or defaults are modified.
+
+## 4.53 listener changes
+
 In 4.53, mini's upstream admin ports changed to 12535/22535 with compatibility
 listeners on 23646/33646. This image explicitly selects `-admin.port=23646`
 and `-admin.port.legacy=0`, keeping its established inventory. The upstream

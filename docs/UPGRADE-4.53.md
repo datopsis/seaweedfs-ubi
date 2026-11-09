@@ -96,7 +96,13 @@ both upload paths discard request cancellation. Limits default off. The source
 path was confirmed, **not reproduced**. It is documented in configuration and
 security guidance, without changing upstream code or defaults. No newly
 introduced blocking regression was found in that search; a one-day-old release
-has limited field evidence.
+has limited field evidence. The refreshed search also checked closed
+[#12493](https://github.com/seaweedfs/seaweedfs/issues/12493): collection listing
+can deadlock behind a writer because it nests the map read lock. The affected
+`Topology.ListCollections` and `ConcurrentReadMap.Items` code is identical
+in 4.46 and 4.53. Fix `5c910ad54634ebd44b6e34e791ed86eeceef0f53` (#12495)
+landed after the release and is not in 4.53. This existing limitation is
+documented in operator/security guidance; it was not reproduced or patched.
 
 Local Podman builds/runtime tests are blocked (`cannot clone: Operation not
 permitted`). Lock verification and source/binary inspection are local evidence;

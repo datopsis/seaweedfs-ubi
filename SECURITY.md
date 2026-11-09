@@ -100,6 +100,13 @@ re-verified at every version bump.
   in both 4.46 and 4.53. The code path was confirmed; it was **not reproduced
   here**. No binary patch, default change, or workaround is applied.
 
+- **Master collection listing can deadlock.** Concurrent collection listing
+  and deletion can deadlock a nested read lock and stall master assign/lookup
+  calls ([upstream #12493](https://github.com/seaweedfs/seaweedfs/issues/12493)).
+  The affected code is identical in 4.46 and 4.53; fix #12495 landed after
+  4.53. This was confirmed in source, not reproduced here, and is not patched
+  in this image. See [operator guidance](docs/CONFIGURATION.md#master-collection-listing-limitation).
+
 The upstream `-whiteList` option does not change that boundary. In the locked
 4.53 source it permits everyone when empty, applies only to selected handlers,
 and does not guard volume reads. It is IP-based defense in depth, not workload
