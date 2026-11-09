@@ -39,7 +39,7 @@ promised until the first supported release defines one.
 
 These are properties of upstream SeaweedFS that operators must handle. They are
 documented here because a deployment that ignores them is insecure even when the
-image itself is current. They were read from the upstream `4.46` source and are
+image itself is current. They were read from the upstream `4.53` source and are
 re-verified at every version bump.
 
 - **The S3 gateway is unauthenticated by default.** With no configuration file
@@ -64,22 +64,16 @@ re-verified at every version bump.
   With gRPC mTLS and write JWTs configured, **only the write path closes**. All
   three read paths stay open.
 
-  That is not a configuration mistake. Upstream states that read JWTs are
-  unsupported alongside a filer, and the S3 API requires a filer, so in any
-  topology that serves S3 the read paths cannot be closed by configuration at
-  all. **Network isolation is the only control for them**: reaching a volume
-  server or the filer is equivalent to reading every object stored there, with no
-  tenant scoping. The `-whiteList` IP restriction is empty by default and is not
-  a substitute for authentication. See [TLS and the boundary between the
-  roles](docs/TLS.md).
-- **`DeleteBucket` deletes a non-empty bucket's contents.** Upstream defaults
-  `allowDeleteBucketNotEmpty` to `true`, so a request that the S3 API answers with
-  `BucketNotEmpty` instead removes every object in the bucket. A client written
-  against S3 semantics can therefore destroy data with a call it expects to fail.
-  This image turns it off by default, and also turns off `autoCreateBucket`, which
-  upstream enables and which turns a mistyped bucket name into a new bucket rather
-  than an error. Both are restored by passing the flag explicitly.
-- **`weed s3` opens more listeners than the S3 API.** In `4.46` it also starts
+  These results describe the repository's write-JWT fixture. Upstream's 4.53
+  scaffold still says volume read JWTs are unsupported with a filer, although
+  read-signing paths exist in source. We have not qualified a read-JWT S3
+  deployment. **Network isolation remains mandatory**; `-whiteList` does not
+  protect volume reads. See [TLS and the boundary between the roles](docs/TLS.md).
+- **Bucket safety defaults remain explicit.** Upstream 4.53 now defaults
+  `allowDeleteBucketNotEmpty` to `false`, agreeing with this image's guard.
+  Upstream still enables `autoCreateBucket`; this image disables it so a typo
+  does not create a new bucket. Both remain explicit operator overrides.
+- **`weed s3` opens more listeners than the S3 API.** In `4.53` it also starts
   an Iceberg REST Catalog on port `8181` and a Lance Namespace server on port
   `9101` unless each is explicitly disabled. This image disables both by
   default. An operator running upstream directly should know they are there.
@@ -91,17 +85,23 @@ re-verified at every version bump.
   logs are JSON by default, but entrypoint messages remain plain text; collectors
   must accept both and logs must still be handled as sensitive operational data.
   See [logging and metrics](docs/LOGGING.md).
-- **Upstream 4.46 can write S3 access-key IDs to logs.** The `mini` environment
-  bootstrap logs the configured ID at startup, and the S3 authentication path
-  logs an attempted ID when an unknown or removed credential is rejected. The
-  standalone Compose example now uses a mounted `s3.json` to avoid the startup
-  path, but that does not fix rejected-request logging. The strict lifecycle
-  check fails on this finding; restrict log access and do not claim key-ID log
-  safety until an upstream or reviewed source-build fix is qualified. See
-  [logging and metrics](docs/LOGGING.md) and the [work plan](docs/README.md).
+- **Log confidentiality still needs review.** Historical 4.46 tests observed
+  access-key-ID disclosure. 4.53 masks rejected key IDs in
+  `s3api/auth_credentials.go`, but environment bootstrap still logs the full ID
+  and verbose config-load logs can expose it. Mounted static configuration
+  avoids the environment-bootstrap path; keep verbosity low.
+  The standalone lifecycle finding awaits a fresh dedicated credential-rotation
+  run; restrict log access. See [logging](docs/LOGGING.md).
+- **Upload admission limits can retain abandoned requests.** With either
+  `-concurrentUploadLimitMB` or `-concurrentFileUploadLimit` enabled, a stalled
+  volume server can cause unbounded socket/goroutine retention and memory growth
+  in the S3 gateway. Both limits default to zero (off). This is the existing
+  [upstream #12496](https://github.com/seaweedfs/seaweedfs/issues/12496), present
+  in both 4.46 and 4.53. The code path was confirmed; it was **not reproduced
+  here**. No binary patch, default change, or workaround is applied.
 
 The upstream `-whiteList` option does not change that boundary. In the locked
-4.46 source it permits everyone when empty, applies only to selected handlers,
+4.53 source it permits everyone when empty, applies only to selected handlers,
 and does not guard volume reads. It is IP-based defense in depth, not workload
 identity, encryption, or S3 authorization. The complete listener matrix and the
 proxy/NAT limitations are in [`docs/USE-CASES.md`](docs/USE-CASES.md).

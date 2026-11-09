@@ -11,7 +11,7 @@ ARCHITECTURES = ("amd64", "arm64")
 SUITES = (
     "image-filesystem", "smoke", "cluster", "s3", "s3-tls", "inter-component",
     "observability", "state-survival", "replication",
-    "resource-exhaustion", "backup-restore",
+    "resource-exhaustion", "backup-restore", "upgrade",
 )
 SHA = re.compile(r"^[0-9a-f]{40}$")
 IMAGE_ID = re.compile(r"^(?:sha256:)?[0-9a-f]{64}$")

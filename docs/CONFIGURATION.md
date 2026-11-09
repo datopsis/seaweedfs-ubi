@@ -320,3 +320,28 @@ the operator through flags, `security.toml`, and `filer.toml`. They are
 deployment responsibilities. The tested one-host security example and its
 direct-read limitation are in [TLS.md](TLS.md); real deployment isolation,
 certificate rotation, and the selected filer backend are not yet qualified.
+
+## Upload admission limitation
+
+`-concurrentUploadLimitMB` and `-concurrentFileUploadLimit` default to `0`
+(off). Enabling either can expose unbounded socket/goroutine retention during
+volume-server stalls: queued PUTs wait without a timeout and can outlive the
+client, consuming descriptors and memory. [Upstream #12496](https://github.com/seaweedfs/seaweedfs/issues/12496)
+reports reproduction on 4.53. The affected queue is identical in 4.46 and 4.53,
+and both use `context.Background()` for the upload retry. We confirmed the code
+path but did not reproduce the failure. Defaults and the upstream binary are
+unchanged; this is a known limitation, not an upgrade regression.
+
+In 4.53, mini's upstream admin ports changed to 12535/22535 with compatibility
+listeners on 23646/33646. This image explicitly selects `-admin.port=23646`
+and `-admin.port.legacy=0`, keeping its established inventory. The upstream
+unauthenticated admin and worker bind defaults are now loopback. Custom admin
+port overrides remain an operator responsibility; do not expose these ports.
+
+4.53 also includes S3 Vectors routes on the existing S3 API listener, dispatched
+by the SigV4 service scope. Disabling the separate Iceberg/Lance ports does not
+remove these routes. There is no upstream disable flag. No Rust vector worker
+is admitted, launched, or qualified, and no vector service support is claimed.
+Keep the master network limited to the declared roles and do not register
+external workers. Ordinary S3 credentials should have only the required actions.
+See [the upgrade record](UPGRADE-4.53.md) for policy and storage changes.

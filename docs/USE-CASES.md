@@ -43,7 +43,7 @@ expose. A standalone result never substitutes for separated-role evidence.
 
 ## What `-whiteList` does and does not do
 
-SeaweedFS 4.46 exposes `-whiteList` on the master and volume roles, and a shared
+SeaweedFS 4.53 exposes `-whiteList` on the master and volume roles, and a shared
 form on `mini`. The locked source describes it as a comma-separated list of IP
 addresses with write permission; CIDR entries are also parsed.
 
@@ -68,7 +68,7 @@ operations. It is not a substitute for S3 authentication, gRPC mTLS, volume
 write JWTs, or—most importantly—the network boundary that keeps component
 listeners away from clients.
 
-This interpretation is tied to the locked `4.46` commit: the upstream
+This interpretation is tied to the locked `4.53` commit: the upstream
 [`Guard` implementation](https://github.com/seaweedfs/seaweedfs/blob/d997fba1575583a89cf0cc50dc0150642286c86d/weed/security/guard.go)
 defines address parsing and the empty-list behavior, while the
 [`volume` HTTP dispatcher](https://github.com/seaweedfs/seaweedfs/blob/d997fba1575583a89cf0cc50dc0150642286c86d/weed/server/volume_server_handlers.go)

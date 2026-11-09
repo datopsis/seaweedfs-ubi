@@ -1,5 +1,11 @@
 # Logging and metrics
 
+The 4.46 lifecycle observations below are historical. The image now locks 4.53;
+4.53 source still logs the full ID during environment bootstrap and verbose
+config loading, although rejected-key lookup now masks it. Those dedicated
+lifecycle results have not been requalified, and no sign-off
+is carried forward. See [the upgrade record](UPGRADE-4.53.md).
+
 This image defines an operations profile without turning observability endpoints
 into client-facing services. SeaweedFS server logs are structured JSON by
 default, while Prometheus metrics are disabled unless each role is given an

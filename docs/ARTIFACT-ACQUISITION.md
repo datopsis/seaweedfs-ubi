@@ -5,7 +5,7 @@ verified before it is admitted into an image, and — just as importantly — wh
 that verification does **not** prove.
 
 Every statement below was read from upstream source, workflows, or release
-metadata at tag `4.46`. Each is a read of one release and must be re-verified at
+metadata at tag `4.53`. Each is a read of one release and must be re-verified at
 every version bump.
 
 ## What upstream actually publishes
@@ -19,10 +19,10 @@ not have the same provenance.
 | Published to | GitHub Releases | `ghcr.io/chrislusf/seaweedfs` and Docker Hub `chrislusf/seaweedfs` |
 | Integrity metadata | a `.md5` sidecar per asset | none of its own |
 | Signature | **none** | **keyless cosign, verified in-pipeline** |
-| Attestation | none | none (`provenance: false` is set explicitly) |
+| Attestation | none | BuildKit provenance/SBOM plus digest-bound provenance and per-platform SBOM attestations |
 | Source ref | the release tag | `BRANCH=${{ github.sha }}`, the exact released commit |
 | `large_disk` variant | yes | yes |
-| Contents | `weed` only | `weed`, plus Rust `weed-volume` and `weed-worker` |
+| Contents | `weed` only | `weed`, plus Rust `weed-volume`, `weed-worker`, and `weed-vector` |
 
 ### The tarball provenance is effectively nil
 
@@ -101,12 +101,13 @@ reasoning for not stripping afterwards is in
 
 ### Only `weed` is needed
 
-The container image also carries two Rust binaries, `weed-volume` and
-`weed-worker`. Neither is required:
+The container image also carries three Rust binaries, `weed-volume`,
+`weed-worker`, and `weed-vector`. None is required:
 
 - upstream's own entrypoint dispatches the `volume` role to `weed volume`, the Go
   implementation; `weed-volume` is reachable only under a *separate* role name, so
   the Rust volume server is an opt-in alternative rather than the default;
+- `weed-vector` implements the unqualified S3 Vectors backend;
 - `weed-worker` serves Lance table buckets, which are outside this project's
   boundary and disabled by this image.
 
@@ -175,37 +176,34 @@ fallback for an environment where pulling and verifying an image is impractical.
 
 ## Verified evidence for the current lock
 
-This is not a description of what the gate should do. Every line below was
-produced by running it against SeaweedFS `4.46`, `large_disk`, and is recorded in
-[`artifacts/seaweedfs.lock.json`](../artifacts/seaweedfs.lock.json).
+The 4.53 `large_disk` lock is a proposal awaiting owner review. Its index
+`sha256:c272ca3b913a8d9f8f843d42553874f70d41ae0611a1bf8e28d80a7da72d7d51` and both architecture manifests verified
+with Cosign v2.6.1 against the recorded workflow identity and GitHub issuer.
+The certificate SHA and GitHub tag API independently agree on
+`4ab66fb76da83700739f5839e62fcaf15fb7d02a`. The Rekor log index is
+`3759071801`.
 
-- The index digest
-  `sha256:b3701e1aa12b00f8781ed898d2d25346ca43ac1777ca88f2cfbe2368468492d1`
-  verifies with cosign against the recorded issuer and identity, as do both
-  architecture manifests, because upstream signs recursively.
-- The signing certificate carries `githubWorkflowRepository: seaweedfs/seaweedfs`
-  — the organization, not the personal namespace the image lives in — with
-  `githubWorkflowRef: refs/tags/4.46` and
-  `githubWorkflowSha: d997fba1575583a89cf0cc50dc0150642286c86d`.
-- That commit is **independently confirmed** to be what the `4.46` tag resolves
-  to, checked against the GitHub API rather than taken from the certificate
-  alone.
-- Both extracted binaries are statically linked, confirmed by ELF inspection: no
-  `PT_INTERP` and no `PT_DYNAMIC` segment, so neither carries a glibc version
-  requirement.
-- The amd64 binary reports `version 8000GB 4.46 d997fba15 linux amd64`. The
-  `8000GB` is the `large_disk` marker: it is upstream's maximum volume size
-  printed at runtime, so the variant is **confirmed from the artifact** rather
-  than inferred from the tag name. A default build would print `30GB`.
-- The arm64 version string is not recorded, because this evidence was produced on
-  an amd64 host and the gate does not execute foreign-architecture binaries. The
-  arm64 binary was instead confirmed to embed both the release commit and the
-  `8000GB` marker. Capturing its version string on a native runner is owed before
-  a release.
-- The upstream version *number* is computed at runtime from a numeric constant
-  rather than stored as a string, so it cannot be found by searching the binary.
-  Only execution reveals it, which is why the commit and the variant marker carry
-  the offline check.
+`scripts/update-lock.py` supplied resolution, signature/certificate checks,
+ELF measurement, and lock generation. Podman is blocked locally by the sandbox's
+user-namespace restriction. A temporary acquisition adapter used Skopeo 1.9.3
+`copy --preserve-digests` by signed manifest digest, checked the manifest and
+layer SHA-256 values, and extracted only `/usr/bin/weed`. It used authenticated
+`gh api` for the GitHub tag query after the unauthenticated API was rate-limited.
+This changes the extraction transport, not the verification policy. Native CI
+must independently repeat ordinary Podman acquisition on each architecture.
+
+Both binaries have no ELF interpreter or dynamic segment, no needed libraries,
+and no glibc requirement. Go build information reports Go 1.26.10,
+`CGO_ENABLED=0`, and `-tags=5BytesOffset` on both. The native ARM64 execution
+reports `version 8000GB 4.53 4ab66fb76 linux arm64`; the AMD64 version string is
+left null pending native execution. No emulated execution is evidence.
+
+The 4.53 upstream workflow now enables BuildKit provenance and SBOM generation,
+attests the merged index, and attaches per-platform SPDX attestations. This
+repository verified the image signatures; it has **not** verified those new
+attestation predicates. Tarballs still have only MD5 sidecars. The container
+signature proves publisher identity, not freedom from defects. See the
+[qualification record](UPGRADE-4.53.md).
 
 ## Running the gate
 

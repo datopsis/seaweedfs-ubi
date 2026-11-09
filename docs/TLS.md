@@ -31,9 +31,10 @@ will fix. Upstream's own scaffold states it:
 > `NOTE: jwt for read is only supported with master+volume setup. Filer does not
 > support this mode.`
 
-Read JWTs require a master-and-volume-only deployment. The S3 API requires a
-filer. Those two facts are incompatible, so **in any topology that serves S3,
-read JWTs are unavailable**, and direct reads stay open by construction.
+The 4.53 upstream scaffold still describes volume read JWTs as unsupported with
+a filer, while read-signing code exists. The repository has not qualified a
+read-JWT S3 deployment. The tested configuration uses write JWTs only and its
+direct read paths remain open; network isolation is mandatory.
 
 Write JWTs have no such restriction, which is why the write path closes and the
 read path does not.

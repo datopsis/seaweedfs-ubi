@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "recordedOn": "2026-09-12",
+  "upstream": {
+    "project": "seaweedfs",
+    "repository": "https://github.com/seaweedfs/seaweedfs",
+    "releaseTag": "4.46",
+    "releaseCommit": "d997fba1575583a89cf0cc50dc0150642286c86d",
+    "license": "Apache-2.0"
+  },
+  "variant": {
+    "name": "large_disk",
+    "buildTags": ["5BytesOffset"],
+    "maxVolumeSize": "8000GB",
+    "versionMarker": "8000GB"
+  },
+  "acquisition": {
+    "path": "verified-container-image",
+    "imageRepository": "ghcr.io/chrislusf/seaweedfs",
+    "imageTag": "4.46_large_disk",
+    "indexDigest": "sha256:b3701e1aa12b00f8781ed898d2d25346ca43ac1777ca88f2cfbe2368468492d1",
+    "binaryPathInImage": "/usr/bin/weed",
+    "signature": {
+      "tool": "cosign",
+      "keyless": true,
+      "certificateOidcIssuer": "https://token.actions.githubusercontent.com",
+      "certificateIdentity": "https://github.com/seaweedfs/seaweedfs/.github/workflows/container_release_unified.yml@refs/tags/4.46"
+    }
+  },
+  "architectures": {
+    "amd64": {
+      "platform": "linux/amd64",
+      "manifestDigest": "sha256:34df47f1d2f844ff2204ee670889c755d2cc28b389f32248de644da999bb71cf",
+      "binary": {
+        "sha256": "ce6fe31be086c72db7aac99c6d24b85d65b43f3ad30b2b1b9558620083665a23",
+        "size": 219977937,
+        "elfMachine": "x86-64",
+        "staticallyLinked": true,
+        "neededLibraries": [],
+        "glibcMinimumVersion": null,
+        "embeddedCommit": "d997fba15",
+        "versionString": "version 8000GB 4.46 d997fba15 linux amd64"
+      }
+    },
+    "arm64": {
+      "platform": "linux/arm64",
+      "manifestDigest": "sha256:706554ed9863c4d16e290123f89b8d4225c472aaf2f91fbfdf9e2fb79c978679",
+      "binary": {
+        "sha256": "c12c86c306cc858826eeb03874577632fc283842b0c05845e4d3f435a81bd4ce",
+        "size": 202918291,
+        "elfMachine": "aarch64",
+        "staticallyLinked": true,
+        "neededLibraries": [],
+        "glibcMinimumVersion": null,
+        "embeddedCommit": "d997fba15",
+        "versionString": null
+      }
+    }
+  },
+  "evidence": {
+    "signatureVerified": true,
+    "signatureVerifiedWith": "cosign v2.6.1",
+    "signatureVerifiedOn": "2026-09-12",
+    "certificateWorkflowRepository": "seaweedfs/seaweedfs",
+    "certificateWorkflowSha": "d997fba1575583a89cf0cc50dc0150642286c86d",
+    "certificateWorkflowRef": "refs/tags/4.46",
+    "rekorLogIndex": 2755213822,
+    "releaseTagResolvesToCommit": true,
+    "notes": [
+      "The index digest and both architecture manifest digests were verified with cosign against the pinned identity and issuer; upstream signs recursively, so the children carry signatures of their own.",
+      "The certificate's githubWorkflowSha matches the commit that the 4.46 tag resolves to, checked independently against the GitHub API.",
+      "Both binaries were confirmed statically linked by ELF inspection: no PT_INTERP and no PT_DYNAMIC segment, so neither carries a glibc version requirement.",
+      "The amd64 versionString was produced by executing the binary. The arm64 versionString is null because this record was produced on an amd64 host; it must be captured on a native arm64 runner before a release, and the arm64 binary was instead confirmed to embed both the large_disk marker and the release commit.",
+      "The upstream version number is computed at runtime from a numeric constant rather than stored as a string, so it cannot be found by searching the binary; only execution reveals it.",
+      "This record proves reviewed bytes and a verifiable publisher identity. It does not prove the absence of defects in the signed image."
+    ]
+  }
+}

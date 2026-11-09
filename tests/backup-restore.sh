@@ -2,7 +2,9 @@
 #
 # Qualify a cold backup and restore of every state-bearing role. Podman's native
 # named-volume archive commands are used so no unpinned helper image enters the
-# evidence path. Credentials are recreated separately and are not backup data.
+# evidence path. UPGRADE_FROM_IMAGE additionally qualifies a cold upgrade and
+# rollback to the pre-upgrade backup; never downgrade mutated state in place.
+# Credentials are recreated separately and are not backup data.
 
 set -euo pipefail
 
@@ -155,6 +157,8 @@ s3_object() {
 		credential = config["identities"][0]["credentials"][0]
 		client = S3Client(sys.argv[2], credential["accessKey"], credential["secretKey"])
 		expected = sys.argv[5].encode()
+		if os.environ.get("UPGRADE_FROM_IMAGE"):
+		    expected *= 131072  # multi-MiB data exercises chunks as well as metadata
 		if sys.argv[4] == "write":
 		    created = client.create_bucket("backup")
 		    if created.status not in (200, 204, 409):
@@ -212,6 +216,13 @@ main() {
 		exit 2
 	fi
 
+	local target_image="$IMAGE"
+	if [ -n "${UPGRADE_FROM_IMAGE:-}" ]; then
+		runtime image exists "$UPGRADE_FROM_IMAGE"
+		IMAGE="$UPGRADE_FROM_IMAGE"
+		printf 'Cold upgrade baseline: '
+		runtime run --rm "$IMAGE" version
+	fi
 	WORK="$(mktemp -d)"
 	local config="${WORK}/s3.json" payload="bytes recovered from three restored state archives"
 	local secret
@@ -269,6 +280,24 @@ main() {
 		ok "master, volume, and filer archives are non-empty and exclude runtime S3 credentials"
 	else
 		bad "master, volume, and filer archives are non-empty and exclude runtime S3 credentials"
+	fi
+
+	if [ -n "${UPGRADE_FROM_IMAGE:-}" ]; then
+		IMAGE="$target_image"
+		printf 'Cold upgrade target: '
+		runtime run --rm "$IMAGE" version
+		start_cluster "$SOURCE_MASTER" "$SOURCE_VOLUME" "$SOURCE_FILER" "$SOURCE_CONFIG"
+		wait_for_object "$config" "$payload" || {
+			printf 'REFUSED: upgraded cluster cannot read baseline bytes\n' >&2
+			exit 1
+		}
+		ok "new version reads the old volume and filer state"
+		s3_object write "$config" "bytes overwritten after upgrade"
+		ok "new version acknowledges and reads a replacement object"
+		runtime stop --time 30 "$GATEWAY" "$FILER" "$VOLUME_ROLE" "$MASTER" >/dev/null
+		remove_containers
+		IMAGE="$UPGRADE_FROM_IMAGE"
+		printf 'Rollback restores the pre-upgrade archives into fresh volumes.\n'
 	fi
 
 	for name in "$SOURCE_MASTER" "$SOURCE_VOLUME" "$SOURCE_FILER" "$SOURCE_CONFIG"; do

@@ -27,11 +27,11 @@ evidence.
 
 - Repository and image: `seaweedfs-ubi`
 - Planned image location: `ghcr.io/datopsis/seaweedfs-ubi`
-- Initial SeaweedFS version: `4.46`
+- Current SeaweedFS version: `4.53`
 - Initial UBI major line: `9`
 - Upstream license: Apache License 2.0
 
-SeaweedFS releases are numbered in two components, such as `4.46`, and are not
+SeaweedFS releases are numbered in two components, such as `4.53`, and are not
 semantically versioned. An increment carries no compatibility promise, and
 releases arrive roughly every seven to ten days, so this project treats every
 upstream increment as a qualification event rather than a routine dependency
@@ -238,8 +238,8 @@ Container releases will use annotated tags in this form:
 v<seaweedfs-version>-ubi<ubi-major>-r<YYYYMMDD>.<daily-sequence>
 ```
 
-For example, `v4.46-ubi9-r20260912.1` identifies SeaweedFS 4.46 on the UBI 9
-product line and the first Datopsis container release created on 2026-09-12
+For example, `v4.53-ubi9-r20261109.1` identifies SeaweedFS 4.53 on the UBI 9
+product line and the first Datopsis container release created on 2026-11-09
 UTC. The example is not a published release.
 
 Image releases and repository revisions are deliberately separate. Production

@@ -55,6 +55,11 @@ The native matrix uses `ubuntu-24.04` for AMD64 and `ubuntu-24.04-arm` for
 ARM64. Each job checks `uname -m` before acquisition, and checks the assembled
 image architecture before running it. The jobs do not install emulators.
 
+Each native job also acquires the signed historical 4.46 lock fixture, builds
+it with the current packaging, and exercises the cold upgrade and complete
+backup rollback described in [the upgrade record](UPGRADE-4.53.md). This is a
+one-host, LevelDB2 development test, not a rolling or multi-filer upgrade claim.
+
 After all native suites pass, each job retains a machine-readable development
 record for 14 days with its architecture, source commit, run ID and attempt,
 local image ID, and completed suite names. A separate job downloads both
@@ -196,7 +201,7 @@ alert. The live [code-scanning dashboard](https://github.com/datopsis/seaweedfs-
 is a triage view and will naturally change as advisories and images change.
 
 The [Go vulnerability triage record](GO-VULNERABILITY-TRIAGE.md) groups aliases,
-records the current 4.46 findings and preliminary 4.47 source-manifest check,
+records the 4.53 findings and the historical 4.46 comparison,
 and defines how the future gate must treat severity disagreements. It does not
 approve an exception or qualify a new image.
 

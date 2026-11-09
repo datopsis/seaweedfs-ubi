@@ -25,7 +25,7 @@ otherwise differ in a way that matters to stored data.
 
 ## What each variant actually changes
 
-Verified from the upstream release workflows and source at tag `4.46`. Re-verify
+Verified from the upstream release workflows and source at tag `4.53`. Re-verify
 at every version bump; upstream could add or retag assets.
 
 | Asset | Build tags | What it changes |

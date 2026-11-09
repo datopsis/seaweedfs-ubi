@@ -314,6 +314,12 @@ main() {
 			"expected explicit disable flags in PID 1: $cmdline"
 	fi
 
+	if [[ " $cmdline " == *" -admin.port=23646 "* && " $cmdline " == *" -admin.port.legacy=0 "* ]]; then
+		ok "standalone pins admin ports and disables extra compatibility listeners"
+	else
+		bad "standalone pins admin ports and disables extra compatibility listeners" "$cmdline"
+	fi
+
 	local identity
 	identity="$(runtime exec "$CONTAINER" cat /proc/1/status 2>/dev/null |
 		awk '/^Uid:/ {print $2}')"

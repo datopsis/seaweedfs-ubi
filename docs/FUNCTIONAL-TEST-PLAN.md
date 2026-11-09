@@ -55,7 +55,7 @@ it is not passing qualification evidence or a native CI case yet.
 Inventory actual assertions before adding cases. Select at least two
 independent S3 clients for a compatibility claim and record their versions.
 Define expectations from the chosen SeaweedFS version and supported subset,
-not blanket AWS S3 conformance. Upstream 4.46 does not support volume-read
+not blanket AWS S3 conformance. Upstream 4.53 does not support volume-read
 JWTs alongside the filer; the security case tests the configured write JWT and
 records that residual boundary instead of claiming both directions.
 

@@ -1202,3 +1202,7 @@ owes all of the following, and a bump is not complete until they are done.
 - Check whether the on-disk volume format or filer schema changed, and qualify
   the upgrade and rollback path if so.
 - Regenerate SBOMs and scans, and disposition new findings.
+
+The 4.46 to 4.53 qualification and remaining obligations are tracked in
+[UPGRADE-4.53.md](UPGRADE-4.53.md). Historical checked work items above are not
+carried forward as review or release approval for the new binary.
