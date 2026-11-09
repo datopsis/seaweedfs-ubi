@@ -57,7 +57,7 @@ SeaweedFS differs from this organization's RPM-based UBI images, and from
 was read out of the upstream `4.53` source or release metadata; re-verify each
 one at every version bump.
 
-- **There is no RPM, no vendor signature, and no usable checksum file.**
+- **Release assets have no RPM, no tarball signature, and no secure checksum manifest.**
   Upstream publishes release tarballs on GitHub with a `.md5` sidecar per asset
   and nothing else: no SHA-256 manifest, no detached signature, no provenance
   attestation. MD5 is not collision resistant, and a sidecar served from the

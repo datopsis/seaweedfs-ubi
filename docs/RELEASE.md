@@ -46,7 +46,10 @@ and [verification guide](https://docs.sigstore.dev/cosign/verifying/verify/).
    are report-only and have known fixed High findings; they cannot be reused
    as a passing release gate. The paired-inventory evaluator in
    `tests/lib/vulnerability_gate.py` is available but is not yet connected to
-   candidate admission.
+   candidate admission. The 4.53 upgrade's paired inventories still fail because
+   Trivy reports fixed High CVE-2026-78661 in `golang.org/x/net` v0.61.0, fixed
+   in v0.62.0, on both architectures. The gate wiring commit was excluded;
+   no exception was approved. See [the current triage](GO-VULNERABILITY-TRIAGE.md).
 3. Run both-architecture, real-host, security, and topology qualification
    against the candidate digest. Complete requirements/control mapping,
    independent cyber review, and the SCAP evidence boundary. A single-container

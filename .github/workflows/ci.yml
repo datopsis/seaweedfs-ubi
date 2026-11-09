@@ -354,6 +354,7 @@ jobs:
           BUNDLE_DIR: ${{ runner.temp }}/seaweedfs-upgrade-baseline
           IMAGE: localhost/seaweedfs-ubi:upgrade-baseline
         run: |
+          python3 .github/scripts/check_artifact_lock.py "${LOCK_FILE}"
           bash scripts/fetch-artifacts.sh ${{ matrix.architecture }}
           bash scripts/build-image.sh ${{ matrix.architecture }}
 

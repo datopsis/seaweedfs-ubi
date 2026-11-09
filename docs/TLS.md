@@ -23,10 +23,9 @@ Anyone who can reach the filer or a volume server can still read every stored
 object. The S3 identity model, tenant scoping included, applies only to callers
 who arrive through the gateway.
 
-## Why the read paths cannot be closed here
+## Scope of the tested read boundary
 
-Not an oversight, and not something a future configuration change in this image
-will fix. Upstream's own scaffold states it:
+Upstream's scaffold states:
 
 > `NOTE: jwt for read is only supported with master+volume setup. Filer does not
 > support this mode.`
@@ -41,7 +40,7 @@ read path does not.
 
 ## What this means for a deployment
 
-The only control for the read paths is the network. That makes the following
+The control for read paths in this tested profile is the network. That makes the following
 requirements rather than recommendations:
 
 - **The master, volume, and filer listeners must not be reachable from any

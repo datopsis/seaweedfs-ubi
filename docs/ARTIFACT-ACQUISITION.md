@@ -91,8 +91,8 @@ Three consequences matter to this project:
 There is a fourth difference between the two pipelines, found while measuring the
 assembled image rather than while reading the workflows. The **tarball** build
 passes `-s -w` and is stripped; the **container** build does not. The admitted
-binary therefore carries about 62 MiB of symbol table and DWARF sections that the
-published tarball does not.
+binary retains symbol-table and DWARF sections that the published tarball
+does not. The earlier 62 MiB estimate described 4.46, not this binary.
 
 That is a real cost of this acquisition path: Path A would produce a smaller
 image with weaker provenance. The trade is recorded and taken knowingly, and the

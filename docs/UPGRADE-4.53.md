@@ -16,7 +16,7 @@ The following changes matter to this packaging, beyond dependency updates:
 | Increment | Changes and operator impact |
 | --- | --- |
 | [4.47](https://github.com/seaweedfs/seaweedfs/releases/tag/4.47) | Identity explicit Deny wins over bucket Allow; unsupported policy conditions fail closed; `aws:SourceIp` uses the TCP peer; forwarded-host bucket retargeting is refused. Remote fetch SSRF checks expand. PostgreSQL `createTable` can initialize `filemeta`. Volume copy validation and faulty-media handling change. |
-| [4.48](https://github.com/seaweedfs/seaweedfs/releases/tag/4.48) | Explicit trusted-proxy allowlists; dedicated Object Lock permissions; stronger STS checks; atomic multipart completion and safer handling of ambiguous filer writes. Filer shutdown drains metadata logs. `large_disk` compaction fixes five-byte offset corruption (#11411); CRC failures no longer complete successful reads. |
+| [4.48](https://github.com/seaweedfs/seaweedfs/releases/tag/4.48) | Explicit trusted-proxy allowlists; dedicated Object Lock permissions; stronger STS checks; atomic multipart completion and safer handling of ambiguous filer writes. Empty intermediate directories no longer prevent deleting an otherwise empty bucket (#11491). Filer shutdown drains metadata logs. `large_disk` compaction fixes five-byte offset corruption (#11411); CRC failures no longer complete successful reads. |
 | [4.49](https://github.com/seaweedfs/seaweedfs/compare/4.48...4.49) | Admin defaults move to 12535/22535 with legacy listeners, and unauthenticated mini admin binds to loopback. Recursive bucket deletion defaults off. S3 shutdown drains requests; ACL, conditional-write, proxy, and versioning checks tighten. Pending chunk deletions persist in a filer ledger; topology identity and maximum-volume-ID mirrors protect rebuilt masters; duplicate volume IDs are quarantined. Remote-cache eviction defaults to 90% disk use. Volume startup repairs unindexed tails; fsync rules gain end-to-end enforcement. |
 | [4.50](https://github.com/seaweedfs/seaweedfs/releases/tag/4.50) | Volume adds companion loopback listeners; optional local socket bind failures no longer kill services. Filer `fsync` rule presence now distinguishes inheritance from explicit false. Volume fsync batching defaults to a 500 microsecond gather window. Single-node masters stop automatically admitting peers. Container provenance/SBOM attestations are added. |
 | [4.51](https://github.com/seaweedfs/seaweedfs/releases/tag/4.51) | Explicit `-ip.bind` suppresses extra loopback listeners. Filer commit records auto-enable for peers with separate stores. S3 stops echoing internal metadata and stored tags; OIDC single-use token behavior is removed. Delete-marker responses and If-Range behavior change. |
@@ -48,8 +48,9 @@ All paths below refer to the exact 4.53 source commit, not moving `master`.
 
 **Filer metadata changed.** `filer.proto` adds `Entry.commit_ts_ns` (field 6)
 and additive transaction/delete/log fields; `Entry` conversion persists the
-commit stamp. `FilerConf.PathConf.fsync` becomes optional, preserving explicit
-false versus inheritance. The new default-enabled deletion ledger stores
+commit stamp. `FilerConf` advances from version 1 to 2: `PathConf.fsync` becomes optional,
+preserving explicit false versus inheritance. Old version-1 false values are
+read as unset, while new explicit false overrides are retained. The new default-enabled deletion ledger stores
 `filer.deleteQueue.ledger.v1` KV records. Master/volume identity mirrors add
 persistent state. PostgreSQL startup DDL behavior changes, although the default
 `filemeta` column layout remains unchanged. PostgreSQL and multi-filer migration
@@ -108,3 +109,9 @@ standalone credential-rotation and Iceberg lifecycle requalification,
 multi-host/backend migration, and external platform qualification remain owed.
 Release publication remains disabled. No FIPS, STIG, or platform support claim
 is made by this upgrade.
+
+The first native run exposed the intentionally pinned 4.46 empty-prefix bucket
+refusal in the S3 suite: 4.53 correctly deleted the empty bucket. The expectation
+and configuration guidance now require success while retaining the separate
+non-empty-bucket refusal. This is an upstream improvement, not a weakened test
+or a newly introduced defect. Both architectures must rerun the full matrix.

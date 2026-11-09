@@ -754,43 +754,22 @@ classification — and every configuration it does not support is named.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical
       findings, and retain the complete inventory including unfixed findings.
 - [x] Implement and negatively test a fail-closed decision primitive for the
-      paired Grype/Trivy inventories. It refuses the current AMD64 development
-      scan's three known fixed High advisory groups; CI and release publication
+      paired Grype/Trivy inventories. It refused the original 4.46 AMD64 development
+      scan's three fixed High advisory groups; CI and release publication
       are not yet gated by it.
-- [ ] Triage the first Grype development-image inventory's three fixed High
-      findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
-      reviewed SeaweedFS update or other upstream resolution, then enable the
-      gate without suppressing those findings to obtain a green check.
-- [x] Identify upstream's source-level resolution for the gRPC advisory:
-      SeaweedFS [PR #11374](https://github.com/seaweedfs/seaweedfs/pull/11374)
-      was merged to `master` on 2026-09-17 and changes
-      `google.golang.org/grpc` from v1.85.0-dev to
-      v1.85.0-dev.0.20260915183914-4e49413dcab7, beyond the
-      [GO-2026-6443 fixed floor](https://pkg.go.dev/vuln/GO-2026-6443).
-      It also raises the Go toolchain requirement to 1.26.6. No duplicate
-      upstream issue is needed for that already-merged change; this checkbox
-      records only the source update, not a fixed released binary or image.
-- [ ] Watch for the first upstream release **after** PR #11374 and check that
-      its tagged source and publisher-signed `large_disk` image actually contain
-      the fixed gRPC version. As checked on 2026-09-19, upstream's latest
-      published release is [4.47](https://github.com/seaweedfs/seaweedfs/releases/tag/4.47)
-      (2026-09-14), which predates that merge and still specifies the affected
-      v1.85.0-dev. Do not close this item from `master` alone; admit the new
-      release through the reviewed lock, measure both AMD64 and ARM64 binaries,
-      and rerun the full image scans and qualification suite.
-- [x] Reconcile scanner aliases and severity differences in the triage policy:
-      Trivy and Grype both report the fixed gRPC issue, while Trivy rates the
-      two fixed `x/crypto` issues Medium and Grype rates them High. The future
-      gates must not silently adopt the lower rating or double-count aliases.
-- [x] Define the triage policy for findings against the Go dependency
-      inventory, which are reported against upstream SeaweedFS rather than
-      proven exploitable in this packaging.
-- [ ] Qualify a reviewed upstream candidate whose measured AMD64 and ARM64
-      binaries clear the three fixed High Go findings. The 4.47 source manifest
-      raises `x/crypto` to its fixed floor but retains the affected gRPC version.
-      PR #11374 changes gRPC on `master`, not in 4.47; neither source check is
-      binary or runtime qualification. Keep the gate open until a later
-      released, admitted candidate clears it on both architectures.
+- [ ] Complete owner triage of the 4.53 native image inventories and decide
+      whether to enable the fixed High/Critical gate. The historical 4.46
+      inventory now has 3 Critical and 18 High Grype records and 8 High Trivy
+      records per architecture, all fixable. The 4.53 binary measurements,
+      seven-increment review, and cold upgrade/rollback qualification are in
+      [UPGRADE-4.53.md](UPGRADE-4.53.md) and
+      [GO-VULNERABILITY-TRIAGE.md](GO-VULNERABILITY-TRIAGE.md).
+- [x] Reconcile scanner aliases and severity differences in the triage policy.
+      Neither scanner's lower severity can waive the other's fixed High/Critical
+      finding; counts remain separate rather than adding cross-scanner aliases.
+- [x] Define triage for the Go module inventory without assuming supported-role
+      exploitability. Repeat source and binary analysis for each changed subject;
+      owner review of 4.53 is pending, with no previous disposition carried over.
 - [x] Trace the locked 4.46 SFTP source path through `filer` and refuse its
       embedded S3, WebDAV, IAM, and SFTP services at the entrypoint. The S3
       switch otherwise bypasses the separated S3 authentication guard; the

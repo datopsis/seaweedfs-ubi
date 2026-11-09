@@ -139,18 +139,15 @@ already set them, so an explicit choice always wins.
 | `s3` | `-port.iceberg=0`, `-port.lance=0` | Both listeners are on by default upstream and are outside this image's boundary. |
 | `mini` | `-s3.port.iceberg=0`, `-s3.port.lance=0` | Same, under `mini`'s differently named flags. |
 | `mini` | `-webdav=false`, `-admin.ui=false` | Both default to `true` in `mini` and are outside the boundary; explicit enable flags are refused. Disabling the UI does **not** stop mini's admin health/metrics HTTP or worker gRPC listeners. |
-| `s3`, `mini` | `-allowDeleteBucketNotEmpty=false` | Upstream defaults it to `true`, which makes `DeleteBucket` on a bucket that still holds objects delete all of them. The S3 API answers `BucketNotEmpty`. |
+| `s3`, `mini` | `-allowDeleteBucketNotEmpty=false` | Upstream 4.53 also defaults it to `false`. Enabling it makes `DeleteBucket` remove objects instead of answering `BucketNotEmpty`. |
 | `s3`, `mini` | `-autoCreateBucket=false` | Upstream defaults it to `true`, which creates a bucket on upload if it does not exist. The S3 API answers `NoSuchBucket`. |
 
 ### The two bucket defaults
 
-These are worth reading rather than skimming, because one of them loses data.
-
-Upstream enables `allowDeleteBucketNotEmpty` by default. A `DeleteBucket` call
-against a bucket that still holds objects **deletes every object in it**. The S3
-API a client is written against answers `BucketNotEmpty` and deletes nothing, so
-the same call that is a safe no-op against S3 is a silent bulk deletion here.
-That is not a permission a storage image should grant by default.
+Upstream 4.53 now disables `allowDeleteBucketNotEmpty` by default, agreeing
+with this image's existing explicit setting. Enabling it makes a `DeleteBucket`
+call against a non-empty bucket delete every object, instead of returning
+`BucketNotEmpty`. Keep it disabled unless recursive deletion is intentional.
 
 Upstream also enables `autoCreateBucket` by default, so a `PUT` into a bucket
 that does not exist creates it, for admin identities. The S3 API answers
@@ -162,28 +159,13 @@ behaviour production will not have, and there is no reason for the production
 role to diverge from S3 semantics either. An operator who wants upstream's
 behaviour passes the flag explicitly and it is honoured.
 
-#### One consequence worth knowing about
+#### Empty prefix directories
 
-SeaweedFS models a bucket as a directory, so a key containing a slash creates a
-directory entry that outlives the object. Delete the only object under
-`prefix/`, and the bucket's listing goes empty while `prefix/` remains.
-
-With `allowDeleteBucketNotEmpty` off, which is this image's default, the bucket
-then **cannot be deleted even though a client sees nothing in it**, and the
-gateway answers `409`. That is a real divergence from the S3 API, and it is a
-consequence of the safer default rather than a defect.
-
-An operator meeting it has two honest options: remove the residual directories
-through the filer, or pass `-allowDeleteBucketNotEmpty=true` for that deletion
-and accept that it will remove anything still present. `tests/s3.sh` asserts this
-behaviour rather than avoiding it, so an upstream change to directory cleanup
-shows up as a failure to review instead of going unnoticed.
-
-The Iceberg listener is disabled for a reason beyond surface area:
-[`lakekeeper-ubi`](https://github.com/datopsis/lakekeeper-ubi) is this
-organization's qualified Iceberg REST catalog, and a second unqualified
-implementation must not appear on a default port. Enabling it is possible and is
-documented as unqualified.
+Upstream 4.53 ignores empty intermediate directories when deciding whether a
+bucket contains objects. After deleting `prefix/nested.txt`, an otherwise empty
+bucket can be deleted with recursive deletion still disabled. This replaces
+4.46's `409` refusal for residual prefix directories. `tests/s3.sh` checks both
+successful deletion of that empty bucket and refusal when real objects remain.
 
 ## The standalone profile
 

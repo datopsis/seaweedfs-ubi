@@ -6,6 +6,13 @@ runners for the reviewed development image. It is not release-image, RHEL,
 OpenShift, multi-host, vulnerability-gate, release-SBOM, provenance, or signing
 evidence.
 
+The 4.53 upgrade still cannot enable the image gate: both native Trivy reports
+contain fixed High CVE-2026-78661 in `golang.org/x/net` v0.61.0 (fix v0.62.0).
+The paired evaluator rejects both downloaded report pairs; its wiring commit
+is excluded. Grype reports no primary High/Critical records. See the complete
+[before/after triage](GO-VULNERABILITY-TRIAGE.md). Historical inventory counts
+below describe their linked runs, not the current image.
+
 ## Triggers and authority
 
 `.github/workflows/ci.yml` runs for pull requests, pushes to `main`, a weekly
