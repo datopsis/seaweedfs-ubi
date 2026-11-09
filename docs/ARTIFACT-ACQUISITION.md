@@ -190,13 +190,17 @@ user-namespace restriction. A temporary acquisition adapter used Skopeo 1.9.3
 layer SHA-256 values, and extracted only `/usr/bin/weed`. It used authenticated
 `gh api` for the GitHub tag query after the unauthenticated API was rate-limited.
 This changes the extraction transport, not the verification policy. Native CI
-must independently repeat ordinary Podman acquisition on each architecture.
+independently repeated ordinary Podman acquisition on each architecture in
+run 42550436459.
 
 Both binaries have no ELF interpreter or dynamic segment, no needed libraries,
 and no glibc requirement. Go build information reports Go 1.26.10,
 `CGO_ENABLED=0`, and `-tags=5BytesOffset` on both. The native ARM64 execution
-reports `version 8000GB 4.53 4ab66fb76 linux arm64`; the AMD64 version string is
-left null pending native execution. No emulated execution is evidence.
+reports `version 8000GB 4.53 4ab66fb76 linux arm64`. Native AMD64 CI
+[run 42550436459](https://github.com/datopsis/seaweedfs-ubi/actions/runs/42550436459)
+executed the digest-verified binary and reports
+`version 8000GB 4.53 4ab66fb76 linux amd64`; that measurement is now recorded
+in the lock. Neither execution used emulation.
 
 The 4.53 upstream workflow now enables BuildKit provenance and SBOM generation,
 attests the merged index, and attaches per-platform SPDX attestations. This

@@ -607,7 +607,7 @@ proves it in an automated suite.
       isolation is documented as the only available control.
 - [x] Document the `-whiteList` IP restriction, its limits, and why it is not a
       substitute for authentication. `docs/USE-CASES.md` ties the guidance to
-      the exact 4.46 implementation: empty means allow-all, socket peer addresses
+      the exact 4.53 implementation: empty means allow-all, socket peer addresses
       are used, and volume reads remain outside the guard.
 - [x] State clearly, for every supported profile, which listeners may face a
       client network and which must not. The separated-role matrix permits only
@@ -770,7 +770,7 @@ classification — and every configuration it does not support is named.
 - [x] Define triage for the Go module inventory without assuming supported-role
       exploitability. Repeat source and binary analysis for each changed subject;
       owner review of 4.53 is pending, with no previous disposition carried over.
-- [x] Trace the locked 4.46 SFTP source path through `filer` and refuse its
+- [x] Trace the locked 4.53 SFTP source path through `filer` and refuse its
       embedded S3, WebDAV, IAM, and SFTP services at the entrypoint. The S3
       switch otherwise bypasses the separated S3 authentication guard; the
       SFTP switch otherwise exposes the SSH code path under a supported role.
@@ -780,7 +780,7 @@ classification — and every configuration it does not support is named.
 - [x] Run pinned `govulncheck` binary-mode analysis on both exact binaries,
       retaining raw JSON and tool/database versions. This is inventory, not a
       passing vulnerability gate or a supported-role call graph.
-- [x] Review the exact 4.46 `large_disk` source import graph for the SSH,
+- [x] Inspect the exact 4.53 `large_disk` source import graph for the SSH,
       OpenPGP, and gRPC xDS findings. SSH has a positive SFTP path; OpenPGP is
       absent; client-side Google direct-path support links the xDS server
       package without a SeaweedFS call to the affected server constructor.
@@ -792,10 +792,12 @@ classification — and every configuration it does not support is named.
       and both binaries, although other AWS SDK v1 packages are used. Retain
       the records and reassess on version bumps; this is not a waiver.
 - [x] Investigate supported-role reachability and replacement options for the
-      unfixed, Unknown-severity `GO-2026-5932` report against `x/crypto/openpgp`.
+      module-level `GO-2026-5932` report against `x/crypto/openpgp`.
       The package is absent from the exact source graph and both binary symbol
       inventories, so there is no application package to replace today. Keep
       the module-level result visible and repeat the review on every bump.
+      The 4.53 inventory now reports a fix; the historical unfixed disposition
+      is invalid and owner review remains pending.
 - [x] Verify Trivy code-scanning identity across five successive paired `main`
       analyses. The original 18 alert numbers advanced without duplicates for
       the unchanged 11-result-per-architecture set. Its SARIF lacks supplied

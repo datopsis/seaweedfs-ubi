@@ -63,7 +63,7 @@ backends remain outside this qualification. Additive protobuf fields do **not**
 establish safe downgrade: an old writer can drop new metadata or miss pending
 cleanup and topology safeguards.
 
-The qualified path must therefore be **cold upgrade, rollback by restoring the
+The development-qualified path is **cold upgrade, rollback by restoring the
 entire pre-upgrade backup**, not by running 4.46 on state mutated by 4.53:
 
 1. Stop writes and gracefully stop S3, filer, volume, then master. Export all
@@ -100,9 +100,19 @@ has limited field evidence.
 
 Local Podman builds/runtime tests are blocked (`cannot clone: Operation not
 permitted`). Lock verification and source/binary inspection are local evidence;
-container runtime, upgrade/rollback, SBOM, and scanner evidence must come from
-the PR's native AMD64 and ARM64 jobs. Results and remaining vulnerabilities are
-recorded in [Go vulnerability triage](GO-VULNERABILITY-TRIAGE.md).
+container runtime, upgrade/rollback, SBOM, and scanner evidence comes from
+[PR run 42550436459](https://github.com/datopsis/seaweedfs-ubi/actions/runs/42550436459).
+Both native AMD64 and ARM64 jobs passed all twelve recorded suites:
+image filesystem, smoke/restricted runtime, cluster, S3/multipart, S3 TLS,
+inter-component security, observability, state survival, one-host replication,
+resource exhaustion, backup/restore, and cross-version upgrade/backup rollback.
+The upgrade fixture passed seven checks on each architecture. Signature
+acquisition, admission/assembly negatives, SBOM validation, and native evidence
+reconciliation also passed. The reconciled record identifies test merge commit
+`8638f09206105b7fe472937238aca4468181e283` for PR head
+`27ca2945a48de1f176ae62af1f9081fdff347f20`. Results and remaining vulnerabilities
+are recorded in [Go vulnerability triage](GO-VULNERABILITY-TRIAGE.md).
+These automated results do not complete the required human artifact-lock review.
 
 Release-candidate digest binding, human lock/security review, dedicated
 standalone credential-rotation and Iceberg lifecycle requalification,
@@ -114,4 +124,6 @@ The first native run exposed the intentionally pinned 4.46 empty-prefix bucket
 refusal in the S3 suite: 4.53 correctly deleted the empty bucket. The expectation
 and configuration guidance now require success while retaining the separate
 non-empty-bucket refusal. This is an upstream improvement, not a weakened test
-or a newly introduced defect. Both architectures must rerun the full matrix.
+or a newly introduced defect. Both architectures passed the complete rerun
+linked above. Subsequent PR revisions must retain passing native CI; the PR
+records final-head results separately from this scoped development evidence.

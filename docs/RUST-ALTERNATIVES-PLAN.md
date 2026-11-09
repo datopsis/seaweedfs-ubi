@@ -5,6 +5,12 @@ admitted, no Rust role is enabled, and no Rust behavior or security property is
 qualified. This plan does not change the first-release boundary or waive any
 existing gate in the [work plan](README.md).
 
+The 4.46 research and version-specific steps below are historical. The image
+now locks 4.53; none of this plan is qualification of that binary. Reassess
+the source, executable inventory (including the new vector binary), and all
+proposed steps against the selected lock before implementing Rust adoption.
+No Rust binary is shipped by this upgrade.
+
 ## Decision and scope
 
 The requested direction is to bring the two upstream Rust executables into a

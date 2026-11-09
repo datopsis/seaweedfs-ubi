@@ -69,9 +69,9 @@ write JWTs, or—most importantly—the network boundary that keeps component
 listeners away from clients.
 
 This interpretation is tied to the locked `4.53` commit: the upstream
-[`Guard` implementation](https://github.com/seaweedfs/seaweedfs/blob/d997fba1575583a89cf0cc50dc0150642286c86d/weed/security/guard.go)
+[`Guard` implementation](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/security/guard.go)
 defines address parsing and the empty-list behavior, while the
-[`volume` HTTP dispatcher](https://github.com/seaweedfs/seaweedfs/blob/d997fba1575583a89cf0cc50dc0150642286c86d/weed/server/volume_server_handlers.go)
+[`volume` HTTP dispatcher](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/server/volume_server_handlers.go)
 shows writes and deletes passing through the guard and reads bypassing it.
 
 ## Explicitly unqualified uses

@@ -41,7 +41,7 @@
         "neededLibraries": [],
         "glibcMinimumVersion": null,
         "embeddedCommit": "4ab66fb76",
-        "versionString": null
+        "versionString": "version 8000GB 4.53 4ab66fb76 linux amd64"
       }
     },
     "arm64": {
@@ -73,8 +73,8 @@
       "The index and both architecture manifests were verified with cosign against the pinned identity and issuer.",
       "The certificate's commit was cross-checked against the commit the release tag resolves to, so neither source vouches for itself alone.",
       "Linkage was measured by ELF inspection rather than assumed from upstream's build flags.",
-      "A version string is recorded only for the architecture this ran on. The other must be captured on a native runner before a release.",
-      "This proves reviewed bytes and a verifiable publisher identity. It does not prove the signed image is free of defects.",
+      "ARM64 version was executed natively during acquisition; AMD64 version was captured from native CI run 42550436459 after digest verification. Neither measurement uses emulation.",
+      "These measurements bind exact bytes to a verifiable publisher identity; owner review remains pending. They do not prove the signed image is free of defects.",
       "Sandbox user namespaces prevent Podman execution. Acquisition used Skopeo 1.9.3 copy --preserve-digests by signed manifest digest, checked manifest and every layer SHA-256, and extracted only usr/bin/weed; native ARM64 version was executed directly. Native CI independently repeats the normal Podman acquisition on both architectures."
     ]
   }
