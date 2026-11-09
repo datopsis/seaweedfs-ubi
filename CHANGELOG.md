@@ -14,6 +14,9 @@ only to published container images; repository-only changes remain under
 
 - Regenerated the complete hash-pinned CI tooling requirements, adding
   packaging and updating virtualenv to 21.14.13 while retaining filelock 3.x.
+- Refreshed the digest-pinned UBI Minimal and Micro bases to UBI 9.8 for
+  pcre2 and CA trust fixes. The older image-inventory triage is flagged as
+  stale; the SeaweedFS binary and artifact lock are unchanged.
 
 - Integrated draft IMG requirements into the L1/L2/L3 product tree and Python-
   generated trace matrix, replacing the detached requirement list without
