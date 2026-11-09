@@ -1,5 +1,9 @@
 # Standalone `mini` for local development
 
+The 4.46 lifecycle observations below are historical. The image now locks 4.53;
+those dedicated lifecycle results have not been requalified, and no sign-off
+is carried forward. See [the upgrade record](UPGRADE-4.53.md).
+
 Status: development guide, not a released or production-qualified deployment.
 The local lifecycle test observed object bytes and a shell-created filer
 directory across container replacement with the same named data volume, but

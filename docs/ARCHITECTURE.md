@@ -1,5 +1,9 @@
 # Architecture
 
+Size figures below are historical measurements of the 4.46 development image,
+not the new 4.53 image. The selected variant and unchanged-byte acquisition
+policy remain; see [4.53 qualification](UPGRADE-4.53.md) for current measurements.
+
 What is in the image, what runs when it starts, how the roles reach each other,
 and where the trust boundaries fall.
 

@@ -34,7 +34,7 @@ this treatment are listed under **standing obligations** in
 [the work plan](docs/README.md#standing-obligations-at-every-upstream-version-bump).
 
 Upstream releases often and makes no compatibility promise, so a claim that was
-true at `4.46` is not automatically true at the next increment.
+true at `4.53` is not automatically true at the next increment.
 
 ## Validate a change
 

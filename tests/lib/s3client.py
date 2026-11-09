@@ -489,21 +489,11 @@ def run(endpoint: str, config_path: Path) -> int:
     checks.expect("an authorised identity deletes its object", alpha.delete_object("alpha", key).status, 200, 204)
     checks.expect("an emptied bucket can then be deleted", setup.delete_bucket("alpha").status, 200, 204)
 
-    # ---- a documented divergence from the S3 API ----------------------------
-    #
-    # SeaweedFS models a bucket as a directory, so a key containing a slash
-    # creates a directory entry that outlives the object. The listing goes empty,
-    # but the bucket does not, and with allowDeleteBucketNotEmpty off -- which is
-    # this image's default -- the bucket then cannot be deleted even though a
-    # client sees nothing in it.
-    #
-    # This is asserted rather than avoided. It is a real consequence of a default
-    # this image chose, an operator will meet it, and pinning it means an upstream
-    # change to directory cleanup surfaces here as a failure to review instead of
-    # going unnoticed.
+    # Empty intermediate directories no longer count as user objects in 4.53.
+    # Keep this distinct from the non-empty-bucket refusal tested above.
     nested = "prefix/nested.txt"
-    beta.put_object("beta", nested, b"nested payload")
-    beta.delete_object("beta", nested)
+    checks.expect("a nested object is created", beta.put_object("beta", nested, b"nested payload").status, 200, 204)
+    checks.expect("the nested object is deleted", beta.delete_object("beta", nested).status, 200, 204)
 
     listing_after = beta.list_objects("beta")
     if listing_after.status == 200 and nested not in listing_after.text:
@@ -514,21 +504,10 @@ def run(endpoint: str, config_path: Path) -> int:
             f"status {listing_after.status}",
         )
 
-    residual = setup.delete_bucket("beta")
-    if residual.status == 409:
-        checks.ok("a bucket whose listing is empty is still refused while a prefix directory remains")
-    elif residual.status in (200, 204):
-        checks.bad(
-            "a bucket whose listing is empty is still refused while a prefix directory remains",
-            "the bucket deleted cleanly, so upstream now removes empty prefix",
-            "directories. That is an improvement: update this expectation and the",
-            "note in docs/CONFIGURATION.md rather than leaving them stale.",
-        )
-    else:
-        checks.bad(
-            "a bucket whose listing is empty is still refused while a prefix directory remains",
-            f"expected HTTP 409, got {residual.status}",
-        )
+    checks.expect(
+        "an empty bucket deletes despite residual intermediate directories",
+        setup.delete_bucket("beta").status, 200, 204,
+    )
 
     print(f"\n{checks.passed} passed, {checks.failed} failed")
     return 1 if checks.failed else 0

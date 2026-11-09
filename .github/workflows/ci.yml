@@ -348,6 +348,21 @@ jobs:
       - name: Qualify cold backup and restore
         run: bash tests/backup-restore.sh
 
+      - name: Acquire and assemble the locked 4.46 upgrade baseline
+        env:
+          LOCK_FILE: ${{ github.workspace }}/tests/fixtures/seaweedfs-4.46.lock.json
+          BUNDLE_DIR: ${{ runner.temp }}/seaweedfs-upgrade-baseline
+          IMAGE: localhost/seaweedfs-ubi:upgrade-baseline
+        run: |
+          python3 .github/scripts/check_artifact_lock.py "${LOCK_FILE}"
+          bash scripts/fetch-artifacts.sh ${{ matrix.architecture }}
+          bash scripts/build-image.sh ${{ matrix.architecture }}
+
+      - name: Qualify cold 4.46 to 4.53 upgrade and backup rollback
+        env:
+          UPGRADE_FROM_IMAGE: localhost/seaweedfs-ubi:upgrade-baseline
+        run: bash tests/upgrade.sh
+
       - name: Record scoped native development evidence
         env:
           ARCHITECTURE: ${{ matrix.architecture }}

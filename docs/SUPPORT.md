@@ -105,7 +105,7 @@ A standalone result may never be cited as evidence for a clustered claim.
 | Durability, replication, and failure behavior | Unsupported | A one-host separated-role test measures two `010` replicas and volume-process loss, but does not establish host, node, disk, backend, or zone-loss durability. The supported statement and real-host topology remain undecided. |
 | Resource-exhaustion behavior | Unsupported | A bounded `tmpfs` and the volume-count limit fail visibly in one-host tests. Inode exhaustion and real storage backends remain unqualified. |
 | Backup and restore | Unsupported | A cold Podman named-volume procedure is tested for master, volume, and embedded filer state. Live backup, Docker, external filer databases, and real-host disaster recovery remain unqualified. |
-| Upstream version upgrade and rollback | Unsupported | Requires on-disk format and filer schema qualification per increment. |
+| Upstream version upgrade and rollback | Preview/unqualified | Native development CI exercises the one-host LevelDB2 4.46 → 4.53 cold upgrade and rollback by restoring the complete pre-upgrade backup; see [scope](UPGRADE-4.53.md). In-place downgrade, rolling/multi-host, and other backend migrations are not qualified. |
 | FUSE mounting (`weed mount`) | Unsupported | Requires device access and privileges the hardened runtime refuses. |
 | Embedded Iceberg REST Catalog and Lance Namespace | Unsupported | Disabled by this image; `lakekeeper-ubi` owns the catalog role. |
 | WebDAV, message broker and queue, admin and worker roles | Unsupported | No first-release use case. |

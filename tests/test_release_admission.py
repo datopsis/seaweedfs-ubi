@@ -14,7 +14,7 @@ from admit_release_ref import admit  # noqa: E402
 from release_signing_context import SigningContextError, identity_for  # noqa: E402
 from validate_release_tag import ReleaseTagError  # noqa: E402
 
-TAG = "v4.46-ubi9-r20260919.1"
+TAG = "v4.53-ubi9-r20260919.1"
 IMAGE = "ghcr.io/datopsis/seaweedfs-ubi@sha256:" + "a" * 64
 
 
@@ -25,7 +25,7 @@ class ReleaseAdmissionTests(unittest.TestCase):
         self.root = pathlib.Path(temporary.name)
         (self.root / "artifacts").mkdir()
         (self.root / "artifacts/seaweedfs.lock.json").write_text(
-            '{"upstream":{"releaseTag":"4.46"}}', encoding="utf-8"
+            '{"upstream":{"releaseTag":"4.53"}}', encoding="utf-8"
         )
         digest = "a" * 64
         (self.root / "Containerfile").write_text(

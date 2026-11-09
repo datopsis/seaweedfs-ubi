@@ -1,5 +1,9 @@
 # Iceberg storage-path development fixture
 
+The 4.46 lifecycle observations below are historical. The image now locks 4.53;
+those dedicated lifecycle results have not been requalified, and no sign-off
+is carried forward. See [the upgrade record](UPGRADE-4.53.md).
+
 `tests/iceberg.sh` is the first in-repository end-to-end test of this image as
 the object store beneath `lakekeeper-ubi`. It uses the image's explicitly
 opted-in `mini` profile, PostgreSQL 17, and PyIceberg 0.12.0

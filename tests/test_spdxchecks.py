@@ -23,7 +23,7 @@ class SpdxValidationTests(unittest.TestCase):
         return {
             "spdxVersion": "SPDX-2.3",
             "packages": [
-                package("pkg:golang/github.com/seaweedfs/seaweedfs@v4.46"),
+                package("pkg:golang/github.com/seaweedfs/seaweedfs@v4.53"),
                 package("pkg:golang/golang.org/x/net@v0.0.0"),
             ],
         }
@@ -58,7 +58,7 @@ class SpdxValidationTests(unittest.TestCase):
     def test_refuses_main_module_without_dependencies(self) -> None:
         document = self.document()
         document["packages"] = [
-            package("pkg:golang/github.com/seaweedfs/seaweedfs@v4.46")
+            package("pkg:golang/github.com/seaweedfs/seaweedfs@v4.53")
         ]
         with self.assertRaisesRegex(SbomValidationError, "no SeaweedFS dependencies"):
             validate_spdx(document)

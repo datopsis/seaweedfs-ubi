@@ -139,18 +139,15 @@ already set them, so an explicit choice always wins.
 | `s3` | `-port.iceberg=0`, `-port.lance=0` | Both listeners are on by default upstream and are outside this image's boundary. |
 | `mini` | `-s3.port.iceberg=0`, `-s3.port.lance=0` | Same, under `mini`'s differently named flags. |
 | `mini` | `-webdav=false`, `-admin.ui=false` | Both default to `true` in `mini` and are outside the boundary; explicit enable flags are refused. Disabling the UI does **not** stop mini's admin health/metrics HTTP or worker gRPC listeners. |
-| `s3`, `mini` | `-allowDeleteBucketNotEmpty=false` | Upstream defaults it to `true`, which makes `DeleteBucket` on a bucket that still holds objects delete all of them. The S3 API answers `BucketNotEmpty`. |
+| `s3`, `mini` | `-allowDeleteBucketNotEmpty=false` | Upstream 4.53 also defaults it to `false`. Enabling it makes `DeleteBucket` remove objects instead of answering `BucketNotEmpty`. |
 | `s3`, `mini` | `-autoCreateBucket=false` | Upstream defaults it to `true`, which creates a bucket on upload if it does not exist. The S3 API answers `NoSuchBucket`. |
 
 ### The two bucket defaults
 
-These are worth reading rather than skimming, because one of them loses data.
-
-Upstream enables `allowDeleteBucketNotEmpty` by default. A `DeleteBucket` call
-against a bucket that still holds objects **deletes every object in it**. The S3
-API a client is written against answers `BucketNotEmpty` and deletes nothing, so
-the same call that is a safe no-op against S3 is a silent bulk deletion here.
-That is not a permission a storage image should grant by default.
+Upstream 4.53 now disables `allowDeleteBucketNotEmpty` by default, agreeing
+with this image's existing explicit setting. Enabling it makes a `DeleteBucket`
+call against a non-empty bucket delete every object, instead of returning
+`BucketNotEmpty`. Keep it disabled unless recursive deletion is intentional.
 
 Upstream also enables `autoCreateBucket` by default, so a `PUT` into a bucket
 that does not exist creates it, for admin identities. The S3 API answers
@@ -162,28 +159,13 @@ behaviour production will not have, and there is no reason for the production
 role to diverge from S3 semantics either. An operator who wants upstream's
 behaviour passes the flag explicitly and it is honoured.
 
-#### One consequence worth knowing about
+#### Empty prefix directories
 
-SeaweedFS models a bucket as a directory, so a key containing a slash creates a
-directory entry that outlives the object. Delete the only object under
-`prefix/`, and the bucket's listing goes empty while `prefix/` remains.
-
-With `allowDeleteBucketNotEmpty` off, which is this image's default, the bucket
-then **cannot be deleted even though a client sees nothing in it**, and the
-gateway answers `409`. That is a real divergence from the S3 API, and it is a
-consequence of the safer default rather than a defect.
-
-An operator meeting it has two honest options: remove the residual directories
-through the filer, or pass `-allowDeleteBucketNotEmpty=true` for that deletion
-and accept that it will remove anything still present. `tests/s3.sh` asserts this
-behaviour rather than avoiding it, so an upstream change to directory cleanup
-shows up as a failure to review instead of going unnoticed.
-
-The Iceberg listener is disabled for a reason beyond surface area:
-[`lakekeeper-ubi`](https://github.com/datopsis/lakekeeper-ubi) is this
-organization's qualified Iceberg REST catalog, and a second unqualified
-implementation must not appear on a default port. Enabling it is possible and is
-documented as unqualified.
+Upstream 4.53 ignores empty intermediate directories when deciding whether a
+bucket contains objects. After deleting `prefix/nested.txt`, an otherwise empty
+bucket can be deleted with recursive deletion still disabled. This replaces
+4.46's `409` refusal for residual prefix directories. `tests/s3.sh` checks both
+successful deletion of that empty bucket and refusal when real objects remain.
 
 ## The standalone profile
 
@@ -320,3 +302,43 @@ the operator through flags, `security.toml`, and `filer.toml`. They are
 deployment responsibilities. The tested one-host security example and its
 direct-read limitation are in [TLS.md](TLS.md); real deployment isolation,
 certificate rotation, and the selected filer backend are not yet qualified.
+
+## Upload admission limitation
+
+`-concurrentUploadLimitMB` and `-concurrentFileUploadLimit` default to `0`
+(off). Enabling either can expose unbounded socket/goroutine retention during
+volume-server stalls: queued PUTs wait without a timeout and can outlive the
+client, consuming descriptors and memory. [Upstream #12496](https://github.com/seaweedfs/seaweedfs/issues/12496)
+reports reproduction on 4.53. The affected queue is identical in 4.46 and 4.53,
+and both use `context.Background()` for the upload retry. We confirmed the code
+path but did not reproduce the failure. Defaults and the upstream binary are
+unchanged; this is a known limitation, not an upgrade regression.
+
+## Master collection-listing limitation
+
+[Upstream #12493](https://github.com/seaweedfs/seaweedfs/issues/12493) reports
+a master deadlock when collection listing races with collection deletion:
+`Topology.ListCollections` and `ConcurrentReadMap.Items` acquire the same read
+lock twice, which can deadlock behind a waiting writer. Assign, lookup, and
+collection calls can then hang. Both functions have the same affected code in
+4.46 and 4.53. The issue is closed by
+[fix #12495](https://github.com/seaweedfs/seaweedfs/pull/12495), merged after
+4.53 and absent from its binary. The code path was confirmed, not reproduced
+here. This existing limitation does not change the upgrade selection; no
+upstream code or defaults are modified.
+
+## 4.53 listener changes
+
+In 4.53, mini's upstream admin ports changed to 12535/22535 with compatibility
+listeners on 23646/33646. This image explicitly selects `-admin.port=23646`
+and `-admin.port.legacy=0`, keeping its established inventory. The upstream
+unauthenticated admin and worker bind defaults are now loopback. Custom admin
+port overrides remain an operator responsibility; do not expose these ports.
+
+4.53 also includes S3 Vectors routes on the existing S3 API listener, dispatched
+by the SigV4 service scope. Disabling the separate Iceberg/Lance ports does not
+remove these routes. There is no upstream disable flag. No Rust vector worker
+is admitted, launched, or qualified, and no vector service support is claimed.
+Keep the master network limited to the declared roles and do not register
+external workers. Ordinary S3 credentials should have only the required actions.
+See [the upgrade record](UPGRADE-4.53.md) for policy and storage changes.

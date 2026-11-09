@@ -58,7 +58,7 @@ anything at runtime either.
 - **A build that quietly differs from the reviewed inputs.** If assembly cannot
   fetch, the image contains what the lock says and nothing else.
 - **A moved or re-pointed tag.** Nothing resolves a tag at build time, so
-  repointing `4.46_large_disk` at different bytes changes nothing until a human
+  repointing `4.53_large_disk` at different bytes changes nothing until a human
   updates the lock and a reviewer reads the diff.
 - **A compromised mirror or a hostile network during assembly.** There is no
   traffic to intercept.

@@ -10,6 +10,18 @@ only to published container images; repository-only changes remain under
 
 ## [Unreleased]
 
+### Changed
+
+- Upgrade the locked SeaweedFS binary from 4.46 to 4.53, retaining `large_disk`
+  and verified-container acquisition. See [qualification](docs/UPGRADE-4.53.md).
+  Consumer-visible changes include stricter S3 policy/action checks, trusted-proxy
+  handling, fail-closed configured gRPC TLS, and additive filer metadata.
+  Cold rollback restores a complete pre-upgrade backup; mixed-version operation
+  and in-place downgrade of mutated state are not qualified.
+- Preserve standalone admin ports 23646/33646 explicitly and disable 4.53's
+  extra compatibility pair. Record existing upload-limit issue #12496 without
+  changing the binary or defaults. Owner vulnerability review remains pending.
+
 ### Fixed
 
 - Regenerated the complete hash-pinned CI tooling requirements, adding
