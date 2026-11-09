@@ -5,6 +5,10 @@ built and tested, but they are not release-candidate evidence. This file defines
 the evidence record that every candidate and supported release must complete.
 Placeholder text, development CI, or an omitted field is not passing evidence.
 
+The proposed 4.53 development upgrade is tracked in
+[UPGRADE-4.53.md](UPGRADE-4.53.md), with owner review pending. It does not
+complete the release-candidate record below.
+
 ## Evidence levels
 
 - **Development** evidence is produced for a proposed revision or pull request.

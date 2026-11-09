@@ -316,7 +316,7 @@ main() {
 		[ "$allow_plaintext_beside_tls" = true ] ||
 			require_no_plaintext_beside_tls s3 "" "$@"
 
-		# In 4.46 the S3 role also opens an Iceberg REST Catalog on 8181 and a
+		# In 4.53 the S3 role also opens an Iceberg REST Catalog on 8181 and a
 		# Lance Namespace server on 9101 unless each is given 0. Neither is in
 		# this image's boundary, and lakekeeper-ubi is this organization's
 		# qualified Iceberg catalog, so a second unqualified one must not appear
@@ -360,6 +360,11 @@ main() {
 		refuse_mini_unsupported_services "$@"
 		has_flag -webdav "$@" || injected+=(-webdav=false)
 		has_flag -admin.ui "$@" || injected+=(-admin.ui=false)
+
+		# 4.53 otherwise adds 12535/22535 alongside the legacy admin ports.
+		# Keep the established standalone inventory and disable the extra pair.
+		has_flag -admin.port "$@" || injected+=(-admin.port=23646)
+		has_flag -admin.port.legacy "$@" || injected+=(-admin.port.legacy=0)
 
 		# mini opens the Iceberg catalog and Lance namespace too, under its own
 		# s3-prefixed flag names rather than the s3 role's. They were left running

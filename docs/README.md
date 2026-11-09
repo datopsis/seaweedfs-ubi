@@ -607,7 +607,7 @@ proves it in an automated suite.
       isolation is documented as the only available control.
 - [x] Document the `-whiteList` IP restriction, its limits, and why it is not a
       substitute for authentication. `docs/USE-CASES.md` ties the guidance to
-      the exact 4.46 implementation: empty means allow-all, socket peer addresses
+      the exact 4.53 implementation: empty means allow-all, socket peer addresses
       are used, and volume reads remain outside the guard.
 - [x] State clearly, for every supported profile, which listeners may face a
       client network and which must not. The separated-role matrix permits only
@@ -754,44 +754,23 @@ classification — and every configuration it does not support is named.
 - [ ] Add Trivy and Grype vulnerability gates that block fixed High and Critical
       findings, and retain the complete inventory including unfixed findings.
 - [x] Implement and negatively test a fail-closed decision primitive for the
-      paired Grype/Trivy inventories. It refuses the current AMD64 development
-      scan's three known fixed High advisory groups; CI and release publication
+      paired Grype/Trivy inventories. It refused the original 4.46 AMD64 development
+      scan's three fixed High advisory groups; CI and release publication
       are not yet gated by it.
-- [ ] Triage the first Grype development-image inventory's three fixed High
-      findings in the upstream Go binary (gRPC and `x/crypto`), evaluate a
-      reviewed SeaweedFS update or other upstream resolution, then enable the
-      gate without suppressing those findings to obtain a green check.
-- [x] Identify upstream's source-level resolution for the gRPC advisory:
-      SeaweedFS [PR #11374](https://github.com/seaweedfs/seaweedfs/pull/11374)
-      was merged to `master` on 2026-09-17 and changes
-      `google.golang.org/grpc` from v1.85.0-dev to
-      v1.85.0-dev.0.20260915183914-4e49413dcab7, beyond the
-      [GO-2026-6443 fixed floor](https://pkg.go.dev/vuln/GO-2026-6443).
-      It also raises the Go toolchain requirement to 1.26.6. No duplicate
-      upstream issue is needed for that already-merged change; this checkbox
-      records only the source update, not a fixed released binary or image.
-- [ ] Watch for the first upstream release **after** PR #11374 and check that
-      its tagged source and publisher-signed `large_disk` image actually contain
-      the fixed gRPC version. As checked on 2026-09-19, upstream's latest
-      published release is [4.47](https://github.com/seaweedfs/seaweedfs/releases/tag/4.47)
-      (2026-09-14), which predates that merge and still specifies the affected
-      v1.85.0-dev. Do not close this item from `master` alone; admit the new
-      release through the reviewed lock, measure both AMD64 and ARM64 binaries,
-      and rerun the full image scans and qualification suite.
-- [x] Reconcile scanner aliases and severity differences in the triage policy:
-      Trivy and Grype both report the fixed gRPC issue, while Trivy rates the
-      two fixed `x/crypto` issues Medium and Grype rates them High. The future
-      gates must not silently adopt the lower rating or double-count aliases.
-- [x] Define the triage policy for findings against the Go dependency
-      inventory, which are reported against upstream SeaweedFS rather than
-      proven exploitable in this packaging.
-- [ ] Qualify a reviewed upstream candidate whose measured AMD64 and ARM64
-      binaries clear the three fixed High Go findings. The 4.47 source manifest
-      raises `x/crypto` to its fixed floor but retains the affected gRPC version.
-      PR #11374 changes gRPC on `master`, not in 4.47; neither source check is
-      binary or runtime qualification. Keep the gate open until a later
-      released, admitted candidate clears it on both architectures.
-- [x] Trace the locked 4.46 SFTP source path through `filer` and refuse its
+- [ ] Complete owner triage of the 4.53 native image inventories and decide
+      whether to enable the fixed High/Critical gate. The historical 4.46
+      inventory now has 3 Critical and 18 High Grype records and 8 High Trivy
+      records per architecture, all fixable. The 4.53 binary measurements,
+      seven-increment review, and cold upgrade/rollback qualification are in
+      [UPGRADE-4.53.md](UPGRADE-4.53.md) and
+      [GO-VULNERABILITY-TRIAGE.md](GO-VULNERABILITY-TRIAGE.md).
+- [x] Reconcile scanner aliases and severity differences in the triage policy.
+      Neither scanner's lower severity can waive the other's fixed High/Critical
+      finding; counts remain separate rather than adding cross-scanner aliases.
+- [x] Define triage for the Go module inventory without assuming supported-role
+      exploitability. Repeat source and binary analysis for each changed subject;
+      owner review of 4.53 is pending, with no previous disposition carried over.
+- [x] Trace the locked 4.53 SFTP source path through `filer` and refuse its
       embedded S3, WebDAV, IAM, and SFTP services at the entrypoint. The S3
       switch otherwise bypasses the separated S3 authentication guard; the
       SFTP switch otherwise exposes the SSH code path under a supported role.
@@ -801,7 +780,7 @@ classification — and every configuration it does not support is named.
 - [x] Run pinned `govulncheck` binary-mode analysis on both exact binaries,
       retaining raw JSON and tool/database versions. This is inventory, not a
       passing vulnerability gate or a supported-role call graph.
-- [x] Review the exact 4.46 `large_disk` source import graph for the SSH,
+- [x] Inspect the exact 4.53 `large_disk` source import graph for the SSH,
       OpenPGP, and gRPC xDS findings. SSH has a positive SFTP path; OpenPGP is
       absent; client-side Google direct-path support links the xDS server
       package without a SeaweedFS call to the affected server constructor.
@@ -813,10 +792,12 @@ classification — and every configuration it does not support is named.
       and both binaries, although other AWS SDK v1 packages are used. Retain
       the records and reassess on version bumps; this is not a waiver.
 - [x] Investigate supported-role reachability and replacement options for the
-      unfixed, Unknown-severity `GO-2026-5932` report against `x/crypto/openpgp`.
+      module-level `GO-2026-5932` report against `x/crypto/openpgp`.
       The package is absent from the exact source graph and both binary symbol
       inventories, so there is no application package to replace today. Keep
       the module-level result visible and repeat the review on every bump.
+      The 4.53 inventory now reports a fix; the historical unfixed disposition
+      is invalid and owner review remains pending.
 - [x] Verify Trivy code-scanning identity across five successive paired `main`
       analyses. The original 18 alert numbers advanced without duplicates for
       the unchanged 11-result-per-architecture set. Its SARIF lacks supplied
@@ -1202,3 +1183,7 @@ owes all of the following, and a bump is not complete until they are done.
 - Check whether the on-disk volume format or filer schema changed, and qualify
   the upgrade and rollback path if so.
 - Regenerate SBOMs and scans, and disposition new findings.
+
+The 4.46 to 4.53 qualification and remaining obligations are tracked in
+[UPGRADE-4.53.md](UPGRADE-4.53.md). Historical checked work items above are not
+carried forward as review or release approval for the new binary.

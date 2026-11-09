@@ -13,11 +13,11 @@ Annotated release tags use:
 v<seaweedfs-version>-ubi<ubi-major>-r<YYYYMMDD>.<daily-sequence>
 ```
 
-For example, `v4.46-ubi9-r20260912.1` would identify:
+For example, `v4.53-ubi9-r20261109.1` would identify:
 
-- SeaweedFS `4.46`;
+- SeaweedFS `4.53`;
 - the UBI 9 runtime product line;
-- a Datopsis container release created on 2026-09-12 UTC; and
+- a Datopsis container release created on 2026-11-09 UTC; and
 - the first container release created on that UTC date.
 
 The `r` distinguishes this project's container release from an upstream
@@ -26,7 +26,7 @@ release tag is created. The sequence is a positive integer beginning at `1` and
 increments for every additional container release created on the same UTC date,
 regardless of SeaweedFS or UBI major version. Dates must not be backdated.
 
-Upstream tags its releases without a leading `v`, as `4.46`. This project's tags
+Upstream tags its releases without a leading `v`, as `4.53`. This project's tags
 always carry the leading `v`, so a tag is unambiguous about which project
 created it.
 
@@ -150,10 +150,10 @@ daily sequence; never fill an older gap or reuse a failed or withdrawn tag.
 
 The first release publishes only:
 
-- the immutable release tag, such as `v4.46-ubi9-r20260912.1`; and
+- the immutable release tag, such as `v4.53-ubi9-r20261109.1`; and
 - an immutable `sha-<short-commit>` traceability tag.
 
-Mutable tags such as `latest`, `stable`, `4`, or `4.46` are not published. They
+Mutable tags such as `latest`, `stable`, `4`, or `4.53` are not published. They
 can be considered later only with documented movement, rollback, and
 consumer-notification semantics. A mutable major tag is especially misleading for
 an upstream line that makes no compatibility promise between increments.

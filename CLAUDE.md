@@ -54,10 +54,10 @@ defined in [`docs/README.md`](docs/README.md). Version rules will be defined in
 
 SeaweedFS differs from this organization's RPM-based UBI images, and from
 `lakekeeper-ubi`, in ways that must not be papered over. Every statement below
-was read out of the upstream `4.46` source or release metadata; re-verify each
+was read out of the upstream `4.53` source or release metadata; re-verify each
 one at every version bump.
 
-- **There is no RPM, no vendor signature, and no usable checksum file.**
+- **Release assets have no RPM, no tarball signature, and no secure checksum manifest.**
   Upstream publishes release tarballs on GitHub with a `.md5` sidecar per asset
   and nothing else: no SHA-256 manifest, no detached signature, no provenance
   attestation. MD5 is not collision resistant, and a sidecar served from the
@@ -78,7 +78,7 @@ one at every version bump.
   caller. A configuration file that loads zero identities denies everything
   instead, so an empty secret mount fails closed while a missing one fails
   open. This image adds a fail-closed guard for the missing case.
-- **`weed s3` opens more listeners than the S3 API.** In `4.46` it also starts
+- **`weed s3` opens more listeners than the S3 API.** In `4.53` it also starts
   an Iceberg REST Catalog on `8181` and a Lance Namespace server on `9101`;
   each is disabled only by passing `0`. This image disables both by default.
   Enabling the embedded Iceberg catalog is a deliberate architectural decision
@@ -98,8 +98,10 @@ one at every version bump.
   reach a volume server can read and write it, and IP allow-listing
   (`-whiteList`) is empty by default. Inter-component security is therefore a
   documented deployment responsibility with tested examples, never an assumed
-  property. In the filer-backed S3 topology, read JWTs are unavailable;
-  `security.toml` does not close the direct filer and volume HTTP read paths.
+  property. The tested filer-backed S3 configuration uses write JWTs only and
+  does not close the direct filer and volume HTTP read paths. Upstream still documents
+  volume read JWTs as unsupported with a filer, despite read-signing code;
+  broader read-JWT support is not qualified here.
   Network isolation of those listeners is mandatory, not an optional defense.
 - **SeaweedFS is a distributed system, and the production profile keeps it one.**
   Upstream has two single-process commands. `server` runs a selectable set of
@@ -110,13 +112,17 @@ one at every version bump.
   standalone command rather than two overlapping ones.
 
   `mini` enables more than the object store by default: `-s3`, `-webdav`, and
-  `-admin.ui` are all `true`, `-s3.autoCreateBucket` and
-  `-s3.allowDeleteBucketNotEmpty` are `true`, and `-dir` defaults to `.` rather
+  `-admin.ui` are all `true`, `-s3.autoCreateBucket` is `true`,
+  `-s3.allowDeleteBucketNotEmpty` is now `false`, and `-dir` defaults to `.` rather
   than a volume. The standalone profile therefore sets `-webdav=false` and
   `-admin.ui=false`, and refuses attempts to re-enable them, because WebDAV and
   the Admin UI are outside the boundary. Disabling the UI removes its management
-  routes but not mini's admin health/metrics HTTP listener (23646) or worker
-  gRPC listener (33646); both need network isolation. The profile also requires
+  routes but not mini's admin health/metrics HTTP or worker gRPC listeners.
+  Upstream now defaults to
+  12535/22535 plus legacy 23646/33646. This image pins `-admin.port=23646` and
+  disables the legacy pair with `-admin.port.legacy=0`, preserving 23646/33646.
+  Upstream now binds unauthenticated admin HTTP and worker gRPC to loopback;
+  both still need network isolation. The profile also requires
   an explicit `-dir` for the same reason the separated roles do.
 
   Four things cannot be exercised or claimed in the standalone profile at all,
@@ -128,11 +134,17 @@ one at every version bump.
   as evidence for a clustered one. A single-*host* production deployment is still
   the separated profile: four containers on one host.
 - **Upstream versions are two-component and fast moving.** Releases are
-  numbered like `4.46`, not semantically, and arrive frequently. Do not assume
+  numbered like `4.53`, not semantically, and arrive frequently. Do not assume
   a version increment is a routine dependency bump; qualify each one.
 - **Environment variables this packaging adds use the `SEAWEEDFS_UBI_`
   prefix**, so they can never collide with the upstream `WEED_` configuration
   namespace.
+
+The version-specific source checks and changes are recorded in
+[`docs/UPGRADE-4.53.md`](docs/UPGRADE-4.53.md). Upstream now also publishes
+container provenance/SBOM attestations and a Rust `weed-vector` binary. Only
+`weed` is admitted; upstream S3 Vectors routes share the S3 listener and are
+outside the qualified API boundary. No vector worker is shipped or supported.
 
 ## Development and verification
 

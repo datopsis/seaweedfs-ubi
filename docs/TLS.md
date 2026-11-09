@@ -23,24 +23,24 @@ Anyone who can reach the filer or a volume server can still read every stored
 object. The S3 identity model, tenant scoping included, applies only to callers
 who arrive through the gateway.
 
-## Why the read paths cannot be closed here
+## Scope of the tested read boundary
 
-Not an oversight, and not something a future configuration change in this image
-will fix. Upstream's own scaffold states it:
+Upstream's scaffold states:
 
 > `NOTE: jwt for read is only supported with master+volume setup. Filer does not
 > support this mode.`
 
-Read JWTs require a master-and-volume-only deployment. The S3 API requires a
-filer. Those two facts are incompatible, so **in any topology that serves S3,
-read JWTs are unavailable**, and direct reads stay open by construction.
+The 4.53 upstream scaffold still describes volume read JWTs as unsupported with
+a filer, while read-signing code exists. The repository has not qualified a
+read-JWT S3 deployment. The tested configuration uses write JWTs only and its
+direct read paths remain open; network isolation is mandatory.
 
 Write JWTs have no such restriction, which is why the write path closes and the
 read path does not.
 
 ## What this means for a deployment
 
-The only control for the read paths is the network. That makes the following
+The control for read paths in this tested profile is the network. That makes the following
 requirements rather than recommendations:
 
 - **The master, volume, and filer listeners must not be reachable from any
