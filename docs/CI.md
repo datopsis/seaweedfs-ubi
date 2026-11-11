@@ -106,7 +106,7 @@ replace the image-level Grype and Trivy inventories. The [Go triage record](GO-V
 records the first pinned run and its newly surfaced module-level findings.
 
 Every native job then runs the restricted-runtime smoke, separated-role cluster,
-authenticated S3 and multipart, S3 TLS, inter-component security, observability,
+authenticated S3 and multipart, SigV4 signature coverage, S3 TLS, inter-component security, observability,
 state-survival, one-host replication, bounded resource-exhaustion, and cold
 backup/restore suites. These retain their individual scope limits: the
 one-host replication test is not multi-node durability evidence, and a bounded

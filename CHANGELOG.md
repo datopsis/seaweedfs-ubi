@@ -10,6 +10,20 @@ only to published container images; repository-only changes remain under
 
 ## [Unreleased]
 
+### Added
+
+- Document remote signing as a supported feature with a measured limit, per
+  the 2026-11-11 owner decision: a how-to for Lakekeeper and PyIceberg, and
+  intended-flow, attack-flow, and trust-boundary diagrams. A new native-CI
+  suite, `tests/signature-coverage.sh`, changes one SigV4 canonical-request
+  component at a time after signing on the separated-role topology. SeaweedFS
+  4.53 rejects changed methods, paths, queries, signed headers, added unsigned
+  `x-amz-*` headers, declared payload hashes, and `PutObject`/`UploadPart`
+  bodies. It accepts a replaced `DeleteObjects` body and deletes another
+  table's objects, so remote signing is **not** a table-isolation control on
+  SeaweedFS. That case is kept as an exact-outcome canary. The security policy,
+  threat model (TM-16), control worksheet, and support matrix record the limit.
+
 ### Changed
 
 - Upgrade the locked SeaweedFS binary from 4.46 to 4.53, retaining `large_disk`

@@ -9,7 +9,8 @@ from pathlib import Path
 
 ARCHITECTURES = ("amd64", "arm64")
 SUITES = (
-    "image-filesystem", "smoke", "cluster", "s3", "s3-tls", "inter-component",
+    "image-filesystem", "smoke", "cluster", "s3", "signature-coverage", "s3-tls",
+    "inter-component",
     "observability", "state-survival", "replication",
     "resource-exhaustion", "backup-restore", "upgrade",
 )

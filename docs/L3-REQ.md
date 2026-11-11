@@ -67,6 +67,19 @@ delete, and multipart operations while an anonymous client is refused.
 
 **Verification.** Test.
 
+### L3-API-002
+
+**Parent.** L2-API-002
+
+**Statement.** The signature-coverage suite SHALL send each signed request
+unchanged and then with exactly one of method, path, query, a signed header,
+an unsigned `x-amz-*` header, the declared payload hash, or the body changed;
+SHALL require the exact rejection for each component SeaweedFS verifies; and
+SHALL keep each unverified component as an exact-outcome canary that fails if
+the outcome changes in either direction.
+
+**Verification.** Test.
+
 ### L3-INT-001
 
 **Parent.** L2-INT-001

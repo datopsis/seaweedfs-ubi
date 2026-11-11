@@ -21,9 +21,9 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 
 | Measure | Count |
 | --- | ---: |
-| L1 / L2 / L3 requirements | 9 / 51 / 48 |
+| L1 / L2 / L3 requirements | 9 / 52 / 49 |
 | IMG criteria with an L2 requirement | 34 |
-| Leaf requirements linked to a test | 19 |
+| Leaf requirements linked to a test | 20 |
 | Testable leaves missing a test link | 29 |
 | Leaves awaiting manual evidence | 5 |
 
@@ -46,6 +46,7 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | ID | Parent | IMG criterion | Methods | Test links | Trace state |
 | --- | --- | --- | --- | --- | --- |
 | `L2-API-001` | `L1-API-001` | — | Test, Analysis | — | decomposed |
+| `L2-API-002` | `L1-API-001` | — | Test, Analysis | — | decomposed |
 | `L2-CFG-001` | `L1-CFG-001` | — | Test | — | decomposed |
 | `L2-CFG-002` | `L1-CFG-001` | — | Test | — | decomposed |
 | `L2-CFG-003` | `L1-CFG-001` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
@@ -102,6 +103,7 @@ Manual methods need separately reviewed evidence in the qualification ledger.
 | ID | Parent | IMG criterion | Methods | Test links | Trace state |
 | --- | --- | --- | --- | --- | --- |
 | `L3-API-001` | `L2-API-001` | — | Test | `tests/s3.sh:130 (main suite)` | test linked |
+| `L3-API-002` | `L2-API-002` | — | Test | `tests/signature-coverage.sh:151 (main suite)` | test linked |
 | `L3-CFG-001` | `L2-CFG-001` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
 | `L3-CFG-002` | `L2-CFG-002` | — | Test | `tests/smoke.sh:152 (main suite)` | test linked |
 | `L3-CFG-003` | `L2-CFG-004` | `IMG-16` | Test, Analysis | — | missing test link |

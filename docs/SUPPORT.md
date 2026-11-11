@@ -109,14 +109,18 @@ A standalone result may never be cited as evidence for a clustered claim.
 | FUSE mounting (`weed mount`) | Unsupported | Requires device access and privileges the hardened runtime refuses. |
 | Embedded Iceberg REST Catalog and Lance Namespace | Unsupported | Disabled by this image; `lakekeeper-ubi` owns the catalog role. |
 | WebDAV, message broker and queue, admin and worker roles | Unsupported | No first-release use case. |
+| Remote signing (Iceberg REST sign endpoint, for example Lakekeeper) | **Supported feature with documented limits** (owner decision, 2026-11-11). **Not a table-isolation control on SeaweedFS.** | On 4.53 a signed `DeleteObjects` body can be replaced after signing and is executed with the signer identity's authority; every other measured component is verified. `tests/signature-coverage.sh` records each component on both native architectures. See [remote signing](REMOTE-SIGNING.md). |
 | Advanced IAM, STS, and credential vending | Unsupported | A wider trust model than static identities; deferred. |
 | Erasure coding, remote tiering, cross-datacenter replication | Unsupported | May be documented as unqualified; not qualified for v1. |
 | FIPS validation or approved mode | Unsupported | No cryptographic module or operational boundary has been validated. |
 | STIG certification or system compliance | Unsupported | Tailored SCAP evidence will be report-only and bounded to selected image-filesystem checks. |
 
-No row is `Supported` today. Development evidence moves a row only to the
-limited classification stated; a supported row requires an exact released
-digest and evidence matching its full scope.
+No image is supported today. Where an owner decision classifies a *feature*
+as supported, that records the project's commitment to support the feature
+within its stated limits; like every row, it attaches to an image only when a
+published support statement names an exact released digest and evidence of
+matching scope. Development evidence moves other rows only to the limited
+classification stated.
 
 ## Upstream maintenance constrains what this project can promise
 
