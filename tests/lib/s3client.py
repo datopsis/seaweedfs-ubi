@@ -53,10 +53,10 @@ def _sign(key: bytes, message: str) -> bytes:
     return hmac.new(key, message.encode("utf-8"), hashlib.sha256).digest()
 
 
-def _signing_key(secret: str, date: str) -> bytes:
+def _signing_key(secret: str, date: str, service: str = SERVICE) -> bytes:
     key = _sign(f"AWS4{secret}".encode("utf-8"), date)
     key = _sign(key, REGION)
-    key = _sign(key, SERVICE)
+    key = _sign(key, service)
     return _sign(key, "aws4_request")
 
 

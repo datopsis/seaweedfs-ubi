@@ -235,6 +235,21 @@ main() {
 		-- mini -dir=/data -s3.cert.file=/tls/server.crt \
 		-s3.key.file=/tls/server.key -s3.port.https=8334
 
+	# ---- the STS-over-TLS guard ---------------------------------------------
+	expect_refusal "s3 refuses an IAM/STS config without TLS" "without TLS" \
+		-e AWS_ACCESS_KEY_ID=smoke-key -e AWS_SECRET_ACCESS_KEY=smoke-secret \
+		-- s3 -iam.config=/etc/seaweedfs/iam.json
+	expect_refusal "s3 refuses an explicitly enabled IAM API without TLS" "without TLS" \
+		-e AWS_ACCESS_KEY_ID=smoke-key -e AWS_SECRET_ACCESS_KEY=smoke-secret \
+		-- s3 -iam=false --iam=true
+	expect_refusal "s3 refuses STS when only the certificate is given" "without TLS" \
+		-e AWS_ACCESS_KEY_ID=smoke-key -e AWS_SECRET_ACCESS_KEY=smoke-secret \
+		-- s3 -iam.config=/etc/seaweedfs/iam.json -cert.file=/tls/server.crt
+	expect_refusal "mini refuses an IAM/STS config without TLS" "without TLS" \
+		-e SEAWEEDFS_UBI_STANDALONE=true \
+		-e AWS_ACCESS_KEY_ID=smoke-key -e AWS_SECRET_ACCESS_KEY=smoke-secret \
+		-- mini -dir=/data -s3.iam.config=/etc/seaweedfs/iam.json
+
 	# ---- the standalone gate -------------------------------------------------
 	expect_refusal "mini without the standalone opt-in is refused" "not enabled" -- mini -dir=/data
 	expect_refusal "mini cannot enable the Admin UI" "outside this image's supported boundary" \
@@ -249,6 +264,8 @@ main() {
 		-e SEAWEEDFS_UBI_REQUIRE_S3_AUTH=yes -- s3
 	expect_refusal "the TLS opt-out also rejects an unrecognised boolean" "not true or false" \
 		-e SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=yes -- version
+	expect_refusal "the STS TLS opt-out rejects an unrecognised boolean" "not true or false" \
+		-e SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS=yes -- version
 	expect_refusal "an unknown log format is refused" "not supported" \
 		-e SEAWEEDFS_UBI_LOG_FORMAT=xml -- version
 
@@ -270,6 +287,21 @@ main() {
 		ok "the data directory guard can be turned off deliberately"
 	else
 		bad "the data directory guard can be turned off deliberately" \
+			"it still refused with EX_CONFIG when opted out"
+	fi
+
+	local sts_optout="${CONTAINER}-stsoptout"
+	runtime run -d --name "$sts_optout" "${RESTRICTED[@]}" \
+		-e SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS=true \
+		-e AWS_ACCESS_KEY_ID=smoke-key -e AWS_SECRET_ACCESS_KEY=smoke-secret \
+		"$IMAGE" s3 -iam.config=/etc/seaweedfs/iam.json >/dev/null 2>&1 || true
+	sleep 5
+	optout_code="$(runtime inspect "$sts_optout" --format '{{.State.ExitCode}}' 2>/dev/null || printf 'unknown')"
+	runtime rm -f "$sts_optout" >/dev/null 2>&1 || true
+	if [ "$optout_code" != "78" ]; then
+		ok "the STS TLS guard can be turned off deliberately for a TLS-terminating proxy"
+	else
+		bad "the STS TLS guard can be turned off deliberately for a TLS-terminating proxy" \
 			"it still refused with EX_CONFIG when opted out"
 	fi
 
@@ -312,6 +344,12 @@ main() {
 	else
 		bad "standalone disables WebDAV and the Admin UI by default" \
 			"expected explicit disable flags in PID 1: $cmdline"
+	fi
+
+	if [[ " $cmdline " == *" -s3.iam=false "* ]]; then
+		ok "standalone disables upstream's implicit IAM API and STS by default"
+	else
+		bad "standalone disables upstream's implicit IAM API and STS by default" "$cmdline"
 	fi
 
 	if [[ " $cmdline " == *" -admin.port=23646 "* && " $cmdline " == *" -admin.port.legacy=0 "* ]]; then
