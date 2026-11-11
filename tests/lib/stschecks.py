@@ -534,8 +534,10 @@ def main(argv: list[str]) -> int:
     state_file = Path(state_path)
 
     if phase == "issue":
-        short = run.short_session()
+        # Seed first, then start the expiry clock as early as possible so the
+        # remaining checks run while the 900-second session ages.
         content = run.seed()
+        short = run.short_session()
         run.tls()
         run.trust()
         scoped = run.scoped(content)

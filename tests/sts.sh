@@ -370,7 +370,7 @@ main() {
 	fi
 
 	local cmdline
-	cmdline="$(runtime exec "$GATEWAY" cat /proc/1/cmdline 2>/dev/null | tr ' ' ' ')"
+	cmdline="$(runtime exec "$GATEWAY" cat /proc/1/cmdline 2>/dev/null | tr '\0' ' ')"
 	if [[ " $cmdline " == *" -iam.readOnly=true "* && " $cmdline " != *" -iam=false "* ]]; then
 		ok "with -iam.config the IAM route stays on for SDK-shaped STS and is pinned read-only"
 	else
