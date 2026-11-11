@@ -53,6 +53,7 @@ upstream's `WEED_` configuration namespace.
 | `SEAWEEDFS_UBI_REQUIRE_S3_AUTH` | `true` | Refuse to start the S3 API with no identity source. |
 | `SEAWEEDFS_UBI_REQUIRE_EXPLICIT_DATA_DIR` | `true` | Refuse a missing or temporary data directory. |
 | `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS` | `false` | Permit the S3 API to serve plaintext on its original port while TLS listens on `-port.https`. |
+| `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS` | `false` | Permit `-iam.config` or an enabled `-iam` (STS and the IAM API on the S3 listener) without `-cert.file`/`-key.file`, for a TLS-terminating proxy. |
 | `SEAWEEDFS_UBI_STANDALONE` | unset (`false`) | Permit the `mini` role. |
 | `SEAWEEDFS_UBI_ENABLE_ICEBERG_CATALOG` | `false` | Allow upstream's embedded Iceberg REST Catalog listener. |
 | `SEAWEEDFS_UBI_ENABLE_LANCE_NAMESPACE` | `false` | Allow upstream's Lance Namespace listener. |
@@ -109,6 +110,22 @@ opt-out changes only the startup guard: the operator must still ensure that the
 plaintext port is not published beyond the intended migration boundary.
 
 An explicit HTTPS port of `0` is treated as disabled and is not refused.
+
+## The STS-over-TLS guard and implicit IAM
+
+Upstream's `s3` role (and `mini`'s S3 component) enables its embedded IAM
+management API by default, and with it starts advanced IAM and STS whenever any
+signing key is available, including a `jwt.filer_signing.key` in
+`security.toml` or an SSE-S3 key on the filer. The entrypoint therefore injects
+`-iam=false` (`-s3.iam=false` for `mini`) unless the operator passes the flag.
+STS is still enabled explicitly by `-iam.config`, which does not depend on it.
+
+STS returns temporary secret keys and accepts session tokens on the S3
+listener. The entrypoint refuses `-iam.config`, or an `-iam` flag whose last
+occurrence enables it, unless `-cert.file` and `-key.file` are both given (the
+`s3.`-prefixed flags for `mini`). A deployment whose TLS terminates at a trusted
+proxy sets `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS=true` and owns the proxy hop. See
+[STS credential vending](STS.md).
 
 ## The data directory guard
 

@@ -93,14 +93,18 @@ class Signer:
         body: bytes = b"",
         payload_hash: str | None = None,
         when: dt.datetime | None = None,
+        payload_header: bool = True,
     ) -> Wire:
+        """payload_header=False signs the body hash without sending it as a
+        header, as AWS SDKs do for STS; the server must then hash the body."""
         when = when or dt.datetime.now(dt.timezone.utc)
         amz_date = when.strftime("%Y%m%dT%H%M%SZ")
         date_stamp = when.strftime("%Y%m%d")
         payload_hash = payload_hash or hashlib.sha256(body).hexdigest()
         signed = {name.lower(): value for name, value in (headers or {}).items()}
         signed.setdefault("host", self.host)
-        signed["x-amz-content-sha256"] = payload_hash
+        if payload_header:
+            signed["x-amz-content-sha256"] = payload_hash
         signed["x-amz-date"] = amz_date
 
         names = sorted(signed)

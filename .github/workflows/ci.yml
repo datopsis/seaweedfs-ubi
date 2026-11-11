@@ -348,6 +348,9 @@ jobs:
       - name: Measure SigV4 signature coverage for remote signing
         run: bash tests/signature-coverage.sh
 
+      - name: Qualify STS credential vending adversarially
+        run: bash tests/sts.sh
+
       - name: Qualify client-facing TLS
         run: bash tests/s3-tls.sh
 

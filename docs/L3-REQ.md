@@ -80,6 +80,19 @@ the outcome changes in either direction.
 
 **Verification.** Test.
 
+### L3-API-003
+
+**Parent.** L2-API-003
+
+**Statement.** The STS suite SHALL assert exact outcomes for table-prefix,
+read-only, and intersection scoping; trust-policy refusal; token tampering,
+forgery, and secret mismatch; expiry after `DurationSeconds`; persistence
+across restart and refusal after signing-key rotation; plaintext refusal; and
+a swapped `DeleteObjects` body under a vended session; and the entrypoint
+SHALL refuse STS without TLS unless explicitly opted out.
+
+**Verification.** Test.
+
 ### L3-INT-001
 
 **Parent.** L2-INT-001

@@ -93,6 +93,17 @@ the gateway does not verify.
 
 **Verification.** Test, Analysis.
 
+### L2-API-003
+
+**Parent.** L1-API-001
+
+**Statement.** STS credential vending SHALL be classified as a table-isolation
+control only while separated-role tests show that a vended session cannot act
+outside the intersection of its role and session policy, cannot be forged,
+widened, or used after expiry, and is issued and used only over TLS.
+
+**Verification.** Test, Analysis.
+
 ### L2-INT-001
 
 **Parent.** L1-INT-001

@@ -222,6 +222,59 @@ require_no_plaintext_beside_tls() {
 		"SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true."
 }
 
+# Whether a Go boolean flag ends up enabled. Go keeps the last occurrence, so
+# every occurrence is read, in order, in both single- and double-dash spelling.
+flag_enabled() {
+	local want="$1"
+	shift
+	local enabled=false argument
+	for argument in "$@"; do
+		case "$argument" in
+		"-${want}" | "--${want}") enabled=true ;;
+		"-${want}"=* | "--${want}"=*)
+			case "${argument#*=}" in
+			false | False | FALSE | f | F | 0) enabled=false ;;
+			*) enabled=true ;;
+			esac
+			;;
+		esac
+	done
+	[ "$enabled" = true ]
+}
+
+# STS runs on the S3 listener. It returns temporary secret keys and accepts
+# session tokens, and the IAM API beside it manages identities. Over plaintext
+# all of that crosses the network in the clear, so a configuration that turns
+# either on must also give the listener a certificate and key, unless TLS is
+# terminated in front of the gateway and the operator says so.
+require_tls_for_sts() {
+	local role="$1" prefix="$2"
+	shift 2
+
+	local config_flag="-${prefix}iam.config" api_flag="${prefix}iam"
+	has_flag "$config_flag" "$@" || flag_enabled "$api_flag" "$@" || return 0
+	has_flag "-${prefix}cert.file" "$@" && has_flag "-${prefix}key.file" "$@" && return 0
+
+	refuse "the ${role} role was given ${config_flag} or -${api_flag} without TLS on its S3 listener." \
+		"That listener then serves STS, which returns temporary secret keys and accepts" \
+		"session tokens, in plaintext. Give it -${prefix}cert.file and -${prefix}key.file" \
+		"(see docs/STS.md). If a trusted proxy terminates TLS in front of the gateway," \
+		"set SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS=true."
+}
+
+# Upstream enables its IAM management API by default, and with it starts
+# advanced IAM and STS whenever any signing key is available -- including a
+# jwt.filer_signing.key in security.toml or an SSE-S3 key on the filer. That
+# would put STS on the listener without the operator having asked for it. Off
+# unless asked: -iam.config enables STS explicitly, and an explicit -iam is
+# honoured.
+disable_implicit_iam() {
+	local prefix="$1"
+	shift
+	has_flag "-${prefix}iam" "$@" || has_flag "--${prefix}iam" "$@" ||
+		injected+=("-${prefix}iam=false")
+}
+
 # Two upstream S3 defaults diverge from the S3 API in ways a client will not
 # expect, and one of them loses data.
 #
@@ -277,6 +330,7 @@ main() {
 	shift
 
 	local guard_dirs=true guard_auth=true allow_plaintext_beside_tls=false
+	local allow_plaintext_sts=false
 	local log_format="${SEAWEEDFS_UBI_LOG_FORMAT:-json}"
 	local global_flags=(-logtostderr=true)
 	case "$log_format" in
@@ -294,6 +348,10 @@ main() {
 	if boolean SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS \
 		"${SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS:-}" false; then
 		allow_plaintext_beside_tls=true
+	fi
+	if boolean SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS \
+		"${SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS:-}" false; then
+		allow_plaintext_sts=true
 	fi
 
 	local injected=()
@@ -315,6 +373,8 @@ main() {
 		[ "$guard_auth" = true ] && require_s3_identities s3 -config "$@"
 		[ "$allow_plaintext_beside_tls" = true ] ||
 			require_no_plaintext_beside_tls s3 "" "$@"
+		[ "$allow_plaintext_sts" = true ] || require_tls_for_sts s3 "" "$@"
+		disable_implicit_iam "" "$@"
 
 		# In 4.53 the S3 role also opens an Iceberg REST Catalog on 8181 and a
 		# Lance Namespace server on 9101 unless each is given 0. Neither is in
@@ -351,6 +411,8 @@ main() {
 		[ "$guard_auth" = true ] && require_s3_identities mini -s3.config "$@"
 		[ "$allow_plaintext_beside_tls" = true ] ||
 			require_no_plaintext_beside_tls mini "s3." "$@"
+		[ "$allow_plaintext_sts" = true ] || require_tls_for_sts mini "s3." "$@"
+		disable_implicit_iam "s3." "$@"
 
 		# mini enables more than the object store by default. Neither WebDAV
 		# nor the Admin UI is in the supported standalone boundary. Explicit
