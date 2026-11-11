@@ -197,6 +197,10 @@ costs, and the exact trust limitations of each are set out in
   table, because a signed `DeleteObjects` body can be swapped after signing.
   The document has the how-to, the per-component signature coverage, and the
   attack and trust-boundary diagrams.
+- [STS credential vending](docs/STS.md) is the supported way to keep an
+  engine inside its Iceberg tables: role and session policy are enforced on
+  every request. It covers configuration with Lakekeeper, operations, the
+  diagrams, and the adversarial evidence.
 - [Logging and metrics](docs/LOGGING.md) defines the structured-log default,
   opt-in role metrics, exposure boundary, and measured secret-handling evidence.
 - [Cold backup and restore](docs/BACKUP-RESTORE.md) defines the coordinated

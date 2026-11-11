@@ -44,7 +44,7 @@ class CyberDocumentationTests(unittest.TestCase):
     def test_threat_ids_are_unique_and_contiguous(self):
         text = (ROOT / "docs" / "THREAT-MODEL.md").read_text(encoding="utf-8")
         rows = re.findall(r"^\| (TM-\d{2}) \|", text, re.M)
-        self.assertEqual(rows, [f"TM-{number:02d}" for number in range(1, 17)])
+        self.assertEqual(rows, [f"TM-{number:02d}" for number in range(1, 18)])
 
     def test_threat_requirements_exist(self):
         threat = (ROOT / "docs" / "THREAT-MODEL.md").read_text(encoding="utf-8")

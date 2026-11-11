@@ -8,8 +8,8 @@
 > can reach. SeaweedFS accepts the changed request and deletes the other
 > table's objects. Use remote signing only where every client that can obtain
 > a signature is already trusted with every table the signing identity covers.
-> Where table isolation matters, the signature is not the control; see
-> [what to use instead](#what-to-use-when-table-isolation-matters).
+> Where table isolation matters, use [STS credential vending](STS.md) and
+> disable remote signing on that warehouse.
 
 Remote signing is a **supported feature with documented limits** in this
 project (owner decision, 2026-11-11; see [SUPPORT.md](SUPPORT.md)). It is **not
@@ -152,7 +152,7 @@ delegation header is `vended-credentials`, which is why it is set explicitly
 here. The engine must also trust the S3 listener's CA.
 
 **Trino 484 does not support remote signing.** Its Iceberg REST connector can
-use vended credentials or its own static S3 keys. Static keys give the engine
+use [vended credentials](STS.md) or its own static S3 keys. Static keys give the engine
 the warehouse's authority directly and bypass the catalog's table permissions
 entirely.
 
@@ -234,13 +234,10 @@ Credential vending issues the client its own short-lived credentials, restricted
 by a session policy to the table's location. The store then evaluates every
 request against the **client's** policy rather than the warehouse's, so a body
 the store does not hash can only name keys the client may already touch.
-SeaweedFS 4.53 implements STS `AssumeRole` with session policies. In this
-repository, IAM/STS credential vending is **unsupported** until its own
-adversarial qualification passes; see [SUPPORT.md](SUPPORT.md).
-
-Until then, if table isolation matters, use a separate bucket and a separate
-signer identity per trust domain, so the signer's authority is no wider than
-what each client may do.
+SeaweedFS 4.53 implements STS `AssumeRole` with session policies, and this
+repository supports it as the table-isolation control after adversarial
+qualification. See [STS credential vending](STS.md), and set
+`remote-signing-enabled: false` on any warehouse where isolation matters.
 
 ## What SeaweedFS's signature check covers
 

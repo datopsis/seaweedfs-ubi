@@ -83,6 +83,20 @@ re-verified at every version bump.
   supported feature with this documented limit; it is **not** a table-isolation
   control. Scope each signer identity to one bucket and one trust domain. See
   [remote signing](docs/REMOTE-SIGNING.md).
+- **STS credential vending is the table-isolation control, under conditions.**
+  Sessions from `AssumeRole` carry a signed session policy and every request is
+  checked against the role's policy **and** that session policy, so a session
+  scoped to one table cannot reach another, even through the unverified
+  `DeleteObjects` body (measured by `tests/sts.sh`). It holds only if the S3
+  listener serves TLS (the image refuses STS without it unless
+  `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS=true`), the `-iam.config` file holding the
+  STS signing key is protected as a secret, the catalog's identity is not an
+  administrator, clocks are synchronized, and remote signing is disabled on the
+  warehouse. SeaweedFS 4.53 has no session revocation API: rotate the signing
+  key to end every session. Upstream also starts its IAM API and STS
+  implicitly when any signing key is available; the image disables that
+  (`-iam=false`) unless `-iam.config` is given, and then pins the IAM API
+  read-only. See [STS credential vending](docs/STS.md).
 - **Bucket safety defaults remain explicit.** Upstream 4.53 now defaults
   `allowDeleteBucketNotEmpty` to `false`, agreeing with this image's guard.
   Upstream still enables `autoCreateBucket`; this image disables it so a typo
@@ -131,7 +145,8 @@ Every guard above is implemented and exercised: `tests/smoke.sh` asserts each
 refusal and its diagnostic, `tests/cluster.sh` asserts the default per-role
 listener sets from running containers, `tests/inter-component.sh` measures
 the `security.toml` boundary, and `tests/signature-coverage.sh` measures which
-parts of a signed S3 request the gateway verifies. Real-host and platform qualification remain future
+parts of a signed S3 request the gateway verifies, and `tests/sts.sh` attacks
+vended STS sessions. Real-host and platform qualification remain future
 work; container tests are not evidence for those environments.
 
 ## Scanner results require context

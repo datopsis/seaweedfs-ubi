@@ -24,7 +24,26 @@ only to published container images; repository-only changes remain under
   SeaweedFS. That case is kept as an exact-outcome canary. The security policy,
   threat model (TM-16), control worksheet, and support matrix record the limit.
 
+- Qualify IAM/STS credential vending in the separated-role production profile
+  and classify it as a supported feature (owner decision, 2026-11-11). The new
+  native-CI suite `tests/sts.sh` serves STS only on the TLS S3 listener and
+  asserts exact outcomes for table-prefix, read-only, and role/session-policy
+  intersection scoping, trust-policy refusals, token tampering and forgery,
+  expiry after `DurationSeconds`, restart persistence, signing-key rotation,
+  and PR 1's swapped `DeleteObjects` body, which deletes nothing under a vended
+  session. `docs/STS.md` explains why it isolates tables, how to configure it
+  with Lakekeeper, its assumptions and limits (no revocation API in 4.53), and
+  operations, with architecture and sequence diagrams.
+
 ### Changed
+
+- Without `-iam.config`, the S3 role and `mini` now disable upstream's
+  embedded IAM API and implicit STS (`-iam=false`, `-s3.iam=false`) unless the
+  flag is passed, because 4.53 starts STS whenever any signing key is
+  available. With `-iam.config` the IAM route stays on, because 4.53 needs it to
+  verify SDK-shaped `AssumeRole`, and is pinned read-only. `-iam.config` or an
+  enabled `-iam` without `-cert.file`/`-key.file` is refused unless
+  `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_STS=true`.
 
 - Upgrade the locked SeaweedFS binary from 4.46 to 4.53, retaining `large_disk`
   and verified-container acquisition. See [qualification](docs/UPGRADE-4.53.md).

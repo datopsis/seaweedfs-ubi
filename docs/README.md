@@ -126,6 +126,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/BACKUP-RESTORE.md` — cold Podman state backup and restore | Present | 4 |
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
 | `docs/REMOTE-SIGNING.md` — remote-signing how-to, measured SigV4 coverage, and the table-isolation limit | Present; supported feature with documented limits, not a table-isolation control | 4, 6 |
+| `docs/STS.md` — STS credential vending: why it isolates tables, configuration, operations, adversarial evidence | Present; supported feature (owner decision 2026-11-11) after adversarial qualification | 4, 6 |
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Present | 5 |
 | `docs/GO-VULNERABILITY-TRIAGE.md` — binary findings and alias policy | Present | 5 |
@@ -205,9 +206,10 @@ omission as an oversight.
   qualify. The [Rust alternatives plan](RUST-ALTERNATIVES-PLAN.md) investigates
   a worker and possible Rust volume substitution; it does not remove this
   exclusion or authorize a production worker by itself.
-- **The advanced IAM and STS configuration**, including credential vending.
-  Static identities cover the first-release use case; a token-vending trust
-  model is a wider boundary that deserves its own qualification.
+- **Advanced IAM beyond STS `AssumeRole` vending**: web-identity and LDAP
+  federation, `GetFederationToken`, the embedded IAM management API, and
+  filer-stored roles. STS credential vending itself is now supported after its
+  own adversarial qualification; see [STS](STS.md).
 - **Filer store backends beyond those the object path needs**, including the
   external database and key-value backends. Each is a distinct dependency, a
   distinct failure mode, and a distinct credential to protect.
@@ -1128,6 +1130,7 @@ reopening one is a deliberate act rather than a drift.
 | 2026-09-12 | **Acquire the binary from the cosign-verified official container image** (Path B), pinned by digest, with the tarball retained as a documented fallback and a source build left open | The tarball has no publisher signal at all, while the image is signed with keyless cosign bound to an organization-repository workflow identity and built from the exact released commit. Because the images live in a personal namespace, verification is the reason to take that path rather than an enhancement to it. Building from source would be stronger still, but it turns this project from a packager of upstream releases into a builder of them. Recorded in [external artifact acquisition](ARTIFACT-ACQUISITION.md). |
 | 2026-09-12 | **First-release consumer: the Datopsis analytical stack's S3 backend**, built so nothing precludes general use | The difference between the two is what gets *qualified*, not what the image can *do*; see [the support contract](SUPPORT.md#who-this-image-is-for). |
 | 2026-09-15 | **Refuse a plaintext S3 listener beside TLS by default, with an explicit migration opt-out** | Upstream's `-port.https` adds TLS without removing plaintext from the original port. Failing closed matches the authentication and data-directory guards, while `SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS=true` preserves the legitimate dual-listener migration shape. |
+| 2026-11-11 | **Move IAM/STS credential vending to supported, only if its adversarial tests pass** (owner decision) | Credential vending is the only way the catalog's table permissions protect data on SeaweedFS, because remote signing is not. `tests/sts.sh` passes on both native architectures; had any test failed, the row would have stayed unsupported. See [STS](STS.md). |
 | 2026-11-11 | **Remote signing stays a supported, documented feature with prominent limits; it is not a table-isolation control on SeaweedFS** (owner decision) | Measured on 4.53: a signed `DeleteObjects` body can be swapped after signing and is executed with the signer's authority. Removing the feature would deny engines that only implement remote signing; documenting the limit with evidence and canaries lets operators choose knowingly. See [remote signing](REMOTE-SIGNING.md). |
 
 ## Decisions that need a human
