@@ -33,6 +33,7 @@ ARG SEAWEEDFS_VERSION
 ARG SEAWEEDFS_VARIANT
 ARG SEAWEEDFS_COMMIT
 ARG SOURCE_REVISION
+ARG ARTIFACT_LOCK_SHA256
 ARG BUILD_DATE
 
 LABEL org.opencontainers.image.title="seaweedfs-ubi" \
@@ -44,6 +45,7 @@ LABEL org.opencontainers.image.title="seaweedfs-ubi" \
       org.opencontainers.image.base.name="registry.access.redhat.com/ubi9/ubi-micro" \
       org.opencontainers.image.version="${SEAWEEDFS_VERSION}" \
       org.opencontainers.image.revision="${SOURCE_REVISION}" \
+      io.datopsis.artifact-lock.sha256="${ARTIFACT_LOCK_SHA256}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       io.datopsis.seaweedfs.version="${SEAWEEDFS_VERSION}" \
       io.datopsis.seaweedfs.variant="${SEAWEEDFS_VARIANT}" \

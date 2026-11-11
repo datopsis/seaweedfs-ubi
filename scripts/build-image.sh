@@ -80,6 +80,13 @@ base_image() {
 main() {
 	PYTHON="$(resolve_python)" || die "a Python 3 interpreter is required"
 	command -v "$CONTAINER_RUNTIME" >/dev/null 2>&1 || die "$CONTAINER_RUNTIME is required"
+	local source_revision lock_sha256
+	source_revision="$(git -C "$REPO_ROOT" rev-parse --verify HEAD)" ||
+		die "a Git checkout with a source commit is required for image provenance"
+	[[ "$source_revision" =~ ^[0-9a-f]{40}$ ]] || die "source revision must be a full commit SHA"
+	# Hash the exact selected lock bytes, as in the sibling UBI repositories.
+	lock_sha256="$("$PYTHON" -c 'import hashlib, pathlib, sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' "$LOCK_FILE")" ||
+		die "could not hash the selected artifact lock"
 
 	local arch="${1:-$(host_arch)}"
 	local binary="${BUNDLE_DIR}/${arch}/weed"
@@ -121,7 +128,8 @@ main() {
 		--build-arg "SEAWEEDFS_VERSION=$(lock_get upstream.releaseTag)" \
 		--build-arg "SEAWEEDFS_VARIANT=$(lock_get variant.name)" \
 		--build-arg "SEAWEEDFS_COMMIT=$(lock_get upstream.releaseCommit)" \
-		--build-arg "SOURCE_REVISION=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || printf 'unknown')" \
+		--build-arg "SOURCE_REVISION=${source_revision}" \
+		--build-arg "ARTIFACT_LOCK_SHA256=${lock_sha256}" \
 		--build-arg "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
 		--pull=never \
 		${network_flag[@]+"${network_flag[@]}"} \

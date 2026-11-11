@@ -129,12 +129,38 @@ PYTHON
 		grep -Fq -- '--network=none' "$WORK/calls" &&
 		grep -Fq -- '--pull=never' "$WORK/calls" &&
 		grep -Fq -- "--build-context weed=${BUNDLE_DIR}/${arch}" "$WORK/calls" &&
+		grep -Fq -- "--build-arg SOURCE_REVISION=$(git -C "$REPO_ROOT" rev-parse HEAD)" "$WORK/calls" &&
+		grep -Fq -- "--build-arg ARTIFACT_LOCK_SHA256=$("$PYTHON" -c 'import hashlib, pathlib, sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' "$LOCK_FILE")" "$WORK/calls" &&
 		[ "$(grep -c '^build ' "$WORK/calls")" -eq 1 ]; then
 		ok "an admitted bundle reaches one offline, no-pull build invocation"
 	else
 		bad "an admitted bundle reaches one offline, no-pull build invocation" \
 			"the build command or required flags were missing; see $WORK/output"
 	fi
+
+	# A different path and different whitespace must label the actual selected
+	# file, not a hard-coded default or a reserialized architecture subsection.
+	cp -- "$LOCK_FILE" "$WORK/selected-lock.json"
+	printf '\n' >>"$WORK/selected-lock.json"
+	local selected_sha
+	selected_sha="$("$PYTHON" -c 'import hashlib, pathlib, sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())' "$WORK/selected-lock.json")"
+	: >"$WORK/calls"
+	if BUNDLE_DIR="$BUNDLE_DIR" LOCK_FILE="$WORK/selected-lock.json" ASSEMBLY_MISSING_BASE=false \
+		CONTAINER_RUNTIME=podman PATH="$WORK/bin:$PATH" \
+		bash "$REPO_ROOT/scripts/build-image.sh" "$arch" >"$WORK/output" 2>&1 &&
+		grep -Fq -- "--build-arg ARTIFACT_LOCK_SHA256=${selected_sha}" "$WORK/calls"; then
+		ok "provenance hashes the exact selected lock file bytes"
+	else
+		bad "provenance hashes the exact selected lock file bytes" "selected lock digest was missing"
+	fi
+
+	cat >"$WORK/bin/git" <<'SHIM'
+#!/usr/bin/env bash
+exit 1
+SHIM
+	chmod +x "$WORK/bin/git"
+	expect_refusal "a missing source commit is refused before building" \
+		"source commit is required" "$BUNDLE_DIR" "$LOCK_FILE" false
 
 	printf '\n%s passed, %s failed\n' "$passed" "$failed"
 	[ "$failed" -eq 0 ]

@@ -277,6 +277,32 @@ scripts/fetch-base-images.sh          # network: pull the digest-pinned bases
 scripts/build-image.sh                # no network: verify again, then assemble
 ```
 
+Every supported build uses `scripts/build-image.sh`, including native AMD64 and
+ARM64 CI. It explicitly sets `org.opencontainers.image.revision` to this Git
+checkout's full `HEAD` commit (the tested merge commit in pull-request CI),
+overriding the base image's revision. Assembly requires a resolvable source
+commit. The upstream SeaweedFS commit remains `io.datopsis.seaweedfs.commit`.
+
+`io.datopsis.artifact-lock.sha256` is the lowercase SHA-256 of the exact bytes
+of the selected `LOCK_FILE` (default `artifacts/seaweedfs.lock.json`), matching
+the PostgreSQL and Trino UBI convention. SeaweedFS, like Trino, keeps both
+architecture records in one file, so both architectures carry the same lock
+hash. It is not a hash of a JSON subsection, normalized JSON, or the binary.
+An alternate `LOCK_FILE`, including the upgrade baseline, gets its own hash.
+These labels identify build inputs; they do not attest a clean working tree or
+replace publisher verification or release signatures.
+
+CI inspects each native image and compares both labels with the checked-out
+commit and selected lock, failing on missing or mismatched values, including
+inherited base revisions. It retains the inspection as
+`development-image-<architecture>-provenance`. To check a local build:
+
+```console
+podman image inspect localhost/seaweedfs-ubi:development > /tmp/seaweedfs-inspect.json
+python3 tests/lib/provenancechecks.py /tmp/seaweedfs-inspect.json \
+  "$(git rev-parse HEAD)" "${LOCK_FILE:-artifacts/seaweedfs.lock.json}"
+```
+
 On a controlled network, run the first two on a connected host, transfer the
 bundle, and run the third disconnected. Assembly re-verifies the bundle, because
 a bundle is an ordinary directory and the two steps can be separated by a
