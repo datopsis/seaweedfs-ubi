@@ -265,12 +265,22 @@ require_tls_for_sts() {
 # Upstream enables its IAM management API by default, and with it starts
 # advanced IAM and STS whenever any signing key is available -- including a
 # jwt.filer_signing.key in security.toml or an SSE-S3 key on the filer. That
-# would put STS on the listener without the operator having asked for it. Off
-# unless asked: -iam.config enables STS explicitly, and an explicit -iam is
-# honoured.
-disable_implicit_iam() {
+# would put STS on the listener without the operator having asked for it, so it
+# is off unless asked for; an explicit -iam is honoured.
+#
+# When the operator does configure STS with -iam.config, the IAM route must stay
+# on: in 4.53 it is the handler that verifies an AWS-SDK-shaped AssumeRole (form
+# body, no x-amz-content-sha256 header) before the body is parsed. Without it the
+# fallback STS handler parses the body first and every such request fails its
+# signature check. The route's management API is pinned read-only.
+configure_iam_route() {
 	local prefix="$1"
 	shift
+	if has_flag "-${prefix}iam.config" "$@"; then
+		has_flag "-${prefix}iam.readOnly" "$@" || has_flag "--${prefix}iam.readOnly" "$@" ||
+			injected+=("-${prefix}iam.readOnly=true")
+		return 0
+	fi
 	has_flag "-${prefix}iam" "$@" || has_flag "--${prefix}iam" "$@" ||
 		injected+=("-${prefix}iam=false")
 }
@@ -374,7 +384,7 @@ main() {
 		[ "$allow_plaintext_beside_tls" = true ] ||
 			require_no_plaintext_beside_tls s3 "" "$@"
 		[ "$allow_plaintext_sts" = true ] || require_tls_for_sts s3 "" "$@"
-		disable_implicit_iam "" "$@"
+		configure_iam_route "" "$@"
 
 		# In 4.53 the S3 role also opens an Iceberg REST Catalog on 8181 and a
 		# Lance Namespace server on 9101 unless each is given 0. Neither is in
@@ -412,7 +422,7 @@ main() {
 		[ "$allow_plaintext_beside_tls" = true ] ||
 			require_no_plaintext_beside_tls mini "s3." "$@"
 		[ "$allow_plaintext_sts" = true ] || require_tls_for_sts mini "s3." "$@"
-		disable_implicit_iam "s3." "$@"
+		configure_iam_route "s3." "$@"
 
 		# mini enables more than the object store by default. Neither WebDAV
 		# nor the Admin UI is in the supported standalone boundary. Explicit

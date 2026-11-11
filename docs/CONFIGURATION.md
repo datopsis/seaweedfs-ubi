@@ -116,9 +116,17 @@ An explicit HTTPS port of `0` is treated as disabled and is not refused.
 Upstream's `s3` role (and `mini`'s S3 component) enables its embedded IAM
 management API by default, and with it starts advanced IAM and STS whenever any
 signing key is available, including a `jwt.filer_signing.key` in
-`security.toml` or an SSE-S3 key on the filer. The entrypoint therefore injects
-`-iam=false` (`-s3.iam=false` for `mini`) unless the operator passes the flag.
-STS is still enabled explicitly by `-iam.config`, which does not depend on it.
+`security.toml` or an SSE-S3 key on the filer. Without `-iam.config`, the
+entrypoint therefore injects `-iam=false` (`-s3.iam=false` for `mini`) unless the
+operator passes the flag.
+
+With `-iam.config`, STS is configured deliberately and the IAM route stays on:
+in 4.53 it is the handler that verifies an AWS-SDK-shaped `AssumeRole` (form
+body, no `x-amz-content-sha256` header) before parsing the body. With
+`-iam=false` the fallback STS handler parses the body first and every such
+request fails its signature check (observed in native CI). The entrypoint pins
+the route's management API read-only with `-iam.readOnly=true` unless the
+operator passes that flag.
 
 STS returns temporary secret keys and accepts session tokens on the S3
 listener. The entrypoint refuses `-iam.config`, or an `-iam` flag whose last

@@ -128,11 +128,17 @@ class Principal:
         """An STS query-API call shaped like an AWS SDK's: a form body, service
         `sts`, and no x-amz-content-sha256 header, so the gateway hashes the
         body it receives rather than trusting a declared value."""
-        body = urllib.parse.urlencode({"Version": "2011-06-15", **params}).encode()
+        return self.query_api("sts", "2011-06-15", params)
+
+    def iam(self, params: dict[str, str]) -> Reply:
+        return self.query_api("iam", "2010-05-08", params)
+
+    def query_api(self, service: str, version: str, params: dict[str, str]) -> Reply:
+        body = urllib.parse.urlencode({"Version": version, **params}).encode()
         headers = {"content-type": "application/x-www-form-urlencoded; charset=utf-8"}
         if self.token:
             headers["x-amz-security-token"] = self.token
-        signer = Signer(self.endpoint.host, self.access_key, self.secret_key, service="sts")
+        signer = Signer(self.endpoint.host, self.access_key, self.secret_key, service=service)
         return self.endpoint.send(
             signer.sign("POST", "/", headers=headers, body=body, payload_header=False))
 
@@ -199,7 +205,19 @@ class Run:
             self.checks.ok(f"{description} -> {status}{' ' + code if code else ''}")
             return True
         wanted = f"{status}{' ' + code if code else ''}"
-        self.checks.bad(description, f"expected HTTP {wanted}, got HTTP {reply.status} {reply.code}")
+        self.checks.bad(description, f"expected HTTP {wanted}, got HTTP {reply.status} {reply.code}",
+                        f"message: {xml_text(reply.body, 'Message')}")
+        return False
+
+    def refused_because(self, description: str, reply: Reply, reason: str) -> bool:
+        """A denial counts only for the stated reason: a refusal for an unrelated
+        cause (a bad signature, say) would otherwise pass every trust check."""
+        message = xml_text(reply.body, "Message") or ""
+        if reply.status == 403 and reply.code == "AccessDenied" and reason in message:
+            self.checks.ok(f"{description} -> 403 AccessDenied ({reason})")
+            return True
+        self.checks.bad(description, f"expected 403 AccessDenied with '{reason}', got HTTP "
+                        f"{reply.status} {reply.code}: {message}")
         return False
 
     def denied(self, description: str, reply: Reply) -> bool:
@@ -257,21 +275,29 @@ class Run:
 
     def trust(self) -> None:
         reply, _ = assume_role(self.outsider)
-        self.denied("trust: a valid identity the trust policy does not name cannot assume the role",
-                    reply)
+        self.refused_because("trust: a valid identity the trust policy does not name cannot assume "
+                             "the role", reply, "is not authorized to assume role")
         anonymous = self.endpoint.send(Wire(
             "POST", "/", (),
             {"host": self.endpoint.host, "content-type": "application/x-www-form-urlencoded"},
             urllib.parse.urlencode({"Version": "2011-06-15", "Action": "AssumeRole",
                                     "RoleArn": ROLE_ARN, "RoleSessionName": "anon"}).encode()))
-        self.denied("trust: an unsigned AssumeRole is refused", anonymous)
+        self.expect("trust: an unsigned AssumeRole is refused", anonymous, 403, "AccessDenied")
         reply, _ = assume_role(self.vendor, role_arn=None)
-        self.denied("trust: the vendor cannot assume itself without a RoleArn", reply)
+        self.refused_because("trust: the vendor cannot assume itself without a RoleArn",
+                             reply, "access denied")
         reply, _ = assume_role(self.vendor,
                                role_arn="arn:aws:iam::000000000000:role/does-not-exist")
-        self.denied("trust: the vendor cannot assume a role that does not exist", reply)
+        self.refused_because("trust: the vendor cannot assume a role that does not exist",
+                             reply, "is not authorized to assume role")
         reply = self.vendor.sts({"Action": "GetFederationToken", "Name": "escape"})
-        self.denied("trust: the vendor cannot mint a federation token", reply)
+        self.refused_because("trust: the vendor cannot mint a federation token",
+                             reply, "is not authorized to call GetFederationToken")
+        reply = self.setup.iam({"Action": "CreateUser", "UserName": "escape"})
+        self.refused_because("iam: even an administrator cannot write through the IAM API",
+                             reply, "IAM write operations are disabled")
+        reply = self.vendor.iam({"Action": "ListUsers"})
+        self.expect("iam: the vendor cannot read through the IAM API", reply, 403, "AccessDenied")
 
     def scoped(self, content: dict[str, bytes]) -> dict[str, str] | None:
         reply, creds = assume_role(
@@ -467,7 +493,8 @@ class Run:
         self.expect("forgery: temporary keys without their session token",
                     no_token.call("GET", self.path(TABLE_A, "data.txt")), 403, "InvalidAccessKeyId")
         chained, _ = assume_role(session_of(self.endpoint, creds), session="chained")
-        self.denied("forgery: a vended session cannot re-assume the role to shed its policy", chained)
+        self.refused_because("forgery: a vended session cannot re-assume the role to shed its policy",
+                             chained, "is not authorized to assume role")
 
     def short_session(self) -> dict[str, str] | None:
         before = dt.datetime.now(dt.timezone.utc)
