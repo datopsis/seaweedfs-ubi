@@ -49,7 +49,10 @@ This review must also include object-store concerns not fully covered by any
 generic SRG: direct filer/volume reads bypassing S3 identity, metadata-store
 consistency, replica placement and failure domain, durable-data mount identity,
 backup and restore, two-tenant authorization, access-key and JWT-key rotation,
-and the risk of an upstream release changing listeners or defaults. Those are
+remote-signing request integrity (a catalog's per-table approval is enforced
+only for the request components the gateway verifies; see
+[REMOTE-SIGNING.md](REMOTE-SIGNING.md)), and the risk of an upstream release
+changing listeners or defaults. Those are
 explicit in [THREAT-MODEL.md](THREAT-MODEL.md) and must not vanish when the
 generic control baseline is imported.
 
@@ -66,7 +69,7 @@ authorization, mutable state, and internal APIs.
 | Control(s) | Shared baseline position | SeaweedFS investigation before origination can be decided |
 | --- | --- | --- |
 | AC-2, IA-2, IA-5 | Research required | Separate operator-managed S3 identities, application handling of credentials, master/filer management paths, and platform/service accounts. Decide account lifecycle, identity proof, key storage, rotation, and MFA scope with the deploying organization. |
-| AC-3, AC-14 | Research required | Test two-identity bucket isolation and anonymous denial; examine explicit anonymous opt-out and filer/volume bypass. The deployment chooses privileges; the image guard does not prove authorization policy. |
+| AC-3, AC-14 | Research required | Test two-identity bucket isolation and anonymous denial; examine explicit anonymous opt-out and filer/volume bypass. The deployment chooses privileges; the image guard does not prove authorization policy. A catalog's table permission is not access enforcement for data under remote signing on SeaweedFS 4.53: a signed `DeleteObjects` body is not verified (TM-16), so the enforced authority is the signer identity's. |
 | AC-6, CM-7 | Image-owned starting point | Verify every role and both native architectures under non-root/no capabilities, feature allowlist, exact listeners, and no package manager. Preserve deployment handoffs for admission and networking. Do not mark met from one smoke test. |
 | AU-2, AU-3, AU-10, AU-12 | Research required | Inventory per-role security events and fields, missing identity in shared-key requests, startup refusals, direct read paths, collector retention, and non-repudiation limitations. Static S3 keys do not establish an individual actor. |
 | CM-6 | Research required | Enumerate upstream defaults, packaging overrides, `security.toml`, S3 identity files, filer backend, and every role flag; prove configuration drift and restart behavior. Tailored SCAP remains report-only until rule selection and review. |
@@ -74,7 +77,7 @@ authorization, mutable state, and internal APIs.
 | RA-5, SI-4 | Host-inherited starting point | Image project supplies full scanner inventories and metrics/logging; host and security operations own continuous monitoring and alert response. Development scans cannot satisfy release-candidate vulnerability gates. |
 | SC-8, SC-8(1), SC-13 | Research required | Separate S3 TLS, gRPC mTLS, direct HTTP paths, cryptographic module provenance, FIPS claims, and approved algorithms. Internal read paths need network isolation even with gRPC mTLS. |
 | SC-28, SC-28(1) | Host-inherited / deployment-configured starting points | Read-only-root compatibility does not encrypt or protect object data at rest. Assess volume, filer metadata, backup encryption, key ownership, and storage service controls. |
-| SI-10, SI-11 | Research required | Test malformed S3, filer, and administrative inputs and error responses by role; do not infer upstream validation from entrypoint flag parsing. |
+| SI-10, SI-11 | Research required | Test malformed S3, filer, and administrative inputs and error responses by role; do not infer upstream validation from entrypoint flag parsing. Integrity of signed S3 requests is measured per component by `tests/signature-coverage.sh`; the `DeleteObjects` body is the measured unverified input. |
 
 Every final `image-owned` row will require a SeaweedFS requirement identifier,
 a required IMG criterion, a scope-matching test or assessment, and explicit

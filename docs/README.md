@@ -125,6 +125,7 @@ packages can reference them and so a reviewer can see what is missing.
 | `docs/STORAGE.md` — measured state survival and durability boundary | Present | 4 |
 | `docs/BACKUP-RESTORE.md` — cold Podman state backup and restore | Present | 4 |
 | `docs/TLS.md` — client TLS and the inter-component boundary, both measured | Present | 4 |
+| `docs/REMOTE-SIGNING.md` — remote-signing how-to, measured SigV4 coverage, and the table-isolation limit | Present; supported feature with documented limits, not a table-isolation control | 4, 6 |
 | `docs/LOGGING.md` — log and metrics profiles | Present | 4 |
 | `docs/CI.md` — automation and local checks | Present | 5 |
 | `docs/GO-VULNERABILITY-TRIAGE.md` — binary findings and alias policy | Present | 5 |

@@ -192,6 +192,11 @@ costs, and the exact trust limitations of each are set out in
   `security.toml` actually closes, measured rather than assumed: it shuts the
   direct write path and leaves three read paths open, which no configuration in
   an S3 topology can close.
+- [Remote signing](docs/REMOTE-SIGNING.md) is a supported feature with a
+  measured limit: on SeaweedFS 4.53 it does **not** keep a client inside its
+  table, because a signed `DeleteObjects` body can be swapped after signing.
+  The document has the how-to, the per-component signature coverage, and the
+  attack and trust-boundary diagrams.
 - [Logging and metrics](docs/LOGGING.md) defines the structured-log default,
   opt-in role metrics, exposure boundary, and measured secret-handling evidence.
 - [Cold backup and restore](docs/BACKUP-RESTORE.md) defines the coordinated
