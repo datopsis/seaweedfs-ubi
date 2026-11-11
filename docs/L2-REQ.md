@@ -81,6 +81,18 @@ conformance.
 
 **Verification.** Test, Analysis.
 
+### L2-API-002
+
+**Parent.** L1-API-001
+
+**Statement.** For every canonical-request component of an AWS Signature
+Version 4 request, a separated-role test SHALL record whether the S3 gateway
+rejects that component when it is changed after signing, and the documentation
+SHALL NOT describe remote signing as a table-isolation control for any component
+the gateway does not verify.
+
+**Verification.** Test, Analysis.
+
 ### L2-INT-001
 
 **Parent.** L1-INT-001

@@ -345,6 +345,9 @@ jobs:
       - name: Qualify authenticated S3 and multipart
         run: bash tests/s3.sh
 
+      - name: Measure SigV4 signature coverage for remote signing
+        run: bash tests/signature-coverage.sh
+
       - name: Qualify client-facing TLS
         run: bash tests/s3-tls.sh
 
