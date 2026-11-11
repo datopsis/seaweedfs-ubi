@@ -189,6 +189,24 @@ jobs:
           test "$(podman image inspect --format '{{.Architecture}}' "${IMAGE}")"
           = "${EXPECTED_ARCHITECTURE}"
 
+      - name: Verify built image source revision and artifact-lock provenance
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          inspection="${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.inspect.json"
+          podman image inspect "${IMAGE}" > "${inspection}"
+          python3 tests/lib/provenancechecks.py "${inspection}" \
+            "${SOURCE_COMMIT}" artifacts/seaweedfs.lock.json
+
+      - name: Retain built image provenance inspection
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: development-image-${{ matrix.architecture }}-provenance
+          path: ${{ runner.temp }}/seaweedfs-ci-${{ matrix.architecture }}.inspect.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Inspect native image filesystem for package managers and unsafe modes
         run: bash tests/image-filesystem.sh
 
@@ -357,6 +375,15 @@ jobs:
           python3 .github/scripts/check_artifact_lock.py "${LOCK_FILE}"
           bash scripts/fetch-artifacts.sh ${{ matrix.architecture }}
           bash scripts/build-image.sh ${{ matrix.architecture }}
+
+      - name: Verify upgrade baseline provenance against its selected lock
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          inspection="${RUNNER_TEMP}/seaweedfs-upgrade-baseline.inspect.json"
+          podman image inspect localhost/seaweedfs-ubi:upgrade-baseline > "${inspection}"
+          python3 tests/lib/provenancechecks.py "${inspection}" \
+            "${SOURCE_COMMIT}" tests/fixtures/seaweedfs-4.46.lock.json
 
       - name: Qualify cold 4.46 to 4.53 upgrade and backup rollback
         env:

@@ -24,6 +24,12 @@ only to published container images; repository-only changes remain under
 
 ### Fixed
 
+- Label every assembled image with the exact selected artifact-lock file's
+  SHA-256 and require this repository's full source commit for its revision.
+  Native AMD64 and ARM64 CI now inspect and verify both provenance labels,
+  including the alternate upgrade-baseline lock, and retain image inspection
+  evidence. Runtime behavior and artifact admission remain unchanged.
+
 - Regenerated the complete hash-pinned CI tooling requirements, adding
   packaging and updating virtualenv to 21.14.13 while retaining filelock 3.x.
 - Refreshed the digest-pinned UBI Minimal and Micro bases to UBI 9.8 for
