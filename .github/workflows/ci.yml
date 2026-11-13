@@ -459,12 +459,16 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  tls-qualification:
+    uses: ./.github/workflows/tls.yml
+
   native-image-result:
     name: native image
     if: ${{ always() }}
     needs:
       - native-image
       - native-evidence
+      - tls-qualification
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -472,9 +476,11 @@ jobs:
         env:
           MATRIX_RESULT: ${{ needs.native-image.result }}
           EVIDENCE_RESULT: ${{ needs.native-evidence.result }}
+          TLS_RESULT: ${{ needs.tls-qualification.result }}
         run: |
           test "${MATRIX_RESULT}" = success
           test "${EVIDENCE_RESULT}" = success
+          test "${TLS_RESULT}" = success
 
   publish-image-alerts:
     name: publish image alerts (${{ matrix.architecture }})

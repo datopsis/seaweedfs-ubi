@@ -51,6 +51,12 @@ only to published container images; repository-only changes remain under
 
 ### Added
 
+- Added a native amd64/arm64 Phase A TLS qualification matrix, isolated role
+  identities, strict profile preflight, and per-listener certificate/plaintext
+  probes. Retained exact-outcome native gRPC identity canaries as blockers;
+  Phase A is not complete. See [scope and evidence](docs/TLS-PHASE-A.md).
+  The upstream binary, image contents and default runtime are unchanged.
+
 - Traced existing lock, assembly, and runtime guard suites to matching L3
   requirements; added standalone S3-auth refusal and per-process capability,
   no-new-privileges, seccomp, and read-only-root observations. Candidate-level

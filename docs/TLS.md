@@ -3,7 +3,10 @@
 What a `security.toml` actually closes, what it leaves open, and why the
 difference matters more than the configuration itself.
 
-Everything below was measured by `tests/inter-component.sh`, which runs the
+The expanded [Phase A qualification](TLS-PHASE-A.md) adds a separate all-listener
+profile and records the native gRPC identity blocker. Phase A is not complete.
+
+The historical write-JWT profile below was measured by `tests/inter-component.sh`, which runs the
 cluster twice — once without the file and once with it — and probes the volume
 server and filer directly each time.
 
@@ -126,8 +129,10 @@ podman run -d --name seaweedfs-volume \
   ghcr.io/datopsis/seaweedfs-ubi:<tag> volume -dir=/data -mserver=master:9333
 ```
 
-Every role needs the same file: the master issues tokens, the volume server
-validates them, and both ends of every gRPC connection need their certificate.
+This historical fixture mounts a shared file for its narrow write-JWT test.
+Do not copy its shared-key mount shape into a deployment. Phase A generates one
+file per role and mounts only that role's private identity; see the
+[bounded profile](TLS-PHASE-A.md).
 
 ## Certificate lifecycle
 
