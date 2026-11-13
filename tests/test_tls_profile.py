@@ -4,12 +4,14 @@ import re
 import shutil
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO / 'scripts/lib'), str(REPO / 'tests/tls')]
 from tls_profile import arguments, render, security, validate
 from pki import ca, leaf, ssl
+from qualify import plaintext_refused
 
 
 class ProfileTests(unittest.TestCase):
@@ -42,6 +44,15 @@ class ProfileTests(unittest.TestCase):
     def check(self, argv=None, env=None):
         validate(self.cfg, 'filer', arguments('filer') if argv is None else argv,
                  {} if env is None else env)
+
+    def test_plaintext_requires_exact_protocol_error_or_empty_close(self):
+        error = b'HTTP/1.0 400 Bad Request\r\n\r\nClient sent an HTTP request to an HTTPS server.\n'
+        self.assertTrue(plaintext_refused(SimpleNamespace(returncode=0, stdout=error)))
+        self.assertTrue(plaintext_refused(SimpleNamespace(returncode=56, stdout=b'')))
+        for status, body in ((0, error + b'secret'), (56, b'application bytes'),
+                             (0, b'HTTP/1.1 301 Moved\r\n\r\n'), (28, b''),
+                             (0, b'HTTP/1.1 403 Forbidden\r\n\r\n')):
+            self.assertFalse(plaintext_refused(SimpleNamespace(returncode=status, stdout=body)))
 
     def test_valid(self):
         self.check()

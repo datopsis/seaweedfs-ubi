@@ -132,8 +132,8 @@ release rather than assumed exploitable in this packaging.
 **SeaweedFS 4.53 does not satisfy strict target-hostname identity for gRPC.**
 The pinned source uses `advancedtls.CertVerification` rather than hostname
 verification in
-[`loadClientTLS`](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/security/tls.go#L209-L310).
-[`AuthenticateServer`](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/security/tls.go#L385-L410)
+[`loadClientTLS`](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/security/tls.go#L194-L289).
+[`AuthenticateServer`](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/security/tls.go#L421-L442)
 accepts any matching CN, DNS SAN or URI SAN. An allowed CN can therefore satisfy
 the policy even with an incorrect DNS SAN. An allowlist is not equivalent to
 verifying the dialed hostname. The
@@ -147,6 +147,21 @@ fails the canary and requires investigation. No binary patch, relaxed identity
 check, exemption, or Phase A completion claim is permitted. The complete
 [profile and evidence boundary](docs/TLS-PHASE-A.md) distinguish native-client
 results from direct listener tests and list remaining unverified edges.
+
+A second limitation prevents strict per-target policy on S3's outbound paths.
+[`command/s3.go`](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/command/s3.go#L310-L323)
+loads one `grpc.client` dial option. The
+[S3 server](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/s3api/s3api_server.go#L219-L255)
+reuses it for both master discovery and filer calls. With the strict filer-only
+server allowlist, native S3 logs `AuthenticateServer: untrusted server identity
+[master master]` and cannot register with master, even though ordinary object
+operations can succeed through filer. The suite asserts that exact rejection
+as another **BLOCKER**. Both architectures reproduced these gaps in
+[run 43367583286](https://github.com/datopsis/seaweedfs-ubi/actions/runs/43367583286).
+The fixture does not broaden the allowlist to hide the missing
+per-target selector. Successful object operations alone do not qualify every
+native peer edge. The master likewise shares one outbound option across master
+and volume targets; the profile's two-name list cannot enforce per-call identity.
 
 This phase covers transport encryption and server/peer identity only. User
 login and OpenID authentication belong to Phase B. HTTPS/mTLS does not make

@@ -43,6 +43,15 @@ def command(args, **kwargs):
     return subprocess.run(list(map(str, args)), capture_output=True, timeout=120, **kwargs)
 
 
+def plaintext_refused(result):
+    if result.returncode in (52, 56) and result.stdout == b'':
+        return True  # peer closed before returning any application bytes
+    head, separator, body = result.stdout.partition(b'\r\n\r\n')
+    return (result.returncode == 0 and bool(separator)
+            and head.split(b'\r\n')[0] in (b'HTTP/1.0 400 Bad Request', b'HTTP/1.1 400 Bad Request')
+            and body == b'Client sent an HTTP request to an HTTPS server.\n')
+
+
 class Qualification:
     def __init__(self, work, report):
         self.work, self.report = work, report
@@ -341,9 +350,7 @@ class Qualification:
                         if plain:
                             # Go HTTPS emits exactly this protocol-error body; gRPC
                             # closes the connection. Neither may return application data.
-                            accepted = b'grpc-status: 0' in result.stdout.lower() or b'200 OK' in result.stdout
-                            refused = not accepted and (result.returncode in (52, 56) or
-                                      b'Client sent an HTTP request to an HTTPS server.' in result.stdout)
+                            refused = plaintext_refused(result)
                         else:
                             refused = result.returncode in (35, 56, 60) and bool(TLS_ERROR.search(evidence))
                         self.row(listener, case + suffix, 'REFUSED', 'REFUSED' if refused else 'UNEXPECTED',
@@ -359,7 +366,7 @@ class Qualification:
                           '--max-time', '8', '--include', '--http1.1',
                           '--data', 'Action=AssumeRole&Version=2011-06-15',
                           f'http://127.0.0.1:{port}/'])
-        refused = b'Client sent an HTTP request to an HTTPS server.' in result.stdout
+        refused = plaintext_refused(result)
         self.row('s3/https', 'plaintext-root-post', 'REFUSED',
                  'REFUSED' if refused else 'UNEXPECTED', 'no STS token or application response')
         self.roundtrip()
@@ -370,6 +377,7 @@ class Qualification:
                 protocol = 'grpc' if grpc else 'http'
                 for variant in ('wrong-san', 'wrong-ca', 'expired', 'role-swap'):
                     self.positive(role, grpc)
+                    self.positive(role, grpc, True)
                     replacement = f'{role}-{variant}'
                     if variant == 'role-swap':
                         replacement = ('filer' if role == 'master' else 'master') + '-valid'

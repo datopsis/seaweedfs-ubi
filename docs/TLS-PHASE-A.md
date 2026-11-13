@@ -37,7 +37,9 @@ arguments. Role logs are checked for private-key and signing-secret disclosure.
 `probe-client` is a separate test provisioner identity admitted for direct
 listener operations. The actual roles never share that identity. The filer
 uses per-target master/volume/S3 server allowlists. Volume permits master;
-S3's generic `grpc.client` permits filer. Master uses `master,volume` because
+S3's generic `grpc.client` permits filer. The same native option is reused for
+master discovery, which is rejected and recorded as a separate exact-outcome
+blocker; successful S3 objects do not prove that discovery works. Master uses `master,volume` because
 its single native client option serves both targets; it cannot express a
 per-call target restriction in this path. No wildcard allowlist is used.
 
@@ -104,7 +106,34 @@ The artifact `development-tls-<architecture>` contains only a JSON coverage
 manifest with source revision, lock digest, architecture, expected and actual
 outcomes, and explicit blockers. It always records `phase_a_complete=false`.
 CI uploads it on failure as well. Private PKI and raw logs are deleted during
-cleanup. Runtime findings are provisional until the actual PR run is inspected.
+cleanup. The first complete runtime evidence is
+[CI run 43367583286](https://github.com/datopsis/seaweedfs-ubi/actions/runs/43367583286),
+tested merge `abed1b695571784ad14aa31b8cd8d02d9c1a0d1f` (PR head `5eb7830`).
+Both native artifacts and their job logs were inspected: each contains **158
+PASS observations and 4 BLOCKER observations**, with cleanup complete. Subsequent
+PR checks also exercise the tightened exact plaintext-response oracle; consult
+the PR checks for the final revision's evidence.
+
+| Listener | amd64 | arm64 |
+| --- | --- | --- |
+| master HTTPS 9333 | 18 negatives pass | 18 negatives pass |
+| volume HTTPS 8080 | 18 negatives pass | 18 negatives pass |
+| filer HTTPS 8888 | 18 negatives pass | 18 negatives pass |
+| S3 HTTPS 8333 | 18 negatives + root POST pass | 18 negatives + root POST pass |
+| master gRPC 19333 | 20 negatives pass; native wrong SAN accepted **BLOCKER** | same |
+| volume gRPC 18080 | 20 negatives pass; native wrong SAN accepted **BLOCKER** | same |
+| filer gRPC 18888 | 20 negatives pass; native wrong SAN accepted **BLOCKER** | same |
+| S3 gRPC 18333 | 20 direct negatives pass | 20 direct negatives pass |
+| S3 → master gRPC | strict target policy rejects discovery **BLOCKER** | same |
+
+The 18 observations per HTTPS listener are nine negatives in each address
+family: absent client certificate, wrong-root client, expired client, wrong
+trust bundle, plaintext, correct-CN/wrong-SAN server, wrong-root server,
+expired server, and a swapped-role server certificate. gRPC adds a disallowed
+role's client certificate in each family. All use valid controls around each
+mutation. Four restricted-runtime/socket observations and a signed object
+write/read/delete observation complete the passing count. Native wrong-SAN
+acceptance is separate from curl's strict rejection of the same leaf.
 
 - Fresh curl processes exercise actual unary RPCs on all four gRPC listeners,
   requiring `grpc-status: 0`; HTTPS uses a real health route. These are separate
@@ -129,6 +158,9 @@ cleanup. Runtime findings are provisional until the actual PR run is inspected.
 - Correct-CN/wrong-SAN native gRPC acceptance blocks Phase A. Changing policy
   to accept that outcome as secure or patching the admitted binary is forbidden.
   A separately reviewed upstream fix/release is required.
+- S3 cannot express separate filer/master outbound identity policies at this
+  pin. Its master-discovery rejection with a filer-only policy is an exact
+  blocker canary; broadening the list is not a target-verification fix.
 - Native outgoing S3 gRPC callback identity mutations are not yet verified;
   direct strict-client probes of 18333 cannot substitute for that evidence.
 - The full native per-edge wrong-root/expiry/role-swap matrix, redirect and
