@@ -3,13 +3,13 @@
 CI runs deterministic repository validation and a native image matrix on AMD64
 and ARM64. A green matrix demonstrates the listed tests on GitHub-hosted Ubuntu
 runners for the reviewed development image. It is not release-image, RHEL,
-OpenShift, multi-host, vulnerability-gate, release-SBOM, provenance, or signing
-evidence.
+OpenShift, multi-host, release-SBOM, or signing evidence. The native image gate
+is scoped to these development images, not a release candidate.
 
-The 4.53 upgrade still cannot enable the image gate: both native Trivy reports
+The 4.53 upgrade has known blockers under the now-enabled image gate: both native Trivy reports
 contain fixed High CVE-2026-78661 in `golang.org/x/net` v0.61.0 (fix v0.62.0).
-The paired evaluator rejects both downloaded report pairs; its wiring commit
-is excluded. Grype reports no primary High/Critical records. See the complete
+The paired evaluator rejects both downloaded report pairs. Grype reports no
+primary High/Critical records, but its related-advisory severities still block. See the complete
 [before/after triage](GO-VULNERABILITY-TRIAGE.md). Historical inventory counts
 below describe their linked runs, not the current image.
 
@@ -212,17 +212,18 @@ records the 4.53 findings and the historical 4.46 comparison,
 and defines how the future gate must treat severity disagreements. It does not
 approve an exception or qualify a new image.
 
-`tests/lib/vulnerability_gate.py GRYPE_JSON TRIVY_JSON` now evaluates both
-unfiltered inventories together and exits nonzero for any fixed High or
-Critical record from either scanner, an invalid Grype database, or incomplete
-Trivy OS/language coverage. Its JSON decision retains scanner-specific IDs;
-it does not add aliases into a misleading cross-scanner count. On the AMD64
-development-image inventories from [PR #47's CI run](https://github.com/datopsis/seaweedfs-ubi/actions/runs/35421754243),
-it correctly refuses the three known fixed High advisory groups. This is a
-locally verified decision primitive, not a CI release gate: current native
-jobs still retain and publish scanner inventories without failing on these
-findings. Wire it only to an exact candidate digest after the reviewed binary
-update or separately approved exception process.
+The native jobs now run `tests/lib/vulnerability_gate.py` against both complete
+inventories, with `--arch`, `--repo-dir` extracted from the pinned UBI Micro base,
+and `--output` for the admission JSON. Fixable High/Critical findings block in
+either scanner, preserving Grype's highest related severity. Only RPM fixes
+proven unavailable from that architecture's enabled UBI repositories defer;
+query errors and non-RPM fixes block. See [the policy](../SECURITY.md#installable-fix-vulnerability-gate).
+The gate runs after runtime qualification and evidence collection, so a known
+binary vulnerability cannot silently remove runtime coverage. Its failure fails
+the existing `native image` aggregate. Release publication remains disabled.
+Historical inventory-only observations above describe earlier CI runs, not the
+current admission policy. The scheduled tracking job is skipped on PRs and
+comments only when the complete deferred set changes.
 
 The common listener parser is Python-based so results do not depend on the
 runner's default `awk` implementing GNU-only `strtonum`.

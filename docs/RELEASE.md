@@ -42,14 +42,14 @@ and [verification guide](https://docs.sigstore.dev/cosign/verifying/verify/).
    merely supplying mutually consistent local files is not registry evidence.
 2. Run fixed High/Critical Trivy **and** Grype gates, retain full inventories
    and release-digest-bound SPDX SBOMs, and resolve or formally disposition
-   findings under the existing policy. The current development-image scans
-   are report-only and have known fixed High findings; they cannot be reused
+   findings under the existing policy. The current development-image gates
+   have known fixed High findings; they cannot be reused
    as a passing release gate. The paired-inventory evaluator in
    `tests/lib/vulnerability_gate.py` is available but is not yet connected to
    candidate admission. The 4.53 upgrade's paired inventories still fail because
    Trivy reports fixed High CVE-2026-78661 in `golang.org/x/net` v0.61.0, fixed
-   in v0.62.0, on both architectures. The gate wiring commit was excluded;
-   no exception was approved. See [the current triage](GO-VULNERABILITY-TRIAGE.md).
+   in v0.62.0, on both architectures. Native CI now enforces the installable-UBI-fix
+   policy in SECURITY.md; no non-RPM exception was approved. See [the current triage](GO-VULNERABILITY-TRIAGE.md).
 3. Run both-architecture, real-host, security, and topology qualification
    against the candidate digest. Complete requirements/control mapping,
    independent cyber review, and the SCAP evidence boundary. A single-container

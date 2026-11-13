@@ -41,6 +41,14 @@ jobs:
       - name: Run repository checks
         run: pre-commit run --all-files --show-diff-on-failure
 
+      - name: Install system RPM comparison and repository-query tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-dnf python3-rpm
+
+      - name: Test real RPM version comparison and repository validation
+        run: /usr/bin/python3 tests/rpm_gate.py
+
       - name: Run deterministic Python validation tests
         run: python -m unittest discover --start-directory tests --pattern "test_*.py" --verbose
 
@@ -178,6 +186,18 @@ jobs:
 
       - name: Pull digest-pinned base images
         run: bash scripts/fetch-base-images.sh
+
+      - name: Read repository configuration from the pinned native UBI base
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          base="$(sed -n 's/^ARG UBI_MICRO=//p' Containerfile)"
+          test "$(podman image inspect --format '{{.Architecture}}' "${base}")" = "${ARCHITECTURE}"
+          container="$(podman create "${base}" /bin/true)"
+          trap 'podman rm "${container}"' EXIT
+          mkdir -p "${RUNNER_TEMP}/ubi-repos"
+          podman cp "${container}:/etc/yum.repos.d/." "${RUNNER_TEMP}/ubi-repos/"
+          printf '%s\n' "${base}" > "${RUNNER_TEMP}/ubi-base.txt"
 
       - name: Assemble with offline build network and no pulling
         run: bash scripts/build-image.sh ${{ matrix.architecture }}
@@ -412,6 +432,33 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Install system repository-query tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-dnf python3-rpm
+
+      - name: Gate fixes installable from UBI repositories
+        env:
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          python3 tests/lib/vulnerability_gate.py \
+            "${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.grype.json" \
+            "${RUNNER_TEMP}/seaweedfs-ci-${ARCHITECTURE}.trivy.json" \
+            --arch "${ARCHITECTURE}" --repo-dir "${RUNNER_TEMP}/ubi-repos" \
+            --output "${RUNNER_TEMP}/vulnerabilities.json"
+
+      - name: Retain admission decisions and base repository configuration
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: development-admission-${{ matrix.architecture }}
+          path: |
+            ${{ runner.temp }}/vulnerabilities.json
+            ${{ runner.temp }}/ubi-repos/
+            ${{ runner.temp }}/ubi-base.txt
+          if-no-files-found: error
+          retention-days: 14
+
   native-evidence:
     name: reconcile native development evidence
     needs: native-image
@@ -521,3 +568,31 @@ jobs:
         with:
           sarif_file: ${{ runner.temp }}/trivy-sarif/seaweedfs-ci-${{ matrix.architecture }}.trivy.sarif
           category: trivy-development-image-${{ matrix.architecture }}
+
+  tracking:
+    name: Track deferred UBI fixes
+    needs: native-image
+    if: ${{ always() && github.event_name == 'schedule' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    concurrency:
+      group: ubi-fix-tracking
+      cancel-in-progress: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download both native admission decisions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: development-admission-*
+          path: admission
+      - name: Update the single deferred-fix tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/track-vulnerabilities.py admission
