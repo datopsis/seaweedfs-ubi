@@ -29,7 +29,9 @@ only to published container images; repository-only changes remain under
   proven unavailable, retaining vendor versions in summaries and evidence;
   query failures and non-RPM fixes remain blocking. Add native RPM comparison,
   error-path and tracker tests, and scheduled change-only deferred-fix tracking.
-  The build has no RPM lock; inherited packages remain pinned by base digest.
+  The build has no RPM lock; refresh the UBI Minimal and Micro base digests
+  to UBI 9.9 so inherited RPMs include the installable libgcc fixes on both
+  architectures. The upstream SeaweedFS binary stays unchanged.
 
 - Label every assembled image with the exact selected artifact-lock file's
   SHA-256 and require this repository's full source commit for its revision.

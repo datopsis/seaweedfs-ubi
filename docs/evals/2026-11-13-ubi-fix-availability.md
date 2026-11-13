@@ -64,10 +64,32 @@ unfixed inventories remain in the CI artifacts.
 Native PR CI is the authority for the final architecture builds and scans.
 The PR description records the completed-run URLs and before/after counts;
 scanner databases can change between runs. No RPM lock exists to refresh:
-assembly inherits pinned base-image RPMs and installs none. This change does
-not update the binary or base digests.
+assembly inherits pinned base-image RPMs and installs none. This change keeps
+the upstream binary unchanged and refreshes the base digests to apply available
+RPM fixes.
 
 The issue tracker is tested for create/change/no-change/resolve/reopen and
 missing-evidence refusal. Its live write path is intentionally not exercised
 from a PR. It runs only on scheduled main-branch CI after merge.
 Release admission and publication remain disabled.
+
+## Fresh pre-refresh scans and base refresh
+
+[PR CI run 43423934497](https://github.com/datopsis/seaweedfs-ubi/actions/runs/43423934497)
+scanned the original base pins on both native architectures with Grype's
+2026-11-13 database. The actual reports now contain two fixable libgcc records
+(previously unfixed), in addition to the same five Go-module blockers. The
+vendor threshold is `0:11.5.0-16.el9_9`; live UBI metadata offers
+`0:11.5.0-17.el9_9` for both architectures. Neither RPM finding may defer.
+Before the base refresh, each Grype report therefore has **7 blocking / 0
+deferred / 5 unfixed** HIGH/CRITICAL records. Each Trivy report still has
+**1 / 0 / 0**. This separates database changes from image changes.
+
+Because there is no RPM lock or install step, applying those fixes requires
+refreshing `Containerfile`'s UBI base index digests. Both UBI Micro and Minimal
+were resolved from Red Hat's current UBI 9 tags and repinned to UBI 9.9.
+Both architecture RPM databases in the new Micro image were inspected before
+changing the pins; each contains libgcc `0:11.5.0-17.el9_9`. The repository
+configuration matches the previous base byte for byte. Native PR CI rebuilds
+and reruns the existing runtime suites with these pins; final scanner counts
+and run links are recorded in the PR description.

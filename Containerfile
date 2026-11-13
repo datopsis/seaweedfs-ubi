@@ -11,8 +11,8 @@
 # Build inputs are pinned by digest. Update them through a reviewed change, not
 # by moving a tag.
 
-ARG UBI_MINIMAL=registry.access.redhat.com/ubi9/ubi-minimal@sha256:4b79c93106c14ad1c234907f83441ff0e4f8d24e78426a36e159098e9f7e6fa5
-ARG UBI_MICRO=registry.access.redhat.com/ubi9/ubi-micro@sha256:6d9eff186ce3ccf399c1835265e7fd3f83bd112cc3422da2d39fd44e234aab59
+ARG UBI_MINIMAL=registry.access.redhat.com/ubi9/ubi-minimal@sha256:baafce2d34783a28b4a472779f304e97e00f9d35c99553bc53b068b14344d9a9
+ARG UBI_MICRO=registry.access.redhat.com/ubi9/ubi-micro@sha256:dbd325b96bcd432dd42816d31412bdf1dc0fb973b79ed310344bc23c76c068db
 
 # UBI Micro ships no CA bundle. A deployment that terminates or originates TLS
 # against a publicly trusted certificate needs one, and an empty trust store
