@@ -51,6 +51,7 @@ class Qualification:
         self.prefix = 'tls-' + secrets.token_hex(5)
         self.network = self.prefix
         self.rows = []
+        self.diagnostics = {}
         self.cleanup_complete = False
         self.serial = 0
         self.signing_key = secrets.token_hex(32)
@@ -87,6 +88,7 @@ class Qualification:
             'commit': os.environ.get('SOURCE_COMMIT', command(['git', 'rev-parse', 'HEAD']).stdout.decode().strip()),
             'artifact_lock_sha256': hashlib.sha256((REPO / 'artifacts/seaweedfs.lock.json').read_bytes()).hexdigest(),
             'phase_a_complete': False, 'cleanup_complete': self.cleanup_complete, 'rows': self.rows,
+            'diagnostics': self.diagnostics,
             'limitations': ['one host, separated roles; no rotation or revocation qualification',
                             'OpenID/user authentication is Phase B',
                             'native outgoing S3 gRPC callback identity mutations not yet verified',
@@ -192,6 +194,23 @@ class Qualification:
             if len(fields) > 3 and fields[3] == '0A':
                 ports.add(int(fields[1].split(':')[1], 16))
         return ports
+
+    def failure_diagnostics(self):
+        # Only synthetic fixture logs, scrubbed before entering the JSON report.
+        # Never retain PKI or raw logs as CI artifacts.
+        forbidden = [*self.credentials.values(), self.signing_key]
+        for path in self.pki.glob('*.key'):
+            forbidden.extend(path.read_text().splitlines())
+        for role in ROLES:
+            result = self.run('logs', self.names[role], check=False)
+            if result.returncode:
+                continue
+            text = (result.stdout + result.stderr).decode(errors='replace')
+            for secret in forbidden:
+                if secret:
+                    text = text.replace(secret, '[REDACTED]')
+            text = re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[TOKEN]', text)
+            self.diagnostics[role] = text.splitlines()[-20:]
 
     def check_logs(self, role):
         result = self.run('logs', self.names[role], check=False)
@@ -436,6 +455,7 @@ def main():
             suite.native_canaries()
             suite.coverage()
         except Exception as error:
+            suite.failure_diagnostics()
             suite.rows.append({'status': 'FAIL', 'detail': str(error)})
             print(f'FAIL: {error}', flush=True)
             raise
