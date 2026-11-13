@@ -6,6 +6,7 @@ blocks Phase A. No third-party Python packages or image changes are required.
 """
 
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -23,7 +24,7 @@ INBOUND = {
 OUTBOUND = {'master': 'master,volume', 'volume': 'master', 'filer': 'filer', 's3': 'filer'}
 
 
-def security(role):
+def security(role, signing_key=None):
     own = {
         'cert': f'{ROOT}/grpc.crt', 'key': f'{ROOT}/grpc.key',
         'client_cert': f'{ROOT}/client.crt', 'client_key': f'{ROOT}/client.key',
@@ -47,6 +48,8 @@ def security(role):
                                   'ca': f'{ROOT}/ca.crt'}
         if role == 'filer':
             result['https'][role]['disable_tls_verify_client_cert'] = False
+    if signing_key is not None:
+        result['jwt'] = {'filer_signing': {'key': signing_key, 'expires_after_seconds': 60}}
     return result
 
 
@@ -79,7 +82,7 @@ def render(config):
 
 
 def openssl(*args):
-    result = subprocess.run(['openssl', *map(str, args)], capture_output=True, check=False)
+    result = subprocess.run(['openssl', *map(str, args)], capture_output=True, check=False, timeout=10)
     if result.returncode:
         raise ValueError('invalid TLS material: ' + result.stderr.decode().splitlines()[-1])
     return result.stdout
@@ -94,7 +97,15 @@ def validate(directory, role, argv, environment):
         raise ValueError('unexpected command or environment override')
     directory = Path(directory)
     parsed = tomllib.loads((directory / 'security.toml').read_text())
-    if parsed != security(role):
+    signing_key = None
+    if 'jwt' in parsed:
+        jwt = parsed['jwt']
+        if not isinstance(jwt, dict) or not isinstance(jwt.get('filer_signing'), dict):
+            raise ValueError('invalid filer admin signing configuration')
+        signing_key = jwt['filer_signing'].get('key', '')
+        if role not in ('filer', 's3') or not isinstance(signing_key, str) or not re.fullmatch(r'[0-9a-f]{64}', signing_key):
+            raise ValueError('invalid filer admin signing configuration')
+    if parsed != security(role, signing_key):
         raise ValueError('TLS profile differs from the bounded role policy')
     expected = {'security.toml', 'ca.crt', 'grpc.crt', 'grpc.key', 'http.crt',
                 'http.key', 'client.crt', 'client.key'}
@@ -109,10 +120,15 @@ def validate(directory, role, argv, environment):
     for stem in ('grpc', 'http', 'client'):
         cert, key = directory / f'{stem}.crt', directory / f'{stem}.key'
         purpose = 'sslclient' if stem == 'client' else 'sslserver'
+        if stem != 'client':
+            san = openssl('x509', '-in', cert, '-noout', '-ext', 'subjectAltName').decode()
+            if not san.strip() or f'DNS:{role}' not in {
+                    item.strip() for item in san.splitlines()[-1].split(',')}:
+                raise ValueError('explicit target DNS SAN is required; CN fallback is forbidden')
         options = [] if stem == 'client' else ['-verify_hostname', role]
         openssl('verify', '-CAfile', ca, '-purpose', purpose, *options, cert)
         cert_pub = openssl('x509', '-in', cert, '-pubkey', '-noout')
-        key_pub = openssl('pkey', '-in', key, '-pubout')
+        key_pub = openssl('pkey', '-in', key, '-passin', 'pass:', '-pubout')
         if cert_pub != key_pub:
             raise ValueError('certificate/private-key mismatch')
         subject = openssl('x509', '-in', cert, '-subject', '-noout', '-nameopt', 'RFC2253')

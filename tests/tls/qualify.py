@@ -5,7 +5,9 @@ S3 credentials and raw container logs never enter the report. Any unexpected
 outcome fails the suite. Known native-policy gaps are BLOCKER rows, not passes.
 """
 import argparse
+import base64
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -14,6 +16,7 @@ import re
 import secrets
 import shutil
 import socket
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -48,11 +51,14 @@ class Qualification:
         self.prefix = 'tls-' + secrets.token_hex(5)
         self.network = self.prefix
         self.rows = []
+        self.cleanup_complete = False
         self.serial = 0
+        self.signing_key = secrets.token_hex(32)
         self.pki = work / 'pki'
         self.pki.mkdir()
         self.names = {role: self.prefix + '-' + role for role in ROLES}
         self.ports = {}
+        self.ports6 = {}
         self.credentials = {'accessKey': secrets.token_hex(16), 'secretKey': secrets.token_hex(32)}
 
     def run(self, *args, check=True, **kwargs):
@@ -80,7 +86,7 @@ class Qualification:
             'schema': 1, 'version': '4.53', 'architecture': platform.machine(),
             'commit': os.environ.get('SOURCE_COMMIT', command(['git', 'rev-parse', 'HEAD']).stdout.decode().strip()),
             'artifact_lock_sha256': hashlib.sha256((REPO / 'artifacts/seaweedfs.lock.json').read_bytes()).hexdigest(),
-            'phase_a_complete': False, 'rows': self.rows,
+            'phase_a_complete': False, 'cleanup_complete': self.cleanup_complete, 'rows': self.rows,
             'limitations': ['one host, separated roles; no rotation or revocation qualification',
                             'OpenID/user authentication is Phase B',
                             'native outgoing S3 gRPC callback identity mutations not yet verified',
@@ -110,7 +116,7 @@ class Qualification:
             for ext in ('crt', 'key'):
                 shutil.copyfile(self.pki / f'{role}-client.{ext}', cfg / f'client.{ext}')
             shutil.copyfile(self.pki / 'ca.crt', cfg / 'ca.crt')
-            (cfg / 'security.toml').write_text(render(security(role)))
+            (cfg / 'security.toml').write_text(render(security(role, self.signing_key if role in ('filer', 's3') else None)))
             if role == 's3':
                 (cfg / 's3.json').write_text(json.dumps({'identities': [{
                     'name': 'tls-probe', 'credentials': [self.credentials],
@@ -121,7 +127,7 @@ class Qualification:
                 path.chmod(0o640)
             # Rootless Podman maps host owner to container root; GID 0 is the
             # image's declared supplemental access boundary, never world access.
-        self.run('network', 'create', self.network)
+        self.run('network', 'create', '--ipv6', self.network)
         for role in ROLES:
             if role != 's3':
                 self.run('volume', 'create', self.names[role] + '-data')
@@ -135,6 +141,7 @@ class Qualification:
             (cfg / f'{protocol}.{ext}').chmod(0o640)
 
     def start(self, role):
+        self.check_logs(role)
         self.run('rm', '-f', self.names[role], check=False)
         args = ['run', '-d', '--name', self.names[role], '--network', self.network,
                 '--network-alias', role, '--read-only', '--cap-drop=ALL',
@@ -143,11 +150,15 @@ class Qualification:
         if role != 's3':
             args += ['-v', f'{self.names[role]}-data:/data']
         for port in (PORTS[role], PORTS[role] + 10000):
-            args += ['-p', f'127.0.0.1::{port}']
+            args += ['-p', f'127.0.0.1::{port}', '-p', f'[::1]::{port}']
         self.run(*args, self.image, *arguments(role))
         mapping = json.loads(self.run('inspect', self.names[role]).stdout)[0]['NetworkSettings']['Ports']
         for port in (PORTS[role], PORTS[role] + 10000):
-            self.ports[role, port == PORTS[role] + 10000] = int(mapping[f'{port}/tcp'][0]['HostPort'])
+            entries = mapping[f'{port}/tcp']
+            self.ports[role, port == PORTS[role] + 10000] = int(next(
+                item['HostPort'] for item in entries if item['HostIp'] == '127.0.0.1'))
+            self.ports6[role, port == PORTS[role] + 10000] = int(next(
+                item['HostPort'] for item in entries if item['HostIp'] == '::1'))
         deadline = time.monotonic() + 45
         while time.monotonic() < deadline:
             if self.socket_ports(role) == {PORTS[role], PORTS[role] + 10000}:
@@ -161,6 +172,7 @@ class Qualification:
 
     def start_all(self):
         for role in reversed(ROLES):
+            self.check_logs(role)
             self.run('rm', '-f', self.names[role], check=False)
         for role in ROLES:
             self.start(role)
@@ -181,6 +193,16 @@ class Qualification:
                 ports.add(int(fields[1].split(':')[1], 16))
         return ports
 
+    def check_logs(self, role):
+        result = self.run('logs', self.names[role], check=False)
+        if result.returncode:
+            return
+        data = result.stdout + result.stderr
+        forbidden = [self.credentials['secretKey'].encode(), self.signing_key.encode()]
+        for path in self.pki.glob('*.key'):
+            forbidden.extend(path.read_bytes().splitlines()[1:-1])
+        assert all(secret not in data for secret in forbidden if secret), 'secret found in role logs'
+
     def logs(self):
         data = b''
         for role in ROLES:
@@ -190,26 +212,38 @@ class Qualification:
             data += combined
         return data.decode(errors='replace')
 
-    def curl(self, role, grpc, client='probe-client', trust='ca', plaintext=False, path=None):
-        port = self.ports[role, grpc]
+    def curl(self, role, grpc, client='probe-client', trust='ca', plaintext=False, path=None, ipv6=False):
+        port = (self.ports6 if ipv6 else self.ports)[role, grpc]
+        address = '[::1]' if ipv6 else '127.0.0.1'
         scheme = 'http' if plaintext else 'https'
         url = f'{scheme}://{role}:{port}' + (path or (RPC[role] if grpc else '/healthz'))
         args = ['curl', '--silent', '--show-error', '--noproxy', '*', '--max-time', '8',
-                '--resolve', f'{role}:{port}:127.0.0.1', '--include']
+                '--resolve', f'{role}:{port}:{address}', '--include']
         if not plaintext:
             args += ['--cacert', self.pki / f'{trust}.crt']
             if client:
                 args += ['--cert', self.pki / f'{client}.crt', '--key', self.pki / f'{client}.key']
         if not grpc:
             args += ['--http1.1']
+        if grpc and role == 's3':
+            def b64(data):
+                return base64.urlsafe_b64encode(data).rstrip(b'=')
+            header = b64(b'{"alg":"HS256","typ":"JWT"}')
+            claims = b64(json.dumps({'exp': int(time.time()) + 60}).encode())
+            message = header + b'.' + claims
+            signature = b64(hmac.new(self.signing_key.encode(), message, hashlib.sha256).digest())
+            token_file = self.work / 'admin-header'
+            token_file.write_bytes(b'authorization: Bearer ' + message + b'.' + signature + b'\n')
+            token_file.chmod(0o600)
+            args += ['-H', '@' + str(token_file)]
         if grpc:
             args += ['--http2-prior-knowledge' if plaintext else '--http2',
                      '-H', 'content-type: application/grpc', '-H', 'te: trailers',
                      '--data-binary', '@-']
         return command([*args, url], input=b'\0\0\0\0\0' if grpc else None)
 
-    def positive(self, role, grpc):
-        result = self.curl(role, grpc)
+    def positive(self, role, grpc, ipv6=False):
+        result = self.curl(role, grpc, ipv6=ipv6)
         if result.returncode or (grpc and b'grpc-status: 0' not in result.stdout.lower()) or (
                 not grpc and b'200 OK' not in result.stdout):
             (self.work / 'probe-error.txt').write_bytes(result.stdout + result.stderr)
@@ -227,16 +261,22 @@ class Qualification:
             client = S3Client(f'https://s3:{self.ports["s3", False]}',
                               self.credentials['accessKey'], self.credentials['secretKey'],
                               ca_bundle=str(self.pki / 'ca.crt'))
+            assert client.context.check_hostname and client.context.verify_mode == ssl.CERT_REQUIRED
             client.context.load_cert_chain(self.pki / 'probe-client.crt', self.pki / 'probe-client.key')
             bucket = f'tls-{self.serial}'
             payload = b'verified transport\n' * 131072
-            assert client.create_bucket(bucket).status == 200
-            assert client.put_object(bucket, 'object', payload).status == 200
+            created = client.create_bucket(bucket)
+            assert created.status == 200, f'create bucket: HTTP {created.status}'
+            put = client.put_object(bucket, 'object', payload)
+            assert put.status == 200, f'write object: HTTP {put.status}'
             got = client.get_object(bucket, 'object')
-            assert got.status == 200 and got.body == payload
-            assert client.delete_object(bucket, 'object').status == 204
-            assert client.get_object(bucket, 'object').status == 404
-            assert client.delete_bucket(bucket).status == 204
+            assert got.status == 200 and got.body == payload, f'byte-exact read: HTTP {got.status}'
+            deleted = client.delete_object(bucket, 'object')
+            assert deleted.status == 204, f'delete object: HTTP {deleted.status}'
+            absent = client.get_object(bucket, 'object')
+            assert absent.status == 404, f'post-delete read: HTTP {absent.status}'
+            removed = client.delete_bucket(bucket)
+            assert removed.status == 204, f'delete bucket: HTTP {removed.status}'
         finally:
             socket.getaddrinfo = original
 
@@ -253,6 +293,8 @@ class Qualification:
                 if other != role:
                     assert self.run('exec', self.names[role], 'cat', f'{ROOT}/{other}/client.key', check=False).returncode
             inspect = json.loads(self.run('inspect', self.names[role]).stdout)[0]
+            assert not any(item.startswith(('WEED_', 'SEAWEEDFS_UBI_ALLOW_PLAINTEXT_BESIDE_TLS='))
+                           for item in inspect['Config'].get('Env', []))
             mounts = [m for m in inspect['Mounts'] if m['Destination'] == ROOT]
             assert len(mounts) == 1 and not mounts[0]['RW']
             assert Path(mounts[0]['Source']) == self.work / role
@@ -262,49 +304,69 @@ class Qualification:
     def negatives(self):
         for role in ROLES:
             for grpc in (False, True):
-                listener = f'{role}/{"grpc" if grpc else "https"}'
-                self.positive(role, grpc)
-                for case, client, trust, plain in (
-                    ('no-client-cert', None, 'ca', False),
-                    ('wrong-client-ca', 'untrusted-client', 'ca', False),
-                    ('expired-client', 'expired-client', 'ca', False),
-                    ('wrong-trust-bundle', 'probe-client', 'other-ca', False),
-                    ('plaintext', None, 'ca', True),
-                    *([('disallowed-role', SWAP[role] + '-client', 'ca', False)] if grpc else []),
-                ):
-                    self.positive(role, grpc)
-                    result = self.curl(role, grpc, client=client, trust=trust, plaintext=plain)
-                    evidence = result.stderr.decode(errors='replace')
-                    if plain:
-                        # Go HTTPS emits exactly this protocol-error body; gRPC
-                        # closes the connection. Neither may return application data.
-                        accepted = b'grpc-status: 0' in result.stdout.lower() or b'200 OK' in result.stdout
-                        refused = not accepted and (result.returncode in (52, 56) or
-                                  b'Client sent an HTTP request to an HTTPS server.' in result.stdout)
-                    else:
-                        refused = result.returncode in (35, 56, 60) and bool(TLS_ERROR.search(evidence))
-                    self.row(listener, case, 'REFUSED', 'REFUSED' if refused else 'UNEXPECTED',
-                             f'curl={result.returncode}; ' + evidence.strip()[:250])
-                    self.positive(role, grpc)
-                self.roundtrip()
+                for ipv6 in (False, True):
+                    listener = f'{role}/{"grpc" if grpc else "https"}'
+                    suffix = '-ipv6' if ipv6 else ''
+                    self.positive(role, grpc, ipv6)
+                    for case, client, trust, plain in (
+                        ('no-client-cert', None, 'ca', False),
+                        ('wrong-client-ca', 'untrusted-client', 'ca', False),
+                        ('expired-client', 'expired-client', 'ca', False),
+                        ('wrong-trust-bundle', 'probe-client', 'other-ca', False),
+                        ('plaintext', None, 'ca', True),
+                        *([('disallowed-role', SWAP[role] + '-client', 'ca', False)] if grpc else []),
+                    ):
+                        self.positive(role, grpc, ipv6)
+                        result = self.curl(role, grpc, client=client, trust=trust, plaintext=plain, ipv6=ipv6)
+                        evidence = result.stderr.decode(errors='replace')
+                        if plain:
+                            # Go HTTPS emits exactly this protocol-error body; gRPC
+                            # closes the connection. Neither may return application data.
+                            accepted = b'grpc-status: 0' in result.stdout.lower() or b'200 OK' in result.stdout
+                            refused = not accepted and (result.returncode in (52, 56) or
+                                      b'Client sent an HTTP request to an HTTPS server.' in result.stdout)
+                        else:
+                            refused = result.returncode in (35, 56, 60) and bool(TLS_ERROR.search(evidence))
+                        self.row(listener, case + suffix, 'REFUSED', 'REFUSED' if refused else 'UNEXPECTED',
+                                 f'curl={result.returncode}; ' + evidence.strip()[:250])
+                        self.positive(role, grpc, ipv6)
+                    self.roundtrip()
+
+
+    def plaintext_root_post(self):
+        self.roundtrip()
+        port = self.ports['s3', False]
+        result = command(['curl', '--silent', '--show-error', '--noproxy', '*',
+                          '--max-time', '8', '--include', '--http1.1',
+                          '--data', 'Action=AssumeRole&Version=2011-06-15',
+                          f'http://127.0.0.1:{port}/'])
+        refused = b'Client sent an HTTP request to an HTTPS server.' in result.stdout
+        self.row('s3/https', 'plaintext-root-post', 'REFUSED',
+                 'REFUSED' if refused else 'UNEXPECTED', 'no STS token or application response')
+        self.roundtrip()
 
     def server_negatives(self):
         for role in ROLES:
             for grpc in (False, True):
                 protocol = 'grpc' if grpc else 'http'
-                for variant in ('wrong-san', 'wrong-ca', 'expired'):
+                for variant in ('wrong-san', 'wrong-ca', 'expired', 'role-swap'):
                     self.positive(role, grpc)
-                    self.copy_leaf(role, protocol, f'{role}-{variant}')
+                    replacement = f'{role}-{variant}'
+                    if variant == 'role-swap':
+                        replacement = ('filer' if role == 'master' else 'master') + '-valid'
+                    self.copy_leaf(role, protocol, replacement)
                     self.start(role)
-                    result = self.curl(role, grpc)
-                    error = result.stderr.decode(errors='replace')
-                    # curl's code 60 means server certificate verification, not
-                    # application authorization, timeouts or service availability.
-                    self.row(f'{role}/{protocol}', 'server-' + variant, 'REFUSED',
-                             'REFUSED' if result.returncode == 60 else 'UNEXPECTED', error.strip()[:250])
+                    for ipv6 in (False, True):
+                        result = self.curl(role, grpc, ipv6=ipv6)
+                        error = result.stderr.decode(errors='replace')
+                        # curl's code 60 means server certificate verification, not
+                        # application authorization, timeouts or service availability.
+                        self.row(f'{role}/{"grpc" if grpc else "https"}', 'server-' + variant + ('-ipv6' if ipv6 else ''), 'REFUSED',
+                                 'REFUSED' if result.returncode == 60 else 'UNEXPECTED', error.strip()[:250])
                     self.copy_leaf(role, protocol, role + '-valid')
                     self.start(role)
                     self.positive(role, grpc)
+                    self.positive(role, grpc, True)
             self.roundtrip()
 
     def native_canaries(self):
@@ -323,13 +385,35 @@ class Qualification:
             self.start_all()
             self.roundtrip()
 
+    def coverage(self):
+        required = {'no-client-cert', 'wrong-client-ca', 'expired-client',
+                    'wrong-trust-bundle', 'plaintext', 'server-wrong-san',
+                    'server-wrong-ca', 'server-expired', 'server-role-swap'}
+        for role in ROLES:
+            for protocol in ('https', 'grpc'):
+                cases = {r['case'] for r in self.rows if r.get('listener') == f'{role}/{protocol}'}
+                expected = required | ({'disallowed-role'} if protocol == 'grpc' else set())
+                expected |= {case + '-ipv6' for case in expected}
+                assert expected <= cases, f'missing coverage for {role}/{protocol}: {expected - cases}'
+        assert not any(row['status'] == 'FAIL' for row in self.rows)
+
     def cleanup(self):
         self.logs()
+        errors = []
         for role in reversed(ROLES):
-            self.run('rm', '-f', self.names[role], check=False)
-            if role != 's3':
-                self.run('volume', 'rm', '-f', self.names[role] + '-data', check=False)
-        self.run('network', 'rm', self.network, check=False)
+            try:
+                self.check_logs(role)
+            except AssertionError as error:
+                errors.append(str(error))
+            if self.run('container', 'exists', self.names[role], check=False).returncode == 0:
+                self.run('rm', '-f', self.names[role])
+            if role != 's3' and self.run('volume', 'exists', self.names[role] + '-data', check=False).returncode == 0:
+                self.run('volume', 'rm', '-f', self.names[role] + '-data')
+        if self.run('network', 'exists', self.network, check=False).returncode == 0:
+            self.run('network', 'rm', self.network)
+        self.cleanup_complete = True
+        if errors:
+            raise AssertionError('; '.join(errors))
 
 
 def main():
@@ -347,15 +431,22 @@ def main():
             suite.roundtrip()
             suite.row('cluster', 'write-read-delete', 'SUCCEEDED', 'SUCCEEDED')
             suite.negatives()
+            suite.plaintext_root_post()
             suite.server_negatives()
             suite.native_canaries()
+            suite.coverage()
         except Exception as error:
             suite.rows.append({'status': 'FAIL', 'detail': str(error)})
             print(f'FAIL: {error}', flush=True)
             raise
         finally:
-            suite.save()
-            suite.cleanup()
+            try:
+                suite.cleanup()
+            except Exception as error:
+                suite.rows.append({'status': 'FAIL', 'detail': 'cleanup: ' + str(error)})
+                raise
+            finally:
+                suite.save()
 
 
 if __name__ == '__main__':

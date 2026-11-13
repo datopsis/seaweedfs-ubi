@@ -21,7 +21,11 @@ clientAuth leaves per role on every run. HTTPS and gRPC use independently
 mutable server files so a test can isolate one protocol. The four role
 containers receive only their own server/client keys and the public CA. The
 CA key, unrelated root, and adversarial certificates stay outside the cluster.
-No key or raw container log is uploaded or committed.
+No key or raw container log is uploaded or committed. Filer and S3 also share a
+throwaway filer-admin JWT signing key so a valid application token can accompany
+the S3 administrative RPC probe; this avoids confusing application authorization
+with TLS enforcement. Tokens travel through a private header file, not command
+arguments. Role logs are checked for private-key and signing-secret disclosure.
 
 | Role | HTTPS | gRPC | Inbound gRPC client CNs (plus the test provisioner) |
 | --- | --- | --- | --- |
@@ -48,7 +52,9 @@ use this stricter profile; that integration contract remains unresolved.
 
 Containers retain non-root UID 1000, read-only root, no capabilities, and
 no-new-privileges. Only declared data volumes are writable. Exact TCP listener
-inventories are read from both `/proc/net/tcp` and `/proc/net/tcp6`; extra
+inventories are read from both `/proc/net/tcp` and `/proc/net/tcp6`. External
+probes use both IPv4 and IPv6 published loopback addresses with identical
+assertions; extra
 listeners, including metrics, debugging, Iceberg or Lance, fail the test.
 
 ## Fail-closed preflight
@@ -82,8 +88,11 @@ or `$HOME/.seaweedfs` or inject `WEED_` environment overrides.
 
 ## Test oracles and evidence
 
-Both native CI architectures run the same Python harness against the image
-assembled by the existing verified acquisition/offline build. All existing
+Both native CI architectures run the same Python harness in the reusable
+`tls.yml` workflow against images assembled by the existing verified
+acquisition/offline build. The `native image` aggregate requires this TLS matrix
+as well as the existing native functional/scanner matrix and its evidence
+reconciliation. All existing
 functional tests and scanner inventory steps remain intact.
 
 The artifact `development-tls-<architecture>` contains only a JSON coverage
@@ -96,13 +105,13 @@ cleanup. Runtime findings are provisional until the actual PR run is inspected.
   requiring `grpc-status: 0`; HTTPS uses a real health route. These are separate
   from the signed S3 write, byte-exact read, delete, and post-delete 404 checks.
 - Every listener refuses no client certificate, wrong-root and expired clients,
-  a wrong client trust bundle, and plaintext. A certificate failure must be a
+  a wrong client trust bundle, and plaintext, including a separate plaintext S3 root POST. A certificate failure must be a
   TLS-specific error, never an application 403 or a timeout. Each negative has
   valid operations immediately before and after it.
 - Every gRPC listener additionally refuses an actual disallowed role's client
   certificate from the trusted CA. HTTPS has no native CN role allowlist;
   client-certificate chain verification is its peer boundary.
-- Every listener is restarted with correct-CN/wrong-SAN, wrong-root, and expired
+- Every listener is restarted with correct-CN/wrong-SAN, wrong-root, expired, and swapped-role
   server leaves. The strict external client must report certificate verification
   failure. These probes do not qualify SeaweedFS's own outbound verifier.
 - Native gRPC canaries replace only the master's, volume's or filer's gRPC

@@ -1,7 +1,6 @@
 """Profile preflight must reject unsafe rendered configuration before launch."""
-import copy
-import json
 from pathlib import Path
+import re
 import shutil
 import sys
 import tempfile
@@ -10,7 +9,7 @@ import unittest
 REPO = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(REPO / 'scripts/lib'), str(REPO / 'tests/tls')]
 from tls_profile import arguments, render, security, validate
-from pki import ca, leaf
+from pki import ca, leaf, ssl
 
 
 class ProfileTests(unittest.TestCase):
@@ -108,13 +107,42 @@ class ProfileTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.check()
 
+    def test_cn_only_server_certificate_refused(self):
+        # OpenSSL verify_hostname alone falls back to CN if SAN is absent.
+        ssl('x509', '-req', '-days', '1', '-in', self.root / 'server.csr',
+            '-CA', self.root / 'ca.crt', '-CAkey', self.root / 'ca.key',
+            '-CAcreateserial', '-out', self.cfg / 'grpc.crt')
+        with self.assertRaisesRegex(ValueError, 'explicit target DNS SAN'):
+            self.check()
+
+    def test_wrong_san_expired_and_wrong_role_refused(self):
+        for name, cn, san, expired in (
+            ('wrong-san', 'filer', 'wrong.invalid', False),
+            ('expired', 'filer', 'filer', True),
+            ('role-swap', 'master', 'master', False),
+        ):
+            with self.subTest(name=name):
+                leaf(self.root, name, cn, san, 'serverAuth', expired=expired)
+                for ext in ('crt', 'key'):
+                    shutil.copyfile(self.root / f'{name}.{ext}', self.cfg / f'grpc.{ext}')
+                with self.assertRaises(ValueError):
+                    self.check()
+
     def test_no_verification_bypass_in_phase_a_execution(self):
         # Narrow scope: the Phase A executable harness. Historical tests are
         # independent evidence and never used to satisfy a Phase A assertion.
         code = (REPO / 'tests/tls/qualify.py').read_text()
-        for forbidden in ('--insecure', 'check_hostname = False', 'CERT_NONE',
-                          '_create_unverified_context', 'verify=False'):
-            self.assertNotIn(forbidden, code)
+        patterns = (
+            r'--insecure|[\"\']-k[\"\']',
+            r'check_hostname\s*=\s*false|cert_none|_create_unverified_context',
+            r'verify\s*=\s*false|insecure_?skip_?verify\s*[:=]\s*true',
+            r'danger_accept_invalid_(?:certs|hostnames)',
+            r'aws_allow_(?:invalid_certificates|http)\s*=\s*true',
+            r'(?:proxy|grpc)_ssl_verify\s+off',
+            r'sslmode\s*=\s*(?:require|allow|prefer|disable|verify-ca)',
+        )
+        for pattern in patterns:
+            self.assertIsNone(re.search(pattern, code, re.I), pattern)
         self.assertNotIn('\r', code)
 
 

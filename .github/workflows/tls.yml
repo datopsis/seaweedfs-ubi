@@ -1,0 +1,73 @@
+name: Phase A TLS
+
+on:
+  workflow_call:
+
+jobs:
+  tls:
+    name: TLS (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-24.04
+            machine: x86_64
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+            machine: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      CONTAINER_RUNTIME: podman
+      IMAGE: localhost/seaweedfs-ubi:tls-${{ matrix.architecture }}
+      SOURCE_COMMIT: ${{ github.sha }}
+      ARCHITECTURE: ${{ matrix.architecture }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Confirm native architecture and required tools
+        env:
+          EXPECTED_MACHINE: ${{ matrix.machine }}
+        run: |
+          test "$(uname -m)" = "${EXPECTED_MACHINE}"
+          for tool in podman openssl curl python3; do
+            command -v "${tool}"
+          done
+          curl --version
+          podman version
+
+      - name: Acquire and verify the locked native binary
+        run: bash scripts/fetch-artifacts.sh "${ARCHITECTURE}"
+
+      - name: Pull digest-pinned base images
+        run: bash scripts/fetch-base-images.sh
+
+      - name: Assemble with offline build network and no pulling
+        run: bash scripts/build-image.sh "${ARCHITECTURE}"
+
+      - name: Verify image architecture and provenance
+        run: |
+          test "$(podman image inspect --format '{{.Architecture}}' "${IMAGE}")" = "${ARCHITECTURE}"
+          inspection="${RUNNER_TEMP}/tls-${ARCHITECTURE}.inspect.json"
+          podman image inspect "${IMAGE}" > "${inspection}"
+          python3 tests/lib/provenancechecks.py "${inspection}" "${SOURCE_COMMIT}" artifacts/seaweedfs.lock.json
+
+      - name: Qualify TLS listeners and exact native-policy canaries
+        run: >-
+          python3 tests/tls/qualify.py
+          --report "${RUNNER_TEMP}/tls-${ARCHITECTURE}.json"
+
+      - name: Retain sanitized coverage and image provenance including blockers
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: development-tls-${{ matrix.architecture }}
+          path: |
+            ${{ runner.temp }}/tls-${{ matrix.architecture }}.json
+            ${{ runner.temp }}/tls-${{ matrix.architecture }}.inspect.json
+          if-no-files-found: error
+          retention-days: 14
