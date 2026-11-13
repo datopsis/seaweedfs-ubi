@@ -390,6 +390,23 @@ jobs:
           UPGRADE_FROM_IMAGE: localhost/seaweedfs-ubi:upgrade-baseline
         run: bash tests/upgrade.sh
 
+      - name: Qualify Phase A TLS listeners and exact native-policy canaries
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+          ARCHITECTURE: ${{ matrix.architecture }}
+        run: >-
+          python3 tests/tls/qualify.py
+          --report "${RUNNER_TEMP}/tls-${ARCHITECTURE}.json"
+
+      - name: Retain sanitized Phase A TLS coverage (including blockers)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: development-tls-${{ matrix.architecture }}
+          path: ${{ runner.temp }}/tls-${{ matrix.architecture }}.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Record scoped native development evidence
         env:
           ARCHITECTURE: ${{ matrix.architecture }}

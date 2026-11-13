@@ -126,3 +126,28 @@ scanner expects, so review the exact RPM build and Red Hat advisory data before
 classifying a match against UBI content. Findings against the Go dependency
 inventory of the `weed` binary must be reviewed against the upstream SeaweedFS
 release rather than assumed exploitable in this packaging.
+
+## Phase A native gRPC identity blocker
+
+**SeaweedFS 4.53 does not satisfy strict target-hostname identity for gRPC.**
+The pinned source uses `advancedtls.CertVerification` rather than hostname
+verification in
+[`loadClientTLS`](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/security/tls.go#L209-L310).
+[`AuthenticateServer`](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/security/tls.go#L385-L410)
+accepts any matching CN, DNS SAN or URI SAN. An allowed CN can therefore satisfy
+the policy even with an incorrect DNS SAN. An allowlist is not equivalent to
+verifying the dialed hostname. The
+[4.53 scaffold](https://github.com/seaweedfs/seaweedfs/blob/4ab66fb76da83700739f5839e62fcaf15fb7d02a/weed/command/scaffold/security.toml#L102-L126)
+also explicitly describes the missing hostname check.
+
+`tests/tls/qualify.py` preserves exact-outcome native canaries, separate from
+strict external-client certificate tests. Their expected acceptance is recorded
+as **BLOCKER**, never a successful security requirement. Any changed outcome
+fails the canary and requires investigation. No binary patch, relaxed identity
+check, exemption, or Phase A completion claim is permitted. The complete
+[profile and evidence boundary](docs/TLS-PHASE-A.md) distinguish native-client
+results from direct listener tests and list remaining unverified edges.
+
+This phase covers transport encryption and server/peer identity only. User
+login and OpenID authentication belong to Phase B. HTTPS/mTLS does not make
+filer/volume APIs enforce the S3 user/tenant authorization model.
