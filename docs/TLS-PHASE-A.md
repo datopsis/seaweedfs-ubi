@@ -41,6 +41,11 @@ S3's generic `grpc.client` permits filer. Master uses `master,volume` because
 its single native client option serves both targets; it cannot express a
 per-call target restriction in this path. No wildcard allowlist is used.
 
+The profile sets both `tls.min_version="TLS 1.2"` and
+`tls.max_version="TLS 1.3"`. At this pin, configuring only the minimum makes
+`advancedtls.NewServerCreds` reject startup because the maximum is unset; this
+was observed on both architectures.
+
 Every role enables `https.client` with CA verification and its own client leaf.
 Master, volume, and filer use `https.<role>.cert/key/ca`. The filer explicitly
 keeps `disable_tls_verify_client_cert=false`. S3 uses `-cert.file`, `-key.file`,

@@ -30,7 +30,7 @@ from pki import ca, leaf
 
 RPC = {
     'master': '/master_pb.Seaweed/GetMasterConfiguration',
-    'volume': '/volume_server_pb.VolumeServer/VolumeStatus',
+    'volume': '/volume_server_pb.VolumeServer/GetState',
     'filer': '/filer_pb.SeaweedFiler/GetFilerConfiguration',
     's3': '/messaging_pb.SeaweedS3IamCache/ListPolicies',
 }
@@ -73,7 +73,7 @@ class Qualification:
     def row(self, listener, case, expected, actual, detail=''):
         match = expected == actual
         status = 'PASS' if match else 'FAIL'
-        if match and expected == 'ACCEPTED-BLOCKER':
+        if match and expected.endswith('-BLOCKER'):
             status = 'BLOCKER'
         self.rows.append(dict(listener=listener, case=case, expected=expected,
                               actual=actual, status=status, detail=detail))
@@ -267,7 +267,7 @@ class Qualification:
                 not grpc and b'200 OK' not in result.stdout):
             (self.work / 'probe-error.txt').write_bytes(result.stdout + result.stderr)
             raise AssertionError(f'valid {role}/{grpc} operation failed: curl={result.returncode}; '
-                                 + result.stderr.decode(errors='replace'))
+                                 + result.stderr.decode(errors='replace') + '; ' + str(re.findall(rb'grpc-(?:status|message):[^\r\n]*', result.stdout)))
 
     def roundtrip(self):
         self.serial += 1
@@ -388,6 +388,17 @@ class Qualification:
                     self.positive(role, grpc, True)
             self.roundtrip()
 
+    def native_target_policy_canary(self):
+        # S3 reuses one grpc.client DialOption for filer AND master. Keep the
+        # intended-target allowlist at filer; adding master would hide the lack
+        # of per-target policy. Stock discovery is expected to fail explicitly.
+        result = self.run('logs', self.names['s3'])
+        logs = (result.stdout + result.stderr).decode(errors='replace')
+        exact = 'AuthenticateServer: untrusted server identity [master master]'
+        self.row('s3->master/grpc', 'native-per-target-policy', 'REJECTED-BLOCKER',
+                 'REJECTED-BLOCKER' if exact in logs else 'UNEXPECTED',
+                 'stock S3 reuses its filer-only client policy for master discovery: ' + exact)
+
     def native_canaries(self):
         # Fresh processes prevent a cached gRPC session from masking a mutation.
         # Separate HTTPS leaves remain valid: an object success therefore
@@ -449,6 +460,7 @@ def main():
             suite.inventory()
             suite.roundtrip()
             suite.row('cluster', 'write-read-delete', 'SUCCEEDED', 'SUCCEEDED')
+            suite.native_target_policy_canary()
             suite.negatives()
             suite.plaintext_root_post()
             suite.server_negatives()
