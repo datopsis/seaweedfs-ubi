@@ -126,3 +126,39 @@ scanner expects, so review the exact RPM build and Red Hat advisory data before
 classifying a match against UBI content. Findings against the Go dependency
 inventory of the `weed` binary must be reviewed against the upstream SeaweedFS
 release rather than assumed exploitable in this packaging.
+
+
+## Installable-fix vulnerability gate
+
+Both native architecture jobs gate the complete Trivy and Grype inventories.
+A fixable HIGH/CRITICAL finding blocks independently in either scanner; Grype
+also preserves the highest severity in related vulnerability records. Every
+non-RPM finding retains this rule, including Go modules in the upstream binary.
+Unfixed findings remain in the full inventories and do not pass as remediated.
+
+Only positively identified Red Hat RPMs for the native architecture (or noarch)
+can be deferred. CI extracts `/etc/yum.repos.d` from the exact digest-pinned
+`UBI_MICRO` base in `Containerfile`, before assembly removes those files. The
+build installs no RPMs: it inherits UBI Micro's RPMs and copies trust material
+from pinned UBI Minimal. There is no RPM lock to refresh. An installable RPM
+finding therefore requires a reviewed base-image update, not an exception.
+
+The query uses the base's enabled BaseOS, AppStream and CodeReady Builder
+repositories, isolated from runner repositories and installed packages. Fresh
+metadata is required for every repository on each architecture. RPM's native
+epoch/version/release comparison checks all advertised fixed versions against
+available binary/noarch RPM versions. A candidate at or above any fix blocks.
+Only a successful query proving no matching candidate can defer a finding.
+Missing or unexpected repositories, unsupported configuration, network errors,
+timeouts, malformed versions, and incomplete evidence fail closed. There are
+no package, advisory, or date exemptions.
+
+Deferred findings remain vulnerabilities. The job summary records their vendor
+fixed versions; admission JSON, repo configuration, and full scanner inventories
+are retained for review. The weekly scheduled CI run maintains one tracking
+issue, reusing it after resolution. It comments only when the deferred set
+changes, never on PRs. Missing evidence fails tracking without clearing the
+previous state. The issue's resolution does not imply a clean vulnerability
+inventory: non-RPM blockers and unfixed findings remain independently visible.
+Release publication remains disabled pending the separate candidate-bound
+release controls.
