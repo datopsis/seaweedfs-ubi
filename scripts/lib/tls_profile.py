@@ -35,7 +35,7 @@ def security(role, signing_key=None):
         for target in ('master', 'volume', 's3'):
             own[f'{target}_allowed_server_commonNames'] = target
     result = {
-        'tls': {'min_version': 'TLS 1.2'},
+        'tls': {'min_version': 'TLS 1.2', 'max_version': 'TLS 1.3'},
         'grpc': {'ca': f'{ROOT}/ca.crt', role: own,
                  'client': {'cert': f'{ROOT}/client.crt', 'key': f'{ROOT}/client.key',
                             'allowed_server_commonNames': OUTBOUND[role]}},
